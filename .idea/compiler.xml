@@ -9,5 +9,8 @@
         <module name="PD-Ticket-System" />
       </profile>
     </annotationProcessing>
+    <bytecodeTargetLevel>
+      <module name="PD-Ticket-System" target="19" />
+    </bytecodeTargetLevel>
   </component>
 </project>
