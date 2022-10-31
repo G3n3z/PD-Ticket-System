@@ -1,9 +1,9 @@
 package com.isec.pd22.utils;
 
-import java.sql.Connection;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import com.isec.pd22.exception.ServerException;
+
+import java.sql.*;
+import java.util.Date;
 
 public class DBVersionManager {
 
@@ -23,8 +23,39 @@ public class DBVersionManager {
                 return res.getInt("numVersion");
             }
         }catch (SQLException e) {
-            return -1;
+            return 1;
         }
-        return -1;
+        return 1;
     }
+
+    public void createTableVersions() {
+        try {
+            Statement stm = connection.createStatement();
+            String query = "CREATE TABLE versions(" +
+                            "version INTEGER primary key AUTOINCREMENT NOT NULL," +
+                            "sql text," +
+                            "timestamp numeric)";
+
+            stm.executeUpdate(query);
+
+
+            addNewVersion(query);
+
+        }catch (SQLException e) {
+            throw new ServerException("Erro ao criar a tabela de versoes " + e.getMessage() );
+        }
+    }
+
+
+    public void addNewVersion(String sql) throws SQLException {
+        String query = "insert into versions (version , sql, timestamp) values(null, ?, ?)";
+        PreparedStatement pstm = connection.prepareStatement(query);
+        Date time = new Date();
+        long unixTime = time.getTime()/1000;
+        pstm.setString(1, sql);
+        pstm.setLong(2, unixTime);
+        pstm.executeUpdate();
+
+    }
+
 }

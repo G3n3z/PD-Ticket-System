@@ -9,6 +9,7 @@ public class Server {
     public static void main(String[] args) {
         if(args.length != 2){
             System.out.println("Para arrancar o servidor deve passar o porto e a diretoria para uma base de dados");
+            System.exit(-1);
         }
 
         Scanner scanner = new Scanner(System.in);
@@ -23,11 +24,13 @@ public class Server {
 
         String url_database = args[1];
         Boolean isFinish = false;
-        InternalInfo info = new InternalInfo(args[0], port, isFinish);
+        InternalInfo info = new InternalInfo(url_database, port, isFinish);
         startServer();
         StartServices startServices = new StartServices(info);
+        startServices.start();
 
         while (!isFinish){
+            System.out.println("Digite comando: ");
             input = scanner.nextLine();
             if(input.equalsIgnoreCase("exit")) {
                 isFinish = true;

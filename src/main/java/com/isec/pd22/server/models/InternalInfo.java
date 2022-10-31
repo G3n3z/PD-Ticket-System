@@ -3,6 +3,9 @@ package com.isec.pd22.server.models;
 import com.isec.pd22.enums.Status;
 import com.isec.pd22.utils.Constants;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public class InternalInfo {
     Status status;
     int portUdp;
@@ -12,6 +15,11 @@ public class InternalInfo {
 
     String url_db;
 
+    String url;
+
+    Set<ServerHeartBeat> heatBeats = new HashSet<>();
+
+
     public InternalInfo() {
     }
 
@@ -19,6 +27,24 @@ public class InternalInfo {
         this.portUdp = portUdp;
         this.finish = finish;
         this.url_db = Constants.BASE_URL_DB + url_db;
+        this.url = Constants.BASE_URL + url_db;
+    }
+
+
+    public Set<ServerHeartBeat> getHeatBeats() {
+        return heatBeats;
+    }
+
+    public void setHeatBeats(Set<ServerHeartBeat> heatBeats) {
+        this.heatBeats = heatBeats;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
     }
 
     public String getUrl_db() {
