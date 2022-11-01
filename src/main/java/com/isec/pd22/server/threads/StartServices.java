@@ -31,7 +31,6 @@ public class StartServices extends Thread {
     Map<HeartBeat, DatagramPacket> heartBeatsPackage;
 
     ObjectStream os = new ObjectStream();
-
     public StartServices(InternalInfo infoServer) {
         this.infoServer = infoServer;
         socket = infoServer.getMulticastSocket();
@@ -122,18 +121,25 @@ public class StartServices extends Thread {
 
     private void startThreads() {
         ServerSocket serverSocket = null;
+        DatagramSocket clientsConnectionSocket = null;
 
         try {
             // inicia serversocket thread
             serverSocket = new ServerSocket(0);
-        } catch (IOException e) {
+            clientsConnectionSocket = new DatagramSocket(infoServer.getPortUdp());
+        }
+        catch (IOException e) {
             System.out.println("Não foi possivel iniciar recursos");
             return;
         }
+
         System.out.println("Ready to start");
 
         ServerSocketThread serverSocketThread = new ServerSocketThread(serverSocket, infoServer);
         serverSocketThread.start();
+
+        ClientsConnectionThread clientsConnectionThread = new ClientsConnectionThread(clientsConnectionSocket, infoServer);
+        clientsConnectionThread.start();
 
         Timer timer = new Timer(true);
         HeartBeatTask heartBeatTask = new HeartBeatTask(infoServer);
@@ -141,6 +147,7 @@ public class StartServices extends Thread {
 
         MulticastThread multicastThread = new MulticastThread(infoServer, timer);
         multicastThread.start();
+
         try {
             serverSocketThread.join();
         } catch (InterruptedException ignored) {

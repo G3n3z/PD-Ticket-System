@@ -27,6 +27,7 @@ public class InternalInfo {
 
     MulticastSocket multicastSocket;
 
+    // HeartBeat -> Server
     Set<HeartBeat> heartBeats = new HashSet<>();
 
     private ArrayList<Socket> allClientSockets;

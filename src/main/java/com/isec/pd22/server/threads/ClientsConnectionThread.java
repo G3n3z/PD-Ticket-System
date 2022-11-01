@@ -1,5 +1,6 @@
 package com.isec.pd22.server.threads;
 
+import com.isec.pd22.enums.ClientsPayloadType;
 import com.isec.pd22.payload.ClientConnectionPayload;
 import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.PackageModel;
@@ -13,13 +14,11 @@ public class ClientsConnectionThread extends Thread{
     private final LinkedList<PackageModel> messagesQueue = new LinkedList<>();
     private final Semaphore semaphoreQueue = new Semaphore(0);
     private final DatagramSocket socket;
+    private final InternalInfo internalInfo;
 
-    public ClientsConnectionThread(InternalInfo internalInfo) throws SocketException {
-        socket = new DatagramSocket(internalInfo.getPortUdp());
-    }
-
-    public DatagramSocket getSocket() {
-        return socket;
+    public ClientsConnectionThread(DatagramSocket socket, InternalInfo internalInfo) {
+        this.socket = socket;
+        this.internalInfo = internalInfo;
     }
 
     @Override
@@ -83,11 +82,7 @@ public class ClientsConnectionThread extends Thread{
 
                 PackageModel packedMessage = messagesQueue.pop();
 
-                ClientConnectionPayload payload = this.onMessageProcessed(packedMessage);
-
-                if (payload != null) {
-                    sendMessage(new PackageModel(payload, packedMessage.getPacket()));
-                }
+                this.onMessageProcessed(packedMessage);
 
             } catch (InterruptedException e) {
                 throw new RuntimeException(e);
@@ -95,10 +90,9 @@ public class ClientsConnectionThread extends Thread{
         }
     }
 
-    private ClientConnectionPayload onMessageProcessed(PackageModel packedMessage) {
+    private void onMessageProcessed(PackageModel packedMessage) {
+        ClientConnectionPayload payload = new ClientConnectionPayload(internalInfo.getHeatBeats(), ClientsPayloadType.REQUEST_SERVERS_SUCCESS);
 
-
-
-        return null;
+        sendMessage(new PackageModel(payload, packedMessage.getPacket()));
     }
 }
