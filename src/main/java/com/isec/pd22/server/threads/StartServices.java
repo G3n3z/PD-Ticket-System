@@ -87,6 +87,10 @@ public class StartServices extends Thread{
 
     private void startThreads() {
        //TODO:
+        //inicia serversocket thread
+        ServerSocketThread serverSocketThread = new ServerSocketThread(infoServer);
+        serverSocketThread.start();
+
         System.out.println("Ready to start");
     }
 
