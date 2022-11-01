@@ -17,6 +17,7 @@ import java.net.*;
 import java.sql.*;
 import java.util.Comparator;
 import java.util.Map;
+import java.util.Timer;
 
 public class StartServices extends Thread{
 
@@ -47,25 +48,34 @@ public class StartServices extends Thread{
 
         }catch (SocketTimeoutException e){
             System.out.println("[START SERVICES] - Timeout socket multicast");
+
+        }
+        catch (IOException | ServerException e){
+            System.out.println(e);
+            if(!infoServer.isFinish())
+                System.out.println("Erro ao connectar ao socket multicast");
+            synchronized (infoServer){
+                infoServer.setFinish(true);
+            }
+            return;
+        }
+
+        try {
             if(infoServer.getHeatBeats().size() == 0){
                 notReceiveHearbeat();
             }else{
                 //Se o sinal de vida recebido
-                try {
-                    receivedHeartBeat();
-                }catch (SQLException | ClassNotFoundException | IOException ex){
-                    System.out.println(e);
-                }
+                receivedHeartBeat();
             }
-            closeConnection();
-            startThreads();
+        }catch (SQLException | ClassNotFoundException | IOException ex){
+            System.out.println(ex);
+            synchronized (infoServer){
+                infoServer.setFinish(true);
+            }
+            return;
         }
-        catch (IOException e) {
-            if(!infoServer.isFinish())
-                System.out.println("Erro ao connectar ao socket multicast");
-        }catch (ServerException e){
-            System.out.println(e);
-        }
+        closeConnection();
+        startThreads();
     }
 
     private void receivedHeartBeat() throws SQLException, IOException, ClassNotFoundException {
@@ -82,15 +92,11 @@ public class StartServices extends Thread{
         }
     }
 
-    private void notReceiveHearbeat() {
+    private void notReceiveHearbeat() throws SQLException {
         try {
             startFirstServer();
         }catch (ServerException ex){
-            System.out.println(ex.getMessage());
-            synchronized (infoServer){
-                infoServer.setFinish(true);
-            }
-            closeConnection();
+
             throw ex;
         }
     }
@@ -107,6 +113,7 @@ public class StartServices extends Thread{
             }
 
             HeartBeat heartBeat = (HeartBeat) msg;
+            heartBeat.setTimeMsg();
             heartBeatsPackage.put(heartBeat, packet);
             infoServer.addHeartBeat(heartBeat);
         }
@@ -115,19 +122,37 @@ public class StartServices extends Thread{
     }
 
     private void startThreads() {
-        //TODO:
         ServerSocket serverSocket = null;
+
         try{
         //inicia serversocket thread
-        serverSocket = new ServerSocket(0);
+            serverSocket = new ServerSocket(0);
         }catch (IOException e){
            System.out.println("Não foi possivel iniciar recursos");
+           return;
         }
+        System.out.println("Ready to start");
 
         ServerSocketThread serverSocketThread = new ServerSocketThread(serverSocket, infoServer);
         serverSocketThread.start();
 
-        System.out.println("Ready to start");
+        Timer timer = new Timer(true);
+        HeartBeatTask heartBeatTask = new HeartBeatTask(infoServer);
+        timer.scheduleAtFixedRate(heartBeatTask, 0, 10000);
+
+        MulticastThread multicastThread = new MulticastThread(infoServer, timer);
+        multicastThread.start();
+        try {
+            serverSocketThread.join();
+        } catch (InterruptedException ignored) {
+        }finally {
+            heartBeatTask.onlyOnceTime = true;
+            heartBeatTask.cancel();
+            timer.cancel();
+            timer.purge();
+        }
+
+        System.out.println("A sair da thread");
     }
 
 
@@ -171,7 +196,7 @@ public class StartServices extends Thread{
         }
     }
 
-    private void startFirstServer() {
+    private void startFirstServer() throws SQLException {
         if(!haveConnectionDatabase(infoServer.getUrl_db())){
             createDatabaseV1();
         }
@@ -240,16 +265,16 @@ public class StartServices extends Thread{
     }
 
 
-    private boolean haveConnectionDatabase(String url){
+    private boolean haveConnectionDatabase(String url) throws SQLException {
         connection = getConnectionDatabaseByUrl(url);
         boolean haveConnection = connection != null;
 
         if(haveConnection){
             dbVersionManager.setConnection(connection);
             dbVersionManager.checkIfHaveTableVersion();
+            infoServer.setNumDB(dbVersionManager.getLastVersion());
             //connection.close();
         }
-
 
         return  haveConnection;
     }

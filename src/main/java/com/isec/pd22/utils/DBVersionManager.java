@@ -4,7 +4,9 @@ import com.isec.pd22.exception.ServerException;
 import com.isec.pd22.server.models.Query;
 
 import java.sql.*;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 public class DBVersionManager {
 
@@ -12,6 +14,10 @@ public class DBVersionManager {
 
     public DBVersionManager(Connection connection) {
         this.connection = connection;
+    }
+
+    public DBVersionManager(String url_db) throws SQLException {
+        connection = DriverManager.getConnection(url_db);
     }
 
     public Connection getConnection() {
@@ -87,4 +93,25 @@ public class DBVersionManager {
         }
 
     }
+
+    public List<Query> getAllVersionAfter(int numVersion) throws SQLException {
+        List<Query> queries = new ArrayList<>();
+
+        String query = "SELECT * from versions where version > ? order by version asc";
+        PreparedStatement preparedStatement = connection.prepareStatement(query);
+        ResultSet res = preparedStatement.executeQuery();
+        while (res.next()){
+            queries.add(mapToQuery(res));
+        }
+        return queries;
+    }
+
+    public Query mapToQuery(ResultSet res) throws SQLException {
+        Query query = new Query();
+        query.setNumVersion(res.getInt("version"));
+        query.setQuery(res.getString("query"));
+        query.setTimestamp(res.getLong("timestamp"));
+        return query;
+    }
+
 }

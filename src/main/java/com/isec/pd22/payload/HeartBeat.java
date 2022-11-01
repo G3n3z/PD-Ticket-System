@@ -1,7 +1,10 @@
 package com.isec.pd22.payload;
 
 import com.isec.pd22.enums.Status;
+import com.isec.pd22.enums.TypeOfMulticastMsg;
 import com.isec.pd22.server.models.ServerHeartBeat;
+
+import java.util.Date;
 
 public class HeartBeat extends MulticastMSG implements Comparable<HeartBeat>{
     String ip;
@@ -11,6 +14,22 @@ public class HeartBeat extends MulticastMSG implements Comparable<HeartBeat>{
     int numVersionDB;
     int portUdp;
 
+    long unixTimeSinceLastHeartBeat;
+
+    public HeartBeat(TypeOfMulticastMsg typeMsg, String ip, int portTcpClients,
+                     int numOfClients, Status statusServer, int numVersionDB, int portUdp) {
+        super(typeMsg);
+        this.ip = ip;
+        this.portTcpClients = portTcpClients;
+        this.numOfClients = numOfClients;
+        this.statusServer = statusServer;
+        this.numVersionDB = numVersionDB;
+        this.portUdp = portUdp;
+    }
+
+    public long getUnixTimeSinceLastHeartBeat() {
+        return unixTimeSinceLastHeartBeat;
+    }
 
     public String getIp() {
         return ip;
@@ -81,5 +100,23 @@ public class HeartBeat extends MulticastMSG implements Comparable<HeartBeat>{
         int result = getIp().hashCode();
         result = 31 * result + getPortUdp();
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "HeartBeat{" +
+                "ip='" + ip + '\'' +
+                ", portTcpClients=" + portTcpClients +
+                ", numOfClients=" + numOfClients +
+                ", statusServer=" + statusServer +
+                ", numVersionDB=" + numVersionDB +
+                ", portUdp=" + portUdp +
+                ", versionDB=" + versionDB +
+                ", typeMsg=" + typeMsg +
+                '}';
+    }
+
+    public void setTimeMsg() {
+        unixTimeSinceLastHeartBeat = new Date().getTime();
     }
 }
