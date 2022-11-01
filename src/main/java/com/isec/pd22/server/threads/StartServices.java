@@ -115,7 +115,18 @@ public class StartServices extends Thread{
     }
 
     private void startThreads() {
-       //TODO:
+        //TODO:
+        ServerSocket serverSocket = null;
+        try{
+        //inicia serversocket thread
+        serverSocket = new ServerSocket(0);
+        }catch (IOException e){
+           System.out.println("Não foi possivel iniciar recursos");
+        }
+
+        ServerSocketThread serverSocketThread = new ServerSocketThread(serverSocket, infoServer);
+        serverSocketThread.start();
+
         System.out.println("Ready to start");
     }
 

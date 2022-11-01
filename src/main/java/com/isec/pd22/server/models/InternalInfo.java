@@ -4,6 +4,8 @@ import com.isec.pd22.enums.Status;
 import com.isec.pd22.payload.HeartBeat;
 import com.isec.pd22.utils.Constants;
 
+import java.net.Socket;
+import java.util.ArrayList;
 import java.net.MulticastSocket;
 import java.util.HashSet;
 import java.util.Set;
@@ -24,6 +26,7 @@ public class InternalInfo {
 
     Set<HeartBeat> heartBeats = new HashSet<>();
 
+    private ArrayList<Socket> allClientSockets;
 
     public InternalInfo() {
     }
@@ -33,6 +36,7 @@ public class InternalInfo {
         this.finish = finish;
         this.url_db = Constants.BASE_URL_DB + url_db;
         this.url = Constants.BASE_URL + url_db;
+        this.allClientSockets = new ArrayList<>();
     }
 
 
@@ -114,6 +118,24 @@ public class InternalInfo {
 
     public void setFinish(boolean finish) {
         this.finish = finish;
+    }
+
+    public ArrayList<Socket> getAllClientSockets() {
+        return allClientSockets;
+    }
+
+    /**
+     * Incrementa o número de clientes que estão a ser atendidos pelo servidor
+     */
+    public void incrementNumClients() {
+        numClients++;
+    }
+
+    /**
+     * Decrementa o número de clientes que estão a ser atendidos pelo servidor
+     */
+    public void decrementNumClients() {
+        numClients++;
     }
 
     public void addHeartBeat(HeartBeat heartBeat) {
