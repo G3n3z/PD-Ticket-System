@@ -43,7 +43,8 @@ public class ClientsConnectionThread extends Thread{
 
             socket.send(packet);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            System.err.println(e.getMessage());
+            System.exit(1);
         }
     }
 
@@ -69,8 +70,13 @@ public class ClientsConnectionThread extends Thread{
                 messagesQueue.add(packageReceived);
                 semaphoreQueue.release(1);
 
-            } catch (Exception e) {
-                throw new RuntimeException(e);
+            }
+            catch (ClassNotFoundException e) {
+                System.out.println("ERRO: waitMessage não consegui converter o objeto para o tipo certo.");
+            }
+            catch (IOException e) {
+                System.err.println(e.getMessage());
+                System.exit(1);
             }
         }
     }
@@ -78,14 +84,15 @@ public class ClientsConnectionThread extends Thread{
     private void messagesQueueThreadRoutine() {
         while (true) {
             try {
-                semaphoreQueue.acquire(1);
-
                 PackageModel packedMessage = messagesQueue.pop();
+
+                semaphoreQueue.acquire(1);
 
                 this.onMessageProcessed(packedMessage);
 
             } catch (InterruptedException e) {
-                throw new RuntimeException(e);
+                System.err.println(e.getMessage());
+                System.exit(1);
             }
         }
     }
