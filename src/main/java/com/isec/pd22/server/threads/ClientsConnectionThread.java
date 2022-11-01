@@ -47,7 +47,7 @@ public class ClientsConnectionThread extends Thread{
         }
     }
 
-    protected PackageModel waitMessage() throws IOException, ClassNotFoundException {
+    private PackageModel waitMessage() throws IOException, ClassNotFoundException {
         DatagramPacket datagramPacketReceive = new DatagramPacket(
                 new byte[ClientConnectionPayload.MAX_PAYLOAD_BYTES],
                 ClientConnectionPayload.MAX_PAYLOAD_BYTES
@@ -61,7 +61,7 @@ public class ClientsConnectionThread extends Thread{
         return new PackageModel((ClientConnectionPayload) inputStream.readObject(), datagramPacketReceive);
     }
 
-    protected void messagesReaderRoutine() {
+    private void messagesReaderRoutine() {
         while (true) {
             try {
                 PackageModel packageReceived = waitMessage();
