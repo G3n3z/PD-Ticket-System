@@ -3,6 +3,7 @@ package com.isec.pd22.server.threads;
 import com.isec.pd22.payload.ClientMSG;
 import com.isec.pd22.server.models.InternalInfo;
 
+import java.io.EOFException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -26,7 +27,6 @@ public class AttendClientThread extends Thread{
                 ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream());
                 ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
 
-                //TODO mudar Object pela class de mensagem
                 ClientMSG clientMsg = (ClientMSG) ois.readObject();
 
                 switch (internalInfo.getStatus())
@@ -38,12 +38,20 @@ public class AttendClientThread extends Thread{
                         keepGoing = false;}
                 }
 
+            } catch (EOFException e){
+                System.out.println("[AttendClientThread] - client input stream was closed: "+ e.getMessage());
+                keepGoing = false;
             } catch (IOException | ClassNotFoundException e) {
                 //TODO tratar excecoes lançadas
-                System.out.println("[AttendClientThread] failed comunication with client: "+ e.getMessage());
+                System.out.println("[AttendClientThread] - failed comunication with client: "+ e.getMessage());
             }
         }
         //TODO enviar ultima msg ao cliente e fechar
+        try {
+            clientSocket.close();
+        } catch (IOException e) {
+            System.out.println("[AttendClientThread] - error on closing client socket: "+ e.getMessage());
+        }
     }
 
     private void handleClientRequest(ClientMSG msgClient, ObjectOutputStream oos) throws IOException {
@@ -75,6 +83,7 @@ public class AttendClientThread extends Thread{
         ClientMSG ansMsg = new ClientMSG("shutdown");
         ansMsg.setServerList(internalInfo.getHeatBeats());
         oos.writeObject(ansMsg);
+        clientSocket.close();
     }
 
 }
