@@ -1,6 +1,8 @@
 package com.isec.pd22.server.models;
 
-public class Query {
+import java.io.Serializable;
+
+public class Query implements Serializable {
     int numVersion;
     String query;
     long timestamp;

@@ -6,6 +6,7 @@ import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.utils.Constants;
 import com.isec.pd22.utils.ObjectStream;
 
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
@@ -49,9 +50,12 @@ public class HeartBeatTask  extends TimerTask {
         try {
             packet = new DatagramPacket(bytes, bytes.length, InetAddress.getByName(Constants.MULTICAST_IP), Constants.MULTICAST_PORT);
             os.writeObject(packet, heartBeat);
-            System.out.println(heartBeat);
+            multicastSocket.send(packet);
         } catch (UnknownHostException e) {
             System.out.println("Erro ao enviar sinal de vida");
+        } catch (IOException e) {
+            System.out.println(e);
+            System.out.println("Nao conseguiu enviar o datagrampacket");
         }
 
         //Se for para executar mais que uma vez

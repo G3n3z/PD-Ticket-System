@@ -111,12 +111,28 @@ public class HeartBeat extends MulticastMSG implements Comparable<HeartBeat>{
                 ", statusServer=" + statusServer +
                 ", numVersionDB=" + numVersionDB +
                 ", portUdp=" + portUdp +
-                ", versionDB=" + versionDB +
                 ", typeMsg=" + typeMsg +
+                ", unixTime="+ unixTimeSinceLastHeartBeat +
+                ", date=" + new Date(unixTimeSinceLastHeartBeat) +
                 '}';
     }
 
     public void setTimeMsg() {
         unixTimeSinceLastHeartBeat = new Date().getTime();
     }
+
+
+    public void copyValues(HeartBeat o){
+        ip = o.ip;
+        numOfClients = o.numOfClients;
+        portTcpClients = o.portTcpClients;
+        statusServer = o.statusServer;
+        numVersionDB = o.numVersionDB;
+        portUdp = o.portUdp;
+        typeMsg = o.typeMsg;
+        unixTimeSinceLastHeartBeat = o.unixTimeSinceLastHeartBeat;
+
+    }
+
+
 }

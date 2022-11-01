@@ -96,7 +96,6 @@ public class DBVersionManager {
 
     public List<Query> getAllVersionAfter(int numVersion) throws SQLException {
         List<Query> queries = new ArrayList<>();
-
         String query = "SELECT * from versions where version > ? order by version asc";
         PreparedStatement preparedStatement = connection.prepareStatement(query);
         ResultSet res = preparedStatement.executeQuery();
@@ -114,4 +113,12 @@ public class DBVersionManager {
         return query;
     }
 
+    public void closeConnection() {
+        try {
+            if(connection!= null && !connection.isClosed()){
+                connection.close();
+            }
+        } catch (SQLException ignored) {
+        }
+    }
 }
