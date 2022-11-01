@@ -29,6 +29,7 @@ public class HeartBeatTask  extends TimerTask {
         multicastSocket = internalInfo.getMulticastSocket();
         this.onlyOnceTime = true;
         os = new ObjectStream();
+        this.timer = timer;
     }
 
     public HeartBeatTask(InternalInfo internalInfo) {
@@ -52,8 +53,12 @@ public class HeartBeatTask  extends TimerTask {
         } catch (UnknownHostException e) {
             System.out.println("Erro ao enviar sinal de vida");
         }
-        internalInfo.checkServersLastBeatMore35Sec();
-        if(onlyOnceTime){
+
+        //Se for para executar mais que uma vez
+        if (!onlyOnceTime){
+            internalInfo.checkServersLastBeatMore35Sec();
+        }
+        else{
             cancel();
             timer.cancel();
         }
