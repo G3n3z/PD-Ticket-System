@@ -19,7 +19,7 @@ import java.util.Comparator;
 import java.util.Map;
 import java.util.Timer;
 
-public class StartServices extends Thread{
+public class StartServices extends Thread {
 
     InternalInfo infoServer;
     MulticastSocket socket;
@@ -31,6 +31,7 @@ public class StartServices extends Thread{
     Map<HeartBeat, DatagramPacket> heartBeatsPackage;
 
     ObjectStream os = new ObjectStream();
+
     public StartServices(InternalInfo infoServer) {
         this.infoServer = infoServer;
         socket = infoServer.getMulticastSocket();
@@ -46,30 +47,29 @@ public class StartServices extends Thread{
             socket.setSoTimeout(30);
             receiveMsg(packet);
 
-        }catch (SocketTimeoutException e){
+        } catch (SocketTimeoutException e) {
             System.out.println("[START SERVICES] - Timeout socket multicast");
 
-        }
-        catch (IOException | ServerException e){
+        } catch (IOException | ServerException e) {
             System.out.println(e);
-            if(!infoServer.isFinish())
+            if (!infoServer.isFinish())
                 System.out.println("Erro ao connectar ao socket multicast");
-            synchronized (infoServer){
+            synchronized (infoServer) {
                 infoServer.setFinish(true);
             }
             return;
         }
 
         try {
-            if(infoServer.getHeatBeats().size() == 0){
+            if (infoServer.getHeatBeats().size() == 0) {
                 notReceiveHearbeat();
-            }else{
-                //Se o sinal de vida recebido
+            } else {
+                // Se o sinal de vida recebido
                 receivedHeartBeat();
             }
-        }catch (SQLException | ClassNotFoundException | IOException ex){
+        } catch (SQLException | ClassNotFoundException | IOException ex) {
             System.out.println(ex);
-            synchronized (infoServer){
+            synchronized (infoServer) {
                 infoServer.setFinish(true);
             }
             return;
@@ -79,14 +79,14 @@ public class StartServices extends Thread{
     }
 
     private void receivedHeartBeat() throws SQLException, IOException, ClassNotFoundException {
-        HeartBeat serverWithMaxDBVersion = infoServer.getHeatBeats().stream().min(Comparator.comparingInt(HeartBeat::getNumVersionDB)).get();
-        //Se nao tem ligacao à base de dados
-        if(!haveConnectionDatabase(infoServer.getUrl_db())) {
+        HeartBeat serverWithMaxDBVersion = infoServer.getHeatBeats().stream()
+                .min(Comparator.comparingInt(HeartBeat::getNumVersionDB)).get();
+        // Se nao tem ligacao à base de dados
+        if (!haveConnectionDatabase(infoServer.getUrl_db())) {
             createDatabaseV1();
             updateDB(serverWithMaxDBVersion);
-        }
-        else {
-            if(!verifyLocalDBVersion(serverWithMaxDBVersion)){
+        } else {
+            if (!verifyLocalDBVersion(serverWithMaxDBVersion)) {
                 updateDB(serverWithMaxDBVersion);
             }
         }
@@ -95,7 +95,7 @@ public class StartServices extends Thread{
     private void notReceiveHearbeat() throws SQLException {
         try {
             startFirstServer();
-        }catch (ServerException ex){
+        } catch (ServerException ex) {
 
             throw ex;
         }
@@ -104,11 +104,11 @@ public class StartServices extends Thread{
     private void receiveMsg(DatagramPacket packet) throws IOException, SocketTimeoutException {
         MulticastMSG msg = null;
 
-        while(true){
+        while (true) {
             socket.receive(packet);
             msg = os.readObject(packet, MulticastMSG.class);
             connection = getConnectionDatabaseByUrl(infoServer.getUrl_db());
-            if(msg.getTypeMsg() != TypeOfMulticastMsg.HEARTBEAT){
+            if (msg.getTypeMsg() != TypeOfMulticastMsg.HEARTBEAT) {
                 continue;
             }
 
@@ -118,18 +118,17 @@ public class StartServices extends Thread{
             infoServer.addHeartBeat(heartBeat);
         }
 
-
     }
 
     private void startThreads() {
         ServerSocket serverSocket = null;
 
-        try{
-        //inicia serversocket thread
+        try {
+            // inicia serversocket thread
             serverSocket = new ServerSocket(0);
-        }catch (IOException e){
-           System.out.println("Não foi possivel iniciar recursos");
-           return;
+        } catch (IOException e) {
+            System.out.println("Não foi possivel iniciar recursos");
+            return;
         }
         System.out.println("Ready to start");
 
@@ -145,7 +144,7 @@ public class StartServices extends Thread{
         try {
             serverSocketThread.join();
         } catch (InterruptedException ignored) {
-        }finally {
+        } finally {
             heartBeatTask.onlyOnceTime = true;
             heartBeatTask.cancel();
             timer.cancel();
@@ -155,9 +154,8 @@ public class StartServices extends Thread{
         System.out.println("A sair da thread");
     }
 
-
     /**
-     * @param server  servidor escolhido
+     * @param server servidor escolhido
      * @return true se a nossa base de dados for maior ou igual
      */
     private boolean verifyLocalDBVersion(HeartBeat server) throws SQLException {
@@ -172,10 +170,11 @@ public class StartServices extends Thread{
         DatagramPacket datagramPacket = heartBeatsPackage.get(server);
 
         try {
-            ServerSocket serverSocket =  new ServerSocket(0);
+            ServerSocket serverSocket = new ServerSocket(0);
             serverSocket.setSoTimeout(2000);
 
-            UpdateDB updateDB = new UpdateDB(TypeOfMulticastMsg.UPDATE_DB, infoServer.getNumDB(),serverSocket.getInetAddress().getHostAddress() ,serverSocket.getLocalPort());
+            UpdateDB updateDB = new UpdateDB(TypeOfMulticastMsg.UPDATE_DB, infoServer.getNumDB(),
+                    serverSocket.getInetAddress().getHostAddress(), serverSocket.getLocalPort());
             os.writeObject(datagramPacket, updateDB);
             socket.send(datagramPacket);
 
@@ -184,20 +183,19 @@ public class StartServices extends Thread{
             ObjectOutputStream oos = new ObjectOutputStream(socketUpdate.getOutputStream());
             ObjectInputStream ois = new ObjectInputStream(socketUpdate.getInputStream());
 
-            while(true){
+            while (true) {
                 Query q = (Query) ois.readObject();
                 dbVersionManager.insertQuery(q);
             }
-        }catch (EOFException e){
+        } catch (EOFException e) {
             return;
-        }
-        catch (IOException | ClassNotFoundException | SQLException e) {
+        } catch (IOException | ClassNotFoundException | SQLException e) {
             throw e;
         }
     }
 
     private void startFirstServer() throws SQLException {
-        if(!haveConnectionDatabase(infoServer.getUrl_db())){
+        if (!haveConnectionDatabase(infoServer.getUrl_db())) {
             createDatabaseV1();
         }
     }
@@ -205,20 +203,20 @@ public class StartServices extends Thread{
     private void createDatabaseV1() {
         File f = new File(getPathToDirectory(infoServer.getUrl()));
         int bytesReads = 0;
-        if(!f.mkdir()){
-           throw new ServerException("Erro a criar a diretoria");
+        if (!f.mkdir()) {
+            throw new ServerException("Erro a criar a diretoria");
         }
 
         try {
-            FileOutputStream fos = new FileOutputStream( new File(infoServer.getUrl()));
+            FileOutputStream fos = new FileOutputStream(new File(infoServer.getUrl()));
             FileInputStream fis = new FileInputStream(Constants.INITIAL_DB_BASE_URL);
-            while (true){
-               byte[] bytes = new byte[4000];
-               bytesReads = fis.read(bytes);
-               if(bytesReads < 0){
-                   break;
-               }
-               fos.write(bytes, 0, bytesReads);
+            while (true) {
+                byte[] bytes = new byte[4000];
+                bytesReads = fis.read(bytes);
+                if (bytesReads < 0) {
+                    break;
+                }
+                fos.write(bytes, 0, bytesReads);
             }
             fos.close();
             fis.close();
@@ -229,7 +227,7 @@ public class StartServices extends Thread{
         }
 
         connection = getConnectionDatabaseByUrl(infoServer.getUrl_db());
-        if(connection == null){
+        if (connection == null) {
             throw new ServerException("Erro na conexao a db depois de ser criada a copia");
         }
 
@@ -245,14 +243,13 @@ public class StartServices extends Thread{
     }
 
     private void closeConnection() {
-        if (connection != null){
+        if (connection != null) {
             try {
                 connection.close();
             } catch (SQLException ignored) {
             }
         }
     }
-
 
     private Connection getConnectionDatabaseByUrl(String url) {
         Connection connection = null;
@@ -264,21 +261,18 @@ public class StartServices extends Thread{
         return connection;
     }
 
-
     private boolean haveConnectionDatabase(String url) throws SQLException {
         connection = getConnectionDatabaseByUrl(url);
         boolean haveConnection = connection != null;
 
-        if(haveConnection){
+        if (haveConnection) {
             dbVersionManager.setConnection(connection);
             dbVersionManager.checkIfHaveTableVersion();
             infoServer.setNumDB(dbVersionManager.getLastVersion());
-            //connection.close();
+            // connection.close();
         }
 
-        return  haveConnection;
+        return haveConnection;
     }
-
-
 
 }
