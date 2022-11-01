@@ -57,8 +57,6 @@ public class StartServices extends Thread {
                 System.out.println("Erro ao connectar ao socket multicast");
             synchronized (internalInfo){
                 internalInfo.setFinish(true);
-
-
             }
             return;
         }
@@ -142,7 +140,7 @@ public class StartServices extends Thread {
         try {
             // inicia serversocket thread
             serverSocket = new ServerSocket(0);
-            clientsConnectionSocket = new DatagramSocket(infoServer.getPortUdp());
+            clientsConnectionSocket = new DatagramSocket(internalInfo.getPortUdp());
         }
         catch (IOException e) {
             System.out.println("Não foi possivel iniciar recursos");
@@ -154,7 +152,7 @@ public class StartServices extends Thread {
         ServerSocketThread serverSocketThread = new ServerSocketThread(serverSocket, internalInfo);
         serverSocketThread.start();
 
-        ClientsConnectionThread clientsConnectionThread = new ClientsConnectionThread(clientsConnectionSocket, infoServer);
+        ClientsConnectionThread clientsConnectionThread = new ClientsConnectionThread(clientsConnectionSocket, internalInfo);
         clientsConnectionThread.start();
 
         Timer timer = new Timer(true);
