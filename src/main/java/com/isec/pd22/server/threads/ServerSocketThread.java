@@ -3,28 +3,29 @@ package com.isec.pd22.server.threads;
 import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.ServerHeartBeat;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
+import java.io.ObjectOutputStream;
+import java.net.*;
 import java.util.ArrayList;
+
+import static com.isec.pd22.utils.Constants.MULTICAST_IP;
+import static com.isec.pd22.utils.Constants.MULTICAST_PORT;
 
 public class ServerSocketThread extends Thread
 {
     private ServerSocket serverSocket;
     private InternalInfo internalInfo;
-    private ArrayList<Socket> allClientSockets;
     private ArrayList<Thread> allClientThreads;
 
 
-    public ServerSocketThread(InternalInfo internalInfo)
+    public ServerSocketThread(ServerSocket serverSocket, InternalInfo internalInfo)
     {
+        this.serverSocket = serverSocket;
         this.internalInfo = internalInfo;
-        allClientSockets = new ArrayList<>();
         allClientThreads = new ArrayList<>();
+        internalInfo.setPortTcp(serverSocket.getLocalPort());
     }
-
-    public ArrayList<Socket> getAllClientSockets() { return allClientSockets; }
 
     public ArrayList<Thread> getAllClientThreads() {
         return allClientThreads;
@@ -32,15 +33,7 @@ public class ServerSocketThread extends Thread
 
     @Override
     public void run() {
-        try {
-            serverSocket = new ServerSocket(0);
-            //colocar na internalInfo informação sobre o porto TCP automaticamente atribuído
-            internalInfo.setPortTcp(serverSocket.getLocalPort());
 
-        } catch (IOException e) {
-            //TODO: ver como tratar
-
-        }
         while(true)
         {
             //flag para sair do ciclo de atender clientes break;
@@ -48,24 +41,23 @@ public class ServerSocketThread extends Thread
                 break;
 
             try {
+                serverSocket.setSoTimeout(5000);
                 //cria socket cliente para receber o cliente aceite pelo serversocket
                 Socket clientSocket = serverSocket.accept();
-                //TODO colocar timeout para obrigar a testar a condição da flag??
-                clientSocket.setSoTimeout(5000);
 
                 //adicionar socket criado à lista de sockets atendidos
-                allClientSockets.add(clientSocket);
+                internalInfo.getAllClientSockets().add(clientSocket);
 
                 //lançar thread de atendendimento de clientes
                 AttendClientThread clientThread = new AttendClientThread(clientSocket, internalInfo);
                 clientThread.start();
 
-                internalInfo.incrementNumClients(); //TODO devera ficar assim?? tornar InternalInfo em objeto synchronized?
+                internalInfo.incrementNumClients();
 
                 allClientThreads.add(clientThread);
 
-                //TODO enviar sinal de vida. Info necessária e método
-                ServerHeartBeat heartBeat = new ServerHeartBeat();
+                sendHeartbeat();
+
 
             }catch (SocketTimeoutException e){
                 continue;
@@ -75,10 +67,7 @@ public class ServerSocketThread extends Thread
 
         }
 
-        //TODO join das threads dos clientes não pode ser feita aqui. terá de ser feita na camada acima.
         waitClientThreads();
-        //TODO ver melhor maneira de fechar os sockets dos clientes
-        closeClientSockets();
     }
 
     /**
@@ -97,14 +86,19 @@ public class ServerSocketThread extends Thread
         }
     }
 
-    private void closeClientSockets(){
-        ArrayList<Socket> clientSockets = getAllClientSockets();
-        for(Socket s : clientSockets){
-            try {
-                s.close();
-            }catch (IOException e) {
+    private void sendHeartbeat() throws IOException {
+        //internalinfo.multicast
 
-            }
-        }
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ObjectOutputStream oos = new ObjectOutputStream(baos);
+
+        ServerHeartBeat heartBeat = null; //TODO: criar mensagem de heartbeat com informação atualizada para enviar
+
+        oos.writeObject(heartBeat);
+
+        DatagramPacket dp = new DatagramPacket(baos.toByteArray(), baos.size(), InetAddress.getByName(MULTICAST_IP), MULTICAST_PORT);
+
+        //internalinfo.multicast.send(dp)
     }
+
 }
