@@ -1,10 +1,12 @@
 package com.isec.pd22.server.models;
 
 import com.isec.pd22.enums.Status;
+import com.isec.pd22.payload.HeartBeat;
 import com.isec.pd22.utils.Constants;
 
 import java.net.Socket;
 import java.util.ArrayList;
+import java.net.MulticastSocket;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -15,11 +17,14 @@ public class InternalInfo {
     int portTcp;
     Boolean finish;
 
+    int numDB;
     String url_db;
 
     String url;
 
-    Set<ServerHeartBeat> heatBeats = new HashSet<>();
+    MulticastSocket multicastSocket;
+
+    Set<HeartBeat> heartBeats = new HashSet<>();
 
     private ArrayList<Socket> allClientSockets;
 
@@ -35,12 +40,28 @@ public class InternalInfo {
     }
 
 
-    public Set<ServerHeartBeat> getHeatBeats() {
-        return heatBeats;
+    public MulticastSocket getMulticastSocket() {
+        return multicastSocket;
     }
 
-    public void setHeatBeats(Set<ServerHeartBeat> heatBeats) {
-        this.heatBeats = heatBeats;
+    public void setMulticastSocket(MulticastSocket multicastSocket) {
+        this.multicastSocket = multicastSocket;
+    }
+
+    public int getNumDB() {
+        return numDB;
+    }
+
+    public void setNumDB(int numDB) {
+        this.numDB = numDB;
+    }
+
+    public Set<HeartBeat> getHeatBeats() {
+        return heartBeats;
+    }
+
+    public void setHeartBeats(Set<HeartBeat> heartBeats) {
+        this.heartBeats = heartBeats;
     }
 
     public String getUrl() {
@@ -117,4 +138,18 @@ public class InternalInfo {
         numClients++;
     }
 
+    public void addHeartBeat(HeartBeat heartBeat) {
+        if(!heartBeats.contains(heartBeat)){
+            heartBeats.add(heartBeat);
+            return;
+        }
+
+        for (HeartBeat heart : heartBeats) {
+            if(heartBeat.equals(heart)){
+                heart = heartBeat;
+                break;
+            }
+        }
+
+    }
 }

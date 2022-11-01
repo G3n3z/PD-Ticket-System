@@ -7,6 +7,12 @@ public class MulticastMSG {
     int versionDB;
     TypeOfMulticastMsg typeMsg;
 
+    public MulticastMSG() {
+    }
+
+    public MulticastMSG(TypeOfMulticastMsg typeMsg) {
+        this.typeMsg = typeMsg;
+    }
 
     public TypeOfMulticastMsg getTypeMsg() {
         return typeMsg;
