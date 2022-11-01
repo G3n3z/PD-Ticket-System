@@ -7,7 +7,7 @@ import java.util.Set;
 
 public class ClientMSG {
     private String command; //string de onde virá a query do cliente e onde seguirá a resposta do servidor
-    private Set<ServerHeartBeat> serverList;
+    private Set<HeartBeat> serverList;
 
     public ClientMSG() {}
 
@@ -24,11 +24,11 @@ public class ClientMSG {
         this.command = command;
     }
 
-    public Set<ServerHeartBeat> getServerList() {
+    public Set<HeartBeat> getServerList() {
         return serverList;
     }
 
-    public void setServerList(Set<ServerHeartBeat> serverList) {
+    public void setServerList(Set<HeartBeat> serverList) {
         this.serverList = serverList;
     }
 }

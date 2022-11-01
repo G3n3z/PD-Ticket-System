@@ -2,7 +2,9 @@ package com.isec.pd22.payload;
 
 import com.isec.pd22.enums.TypeOfMulticastMsg;
 
-public class MulticastMSG {
+import java.io.Serializable;
+
+public class MulticastMSG implements Serializable {
 
     int versionDB;
     TypeOfMulticastMsg typeMsg;

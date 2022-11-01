@@ -68,6 +68,7 @@ public class ServerSocketThread extends Thread
         }
 
         waitClientThreads();
+        System.out.println("A sair da thread ServerSocket");
     }
 
     /**

@@ -3,7 +3,7 @@ package com.isec.pd22.server.models;
 public class Query {
     int numVersion;
     String query;
-    int timestamp;
+    long timestamp;
 
     public Query() {
     }
@@ -30,11 +30,11 @@ public class Query {
         this.query = query;
     }
 
-    public int getTimestamp() {
+    public long getTimestamp() {
         return timestamp;
     }
 
-    public void setTimestamp(int timestamp) {
+    public void setTimestamp(long timestamp) {
         this.timestamp = timestamp;
     }
 }

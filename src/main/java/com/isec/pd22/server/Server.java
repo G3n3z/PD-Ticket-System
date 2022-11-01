@@ -31,6 +31,7 @@ public class Server {
         try {
             MulticastSocket multicastSocket =  connectMulticastGroup();
             info.setMulticastSocket(multicastSocket);
+            info.setIp(multicastSocket.getLocalAddress().getHostAddress());
         } catch (IOException e) {
             System.out.println("Não foi possivel criar o socket multicast");
         }

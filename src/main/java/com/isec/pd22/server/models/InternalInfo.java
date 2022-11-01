@@ -7,10 +7,13 @@ import com.isec.pd22.utils.Constants;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.net.MulticastSocket;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 
 public class InternalInfo {
+
+    String ip;
     Status status;
     int portUdp;
     int numClients;
@@ -39,6 +42,13 @@ public class InternalInfo {
         this.allClientSockets = new ArrayList<>();
     }
 
+    public String getIp() {
+        return ip;
+    }
+
+    public void setIp(String ip) {
+        this.ip = ip;
+    }
 
     public MulticastSocket getMulticastSocket() {
         return multicastSocket;
@@ -139,17 +149,27 @@ public class InternalInfo {
     }
 
     public void addHeartBeat(HeartBeat heartBeat) {
-        if(!heartBeats.contains(heartBeat)){
-            heartBeats.add(heartBeat);
-            return;
-        }
+        heartBeat.setTimeMsg();
+        synchronized (heartBeats) {
 
-        for (HeartBeat heart : heartBeats) {
-            if(heartBeat.equals(heart)){
-                heart = heartBeat;
-                break;
+            if (!heartBeats.contains(heartBeat)) {
+                heartBeats.add(heartBeat);
+                return;
+            }
+
+            for (HeartBeat heart : heartBeats) {
+                if (heartBeat.equals(heart)) {
+                    heart = heartBeat;
+                    break;
+                }
             }
         }
+    }
 
+    public void checkServersLastBeatMore35Sec() {
+        long now = new Date().getTime();
+        synchronized (this.heartBeats){
+            heartBeats.removeIf( heartBeat -> (now - heartBeat.getUnixTimeSinceLastHeartBeat()) >= 35000);
+        }
     }
 }
