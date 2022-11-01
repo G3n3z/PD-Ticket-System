@@ -27,7 +27,7 @@ public class ObjectStream {
         return true;
     }
 
-    public <T> T readObject(DatagramPacket packet, Class<T> tClass) {
+    public <T> T readObject(DatagramPacket packet, Class<T> tClass) throws IOException  {
         ObjectInputStream in;
         try{
             in =  new ObjectInputStream(new ByteArrayInputStream(packet.getData(), 0, packet.getLength()));
@@ -42,7 +42,8 @@ public class ObjectStream {
                 obj = (T) object;
             }
 
-        } catch (IOException | ClassNotFoundException e) {
+        } catch ( ClassNotFoundException e) {
+            System.out.println(e);
             return null;
         }
 

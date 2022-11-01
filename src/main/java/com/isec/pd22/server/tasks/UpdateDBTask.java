@@ -30,9 +30,11 @@ public class UpdateDBTask extends Thread{
             Socket socket = new Socket(updateDB.getIp(), updateDB.getPortTCP());
             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
+            socket.setSoTimeout(2000);
             int numVersion = (int)ois.readObject();
             DBVersionManager dbVersionManager = new DBVersionManager(internalInfo.getUrl_db());
             List<Query> queries = dbVersionManager.getAllVersionAfter(numVersion);
+            dbVersionManager.closeConnection();
             for (Query query : queries) {
                 oos.writeUnshared(query);
             }

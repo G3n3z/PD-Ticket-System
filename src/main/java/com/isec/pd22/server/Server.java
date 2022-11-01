@@ -16,7 +16,7 @@ public class Server {
         }
 
         Scanner scanner = new Scanner(System.in);
-        String input;
+        int input;
         int port = 0;
         try{
              port = Integer.parseInt(args[0]);
@@ -31,35 +31,49 @@ public class Server {
         try {
             MulticastSocket multicastSocket =  connectMulticastGroup();
             info.setMulticastSocket(multicastSocket);
-            info.setIp(multicastSocket.getLocalAddress().getHostAddress());
+            info.setIp(InetAddress.getLocalHost().getHostAddress());
         } catch (IOException e) {
             System.out.println("Não foi possivel criar o socket multicast");
+            return;
         }
 
         StartServices startServices = new StartServices(info);
         startServices.start();
 
         while (!isFinish){
-            System.out.println("Digite comando: ");
-            input = scanner.nextLine();
-            if(input.equalsIgnoreCase("exit")) {
-                isFinish = true;
-                synchronized (info){
-                    info.setFinish(true);
-                    info.getMulticastSocket().close();
-                }
+            imprimeMenu();
+            input = scanner.nextInt();
 
-            }else {
-                synchronized (info){
-                    isFinish = info.isFinish();
+            switch (input){
+                case 1 -> {
+                    isFinish = true;
+                    synchronized (info){
+                        info.setFinish(true);
+                        info.getMulticastSocket().close();
+                    }
+                }
+                case 2 -> {
+                    synchronized (info.getHeatBeats()){
+                        info.getHeatBeats().forEach(System.out::println);
+                    }
                 }
             }
+
+            isFinish = info.isFinish();
+
         }
 
 
         //TODO:  Esperar pelas threads terminem, gravar estados
         System.out.println("Adeus e obrigado");
 
+    }
+
+    private static void imprimeMenu() {
+        System.out.println("******************");
+        System.out.println("       Menu       ");
+        System.out.println("1 - Exit");
+        System.out.println("2 - Listar Servidores");
     }
 
     private static void startServer() {
@@ -73,7 +87,7 @@ public class Server {
         MulticastSocket socket = new MulticastSocket(Constants.MULTICAST_PORT);
         InetAddress group = InetAddress.getByName(Constants.MULTICAST_IP);
         SocketAddress sa = new InetSocketAddress(group, Constants.MULTICAST_PORT);
-        NetworkInterface nif = NetworkInterface.getByName("en0");
+        NetworkInterface nif = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
         socket.joinGroup(sa, nif);
         return socket;
     }

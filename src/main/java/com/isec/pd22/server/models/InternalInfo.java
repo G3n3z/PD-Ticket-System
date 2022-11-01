@@ -160,7 +160,7 @@ public class InternalInfo {
 
             for (HeartBeat heart : heartBeats) {
                 if (heartBeat.equals(heart)) {
-                    heart = heartBeat;
+                    heart.copyValues(heartBeat);
                     break;
                 }
             }
