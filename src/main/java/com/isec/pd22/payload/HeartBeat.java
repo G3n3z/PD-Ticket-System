@@ -1,15 +1,16 @@
-package com.isec.pd22.server.models;
+package com.isec.pd22.payload;
 
 import com.isec.pd22.enums.Status;
+import com.isec.pd22.server.models.ServerHeartBeat;
 
-public class ServerHeartBeat {
-
+public class HeartBeat extends MulticastMSG implements Comparable<HeartBeat>{
     String ip;
     int portTcpClients;
     int numOfClients;
     Status statusServer;
     int numVersionDB;
-    int portTcp;
+    int portUdp;
+
 
     public String getIp() {
         return ip;
@@ -51,11 +52,34 @@ public class ServerHeartBeat {
         this.numVersionDB = numVersionDB;
     }
 
-    public int getPortTcp() {
-        return portTcp;
+    public int getPortUdp() {
+        return portUdp;
     }
 
-    public void setPortTcpUpdateDB(int portTcp) {
-        this.portTcp = portTcp;
+    public void setPortUdp(int portUdp) {
+        this.portUdp = portUdp;
+    }
+
+    @Override
+    public int compareTo(HeartBeat o) {
+        return this.numOfClients - o.numOfClients;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        HeartBeat heartBeat = (HeartBeat) o;
+
+        if (getPortUdp() != heartBeat.getPortUdp()) return false;
+        return getIp().equals(heartBeat.getIp());
+    }
+
+    @Override
+    public int hashCode() {
+        int result = getIp().hashCode();
+        result = 31 * result + getPortUdp();
+        return result;
     }
 }

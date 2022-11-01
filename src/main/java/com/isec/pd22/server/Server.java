@@ -2,7 +2,10 @@ package com.isec.pd22.server;
 
 import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.threads.StartServices;
+import com.isec.pd22.utils.Constants;
 
+import java.io.IOException;
+import java.net.*;
 import java.util.Scanner;
 
 public class Server {
@@ -25,7 +28,13 @@ public class Server {
         String url_database = args[1];
         Boolean isFinish = false;
         InternalInfo info = new InternalInfo(url_database, port, isFinish);
-        startServer();
+        try {
+            MulticastSocket multicastSocket =  connectMulticastGroup();
+            info.setMulticastSocket(multicastSocket);
+        } catch (IOException e) {
+            System.out.println("Não foi possivel criar o socket multicast");
+        }
+
         StartServices startServices = new StartServices(info);
         startServices.start();
 
@@ -36,6 +45,7 @@ public class Server {
                 isFinish = true;
                 synchronized (info){
                     info.setFinish(true);
+                    info.getMulticastSocket().close();
                 }
 
             }else {
@@ -55,5 +65,15 @@ public class Server {
         //Testar se existe base de dados
         //30s espera por um heartbit
 
+    }
+
+    private static MulticastSocket connectMulticastGroup() throws IOException {
+
+        MulticastSocket socket = new MulticastSocket(Constants.MULTICAST_PORT);
+        InetAddress group = InetAddress.getByName(Constants.MULTICAST_IP);
+        SocketAddress sa = new InetSocketAddress(group, Constants.MULTICAST_PORT);
+        NetworkInterface nif = NetworkInterface.getByName("en0");
+        socket.joinGroup(sa, nif);
+        return socket;
     }
 }
