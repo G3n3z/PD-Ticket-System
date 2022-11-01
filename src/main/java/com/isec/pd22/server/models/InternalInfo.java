@@ -94,4 +94,19 @@ public class InternalInfo {
     public void setFinish(boolean finish) {
         this.finish = finish;
     }
+
+    /**
+     * Incrementa o número de clientes que estão a ser atendidos pelo servidor
+     */
+    public void incrementNumClients() {
+        numClients++;
+    }
+
+    /**
+     * Decrementa o número de clientes que estão a ser atendidos pelo servidor
+     */
+    public void decrementNumClients() {
+        numClients++;
+    }
+
 }
