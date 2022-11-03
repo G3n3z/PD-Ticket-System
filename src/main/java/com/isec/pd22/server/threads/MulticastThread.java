@@ -122,10 +122,16 @@ public class MulticastThread extends Thread{
                 }
                 query = prepare.getQuery();
                 Integer i = prepare.getNumVersion();
-                objectStream.writeObject(packet, prepare);
+
                 try {
+                    //TODO: implement with Hugo changes
+                    packet = new DatagramPacket(new byte[3000], 3000, InetAddress.getByName(""), 21);
+                    objectStream.writeObject(packet, prepare);
                     multicastSocket.send(packet);
                 } catch (IOException e) {
+                    synchronized (internalInfo){
+                        internalInfo.setStatus(Status.AVAILABLE);
+                    }
                     System.out.println("Nao consegui enviar a confirmacao do prepare");
                 }
 

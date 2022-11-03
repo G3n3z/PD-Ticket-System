@@ -24,7 +24,6 @@ public class ClientConnectionPayload implements Serializable {
         this.clientsPayloadType = clientsPayloadType;
     }
 
-
     public List<HeartBeat> getServersListCollection() { return serversListCollection; }
 
     public ClientsPayloadType getClientsPayloadType() { return clientsPayloadType; }

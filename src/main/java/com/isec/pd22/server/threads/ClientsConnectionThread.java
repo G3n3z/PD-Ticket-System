@@ -4,6 +4,7 @@ import com.isec.pd22.enums.ClientsPayloadType;
 import com.isec.pd22.payload.ClientConnectionPayload;
 import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.PackageModel;
+import com.isec.pd22.utils.UdpUtils;
 
 import java.io.*;
 import java.net.*;
@@ -19,29 +20,18 @@ public class ClientsConnectionThread extends Thread{
     public ClientsConnectionThread(DatagramSocket socket, InternalInfo internalInfo) {
         this.socket = socket;
         this.internalInfo = internalInfo;
+
+        new Thread(this::messagesQueueThreadRoutine).start();
     }
 
     @Override
     public void run() {
         this.messagesReaderRoutine();
-        new Thread(this::messagesQueueThreadRoutine).start();
     }
 
     public void sendMessage(PackageModel packagedMessageModel) {
         try {
-            DatagramPacket packet = packagedMessageModel.getPacket();
-
-            ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-            ObjectOutputStream outputStream = new ObjectOutputStream(byteArrayOutputStream);
-
-            outputStream.writeObject(packagedMessageModel.getPayload());
-
-            byte[] byteStreamMessage = byteArrayOutputStream.toByteArray();
-
-            packet.setData(byteStreamMessage);
-            packet.setLength(byteStreamMessage.length);
-
-            socket.send(packet);
+            UdpUtils.sendObject(socket, packagedMessageModel.getPacket(), packagedMessageModel.getPayload());
         } catch (IOException e) {
             System.err.println(e.getMessage());
             System.exit(1);
@@ -54,12 +44,9 @@ public class ClientsConnectionThread extends Thread{
                 ClientConnectionPayload.MAX_PAYLOAD_BYTES
         );
 
-        socket.receive(datagramPacketReceive);
+        ClientConnectionPayload payloadReceived = UdpUtils.receiveObject(socket, datagramPacketReceive);
 
-        ByteArrayInputStream byteArrayOutputStream = new ByteArrayInputStream(datagramPacketReceive.getData());
-        ObjectInputStream inputStream = new ObjectInputStream(byteArrayOutputStream);
-
-        return new PackageModel((ClientConnectionPayload) inputStream.readObject(), datagramPacketReceive);
+        return new PackageModel(payloadReceived, datagramPacketReceive);
     }
 
     private void messagesReaderRoutine() {
@@ -69,7 +56,6 @@ public class ClientsConnectionThread extends Thread{
 
                 messagesQueue.add(packageReceived);
                 semaphoreQueue.release(1);
-
             }
             catch (ClassNotFoundException e) {
                 System.out.println("ERRO: waitMessage não consegui converter o objeto para o tipo certo.");
@@ -84,9 +70,9 @@ public class ClientsConnectionThread extends Thread{
     private void messagesQueueThreadRoutine() {
         while (true) {
             try {
-                PackageModel packedMessage = messagesQueue.pop();
-
                 semaphoreQueue.acquire(1);
+
+                PackageModel packedMessage = messagesQueue.pop();
 
                 this.onMessageProcessed(packedMessage);
 

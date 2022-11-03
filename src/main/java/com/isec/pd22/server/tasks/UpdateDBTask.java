@@ -26,6 +26,7 @@ public class UpdateDBTask extends Thread{
 
     @Override
     public void run() {
+        //System.out.println("[UPDATEDBTASK] - Começou o Update" );
         try{
             Socket socket = new Socket(updateDB.getIp(), updateDB.getPortTCP());
             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
@@ -47,5 +48,6 @@ public class UpdateDBTask extends Thread{
         } catch (ClassNotFoundException | SQLException e) {
             System.out.println("[UPDATEDBTASK] - Não foi possivel fornecer os pedidos");
         }
+        //System.out.println("[UPDATEDBTASK] - Terminou o Update" );
     }
 }

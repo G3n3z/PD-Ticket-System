@@ -66,5 +66,6 @@ public class HeartBeatTask  extends TimerTask {
             cancel();
             timer.cancel();
         }
+        System.out.println("Enviado HeartBeat");
     }
 }
