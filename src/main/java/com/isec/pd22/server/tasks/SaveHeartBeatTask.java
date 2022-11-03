@@ -16,6 +16,8 @@ public class SaveHeartBeatTask extends Thread{
 
     @Override
     public void run() {
+        //System.out.println("[SaveHeartBeatTask] - Começou o Save Heartbeat" );
         internalInfo.addHeartBeat(heartBeat);
+        //System.out.println("[SaveHeartBeatTask] - Terminou o Save Heartbeat" );
     }
 }
