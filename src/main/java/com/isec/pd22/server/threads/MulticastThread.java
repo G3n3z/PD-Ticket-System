@@ -125,7 +125,7 @@ public class MulticastThread extends Thread{
 
                 try {
                     //TODO: implement with Hugo changes
-                    packet = new DatagramPacket(new byte[3000], 3000, InetAddress.getByName(""), 21);
+                    packet = new DatagramPacket(new byte[3000], 3000, InetAddress.getByName(""), prepare.getConfirmationUDPPort());
                     objectStream.writeObject(packet, prepare);
                     multicastSocket.send(packet);
                 } catch (IOException e) {
