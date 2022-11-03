@@ -42,8 +42,14 @@ public class StartServices extends Thread {
     public void run() {
         DatagramPacket packet = null;
         MulticastMSG msg = null;
-        dbVersionManager = new DBVersionManager(connection);
+
         try {
+            try {
+                connection = DriverManager.getConnection(internalInfo.getUrl_db());
+            }catch (SQLException e){
+                System.out.println("Base de dados nao existente");
+            }
+            dbVersionManager = new DBVersionManager(connection);
             packet = new DatagramPacket(new byte[6000], 6000);
             System.out.println("Aqui" + new Date());
             socket.setSoTimeout(5000);
@@ -75,7 +81,6 @@ public class StartServices extends Thread {
 
             synchronized (internalInfo){
                 internalInfo.setFinish(true);
-
             }
             return;
         }
@@ -121,7 +126,6 @@ public class StartServices extends Thread {
             msg = os.readObject(packet, MulticastMSG.class);
             connection = getConnectionDatabaseByUrl(internalInfo.getUrl_db());
             if(msg.getTypeMsg() != TypeOfMulticastMsg.HEARTBEAT){
-
                 continue;
             }
 
@@ -172,7 +176,7 @@ public class StartServices extends Thread {
             timer.purge();
         }
 
-        System.out.println("A sair da thread");
+        System.out.println("A sair da thread Start Services");
     }
 
     /**
@@ -186,7 +190,7 @@ public class StartServices extends Thread {
 
     private void updateDB(HeartBeat server) throws IOException, ClassNotFoundException, SQLException {
 
-        DBVersionManager dbVersionManager = new DBVersionManager(connection);
+        //DBVersionManager dbVersionManager = new DBVersionManager(connection);
 
         DatagramPacket datagramPacket = heartBeatsPackage.get(server);
 
@@ -221,7 +225,6 @@ public class StartServices extends Thread {
     private void startFirstServer() throws SQLException {
 
         if(!haveConnectionDatabase(internalInfo.getUrl_db())){
-
             createDatabaseV1();
         }
     }
@@ -261,7 +264,8 @@ public class StartServices extends Thread {
             throw new ServerException("Erro na conexao a db depois de ser criada a copia");
         }
 
-        new DBVersionManager(connection).createTableVersions();
+        dbVersionManager = new DBVersionManager(connection);
+        dbVersionManager.createTableVersions();
 
         internalInfo.setNumDB(1);
 
@@ -292,11 +296,11 @@ public class StartServices extends Thread {
     }
 
     private boolean haveConnectionDatabase(String url) throws SQLException {
-        connection = getConnectionDatabaseByUrl(url);
+        //connection = getConnectionDatabaseByUrl(url);
         boolean haveConnection = connection != null;
 
         if (haveConnection) {
-            dbVersionManager.setConnection(connection);
+            //dbVersionManager.setConnection(connection);
             dbVersionManager.checkIfHaveTableVersion();
 
             internalInfo.setNumDB(dbVersionManager.getLastVersion());
