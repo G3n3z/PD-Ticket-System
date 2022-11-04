@@ -1,75 +1,64 @@
-package services.NetworkService;
+package com.isec.pd22.client.threads;
 
-import enums.ENetworkMessageType;
-import models.ConnectionModel;
-import models.MessageModel;
+import com.isec.pd22.client.models.ConnectionModel;
+import com.isec.pd22.enums.ClientsPayloadType;
+import com.isec.pd22.payload.ClientMSG;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
-import java.net.Socket;
-import java.util.function.BiFunction;
+import java.io.ObjectOutputStream;
+import java.util.function.BiConsumer;
 
-public class NetworkServiceClientTcp extends NetworkService<Socket, MessageModel>{
-    private final ConnectionModel serverConnection;
+public class ServerConnectionThread extends Thread {
+    private ConnectionModel connection;
+    private final BiConsumer<ClientMSG, ServerConnectionThread> onMessageProcessed;
 
-    public NetworkServiceClientTcp(
-            String hostname,
-            int port,
-            BiFunction<MessageModel, NetworkService<Socket, MessageModel>, MessageModel> onMessageProcessed
-    ) throws IOException {
-        super(new Socket(hostname, port), onMessageProcessed);
-
-        serverConnection = new ConnectionModel(socket);
-
-        initThreads();
-    }
-
-    public void sendMessage(MessageModel message) throws IOException {
-        super.sendMessage(message, serverConnection.getObjOutputStream());
+    public ServerConnectionThread(
+            ConnectionModel connection,
+            BiConsumer<ClientMSG, ServerConnectionThread> onMessageProcessed
+    ) {
+        this.connection = connection;
+        this.onMessageProcessed = onMessageProcessed;
     }
 
     @Override
-    protected MessageModel waitMessage() throws IOException, ClassNotFoundException {
-        ObjectInputStream inputStream = serverConnection.getObjInputStream();
-
-        return (MessageModel) inputStream.readObject();
+    public void run() {
+        messagesReaderRoutine();
     }
 
-    @Override
-    protected MessageModel waitMessage(ConnectionModel connection) {
-        return null;
-    }
-
-    @Override
-    protected void messagesReaderRoutine() {
-        while (true) {
-            try {
-                MessageModel messageReceived = waitMessage();
-
-                MessageModel messageToSend = this.onMessageProcessed.apply(messageReceived, this);
-
-                if (messageToSend != null) {
-                    sendMessage(messageToSend);
-                }
-            }
-            catch (IOException e) {
-                onMessageProcessed.apply(new MessageModel(ENetworkMessageType.CONNECTION_LOST), this);
-                return;
-            }
-            catch (ClassNotFoundException e) {
-                throw new RuntimeException(e);
-            }
+    public void setConnection(ConnectionModel connection) {
+        synchronized (this) {
+            this.connection = connection;
         }
     }
 
-    @Override
-    protected void messagesReaderRoutine(ConnectionModel connection) { }
+    public void sendMessage(ClientMSG message) throws IOException {
+        ObjectOutputStream outputStream = connection.getObjOutputStream();
 
-    @Override
-    protected void waitConnection() {
+        if (outputStream == null) { return; }
+
+        outputStream.writeObject(message);
     }
 
-    private void initThreads() {
-        new Thread(this::messagesReaderRoutine).start();
+    private ClientMSG waitMessage() throws IOException, ClassNotFoundException {
+        ObjectInputStream inputStream = connection.getObjInputStream();
+
+        return (ClientMSG) inputStream.readObject();
+    }
+
+    private void messagesReaderRoutine() {
+        while (true) {
+            try {
+                ClientMSG messageReceived = waitMessage();
+
+                onMessageProcessed.accept(messageReceived, this);
+            }
+            catch (IOException e) {
+                onMessageProcessed.accept(new ClientMSG(ClientsPayloadType.CONNECTION_LOST), this);
+            }
+            catch (ClassNotFoundException e) {
+                System.out.println("[ERRO] - o tipo do objeto enviado deve ser ClientMSG");
+            }
+        }
     }
 }

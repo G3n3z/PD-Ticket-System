@@ -1,7 +1,7 @@
 package com.isec.pd22.server.threads;
 
 import com.isec.pd22.enums.ClientsPayloadType;
-import com.isec.pd22.payload.ClientConnectionPayload;
+import com.isec.pd22.payload.ServersRequestPayload;
 import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.PackageModel;
 import com.isec.pd22.utils.UdpUtils;
@@ -11,13 +11,13 @@ import java.net.*;
 import java.util.LinkedList;
 import java.util.concurrent.Semaphore;
 
-public class ClientsConnectionThread extends Thread{
+public class ServersRequestThread extends Thread{
     private final LinkedList<PackageModel> messagesQueue = new LinkedList<>();
     private final Semaphore semaphoreQueue = new Semaphore(0);
     private final DatagramSocket socket;
     private final InternalInfo internalInfo;
 
-    public ClientsConnectionThread(DatagramSocket socket, InternalInfo internalInfo) {
+    public ServersRequestThread(DatagramSocket socket, InternalInfo internalInfo) {
         this.socket = socket;
         this.internalInfo = internalInfo;
 
@@ -40,11 +40,11 @@ public class ClientsConnectionThread extends Thread{
 
     private PackageModel waitMessage() throws IOException, ClassNotFoundException {
         DatagramPacket datagramPacketReceive = new DatagramPacket(
-                new byte[ClientConnectionPayload.MAX_PAYLOAD_BYTES],
-                ClientConnectionPayload.MAX_PAYLOAD_BYTES
+                new byte[ServersRequestPayload.MAX_PAYLOAD_BYTES],
+                ServersRequestPayload.MAX_PAYLOAD_BYTES
         );
 
-        ClientConnectionPayload payloadReceived = UdpUtils.receiveObject(socket, datagramPacketReceive);
+        ServersRequestPayload payloadReceived = UdpUtils.receiveObject(socket, datagramPacketReceive);
 
         return new PackageModel(payloadReceived, datagramPacketReceive);
     }
@@ -84,7 +84,7 @@ public class ClientsConnectionThread extends Thread{
     }
 
     private void onMessageProcessed(PackageModel packedMessage) {
-        ClientConnectionPayload payload = new ClientConnectionPayload(internalInfo.getHeatBeats(), ClientsPayloadType.REQUEST_SERVERS_SUCCESS);
+        ServersRequestPayload payload = new ServersRequestPayload(internalInfo.getHeatBeats(), ClientsPayloadType.REQUEST_SERVERS_SUCCESS);
 
         sendMessage(new PackageModel(payload, packedMessage.getPacket()));
     }

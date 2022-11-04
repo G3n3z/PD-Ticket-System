@@ -8,19 +8,19 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class ClientConnectionPayload implements Serializable {
+public class ServersRequestPayload implements Serializable {
     public static final int MAX_PAYLOAD_BYTES = 10000;
 
     private List<HeartBeat> serversListCollection = null;
 
     private final ClientsPayloadType clientsPayloadType;
 
-    public ClientConnectionPayload(Set<HeartBeat> serversList, ClientsPayloadType clientsPayloadType) {
+    public ServersRequestPayload(Set<HeartBeat> serversList, ClientsPayloadType clientsPayloadType) {
         this.clientsPayloadType = clientsPayloadType;
         this.serversListCollection = serversList.stream().filter(heartBeat -> heartBeat.statusServer != Status.UNAVAILABLE).collect(Collectors.<HeartBeat>toList());
     }
 
-    public ClientConnectionPayload(ClientsPayloadType clientsPayloadType) {
+    public ServersRequestPayload(ClientsPayloadType clientsPayloadType) {
         this.clientsPayloadType = clientsPayloadType;
     }
 

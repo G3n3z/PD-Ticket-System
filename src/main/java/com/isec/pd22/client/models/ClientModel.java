@@ -1,5 +1,6 @@
 package com.isec.pd22.client.models;
 
+import com.isec.pd22.client.threads.ServerConnectionThread;
 import com.isec.pd22.payload.HeartBeat;
 
 import java.net.Socket;
@@ -9,10 +10,9 @@ public class ClientModel {
 
     private int udpServerPort;
     private String udpServerIp;
-
     private List<HeartBeat> serversList;
-
-    private Socket tcpServerSocket;
+    private ConnectionModel tcpServerConnection;
+    private ServerConnectionThread serverConnectionThread;
 
     public ClientModel(String[] args) throws RuntimeException {
         if (args.length != 2) {
@@ -29,19 +29,29 @@ public class ClientModel {
         return udpServerPort;
     }
 
-    public void setUdpServerPort(int udpServerPort) {
-        this.udpServerPort = udpServerPort;
-    }
-
     public String getUdpServerIp() {
         return udpServerIp;
-    }
-
-    public void setUdpServerIp(String udpServerIp) {
-        this.udpServerIp = udpServerIp;
     }
 
     public List<HeartBeat> getServersList() { return serversList; }
 
     public void setServersList(List<HeartBeat> serversList) { this.serversList = serversList; }
+
+    public ConnectionModel getTcpServerConnection() {
+        return tcpServerConnection;
+    }
+
+    public void setTcpServerConnection(ConnectionModel tcpServerConnection) {
+        synchronized (this) {
+            this.tcpServerConnection = tcpServerConnection;
+        }
+    }
+
+    public ServerConnectionThread getServerConnectionThread() {
+        return serverConnectionThread;
+    }
+
+    public void setServerConnectionThread(ServerConnectionThread serverConnectionThread) {
+        this.serverConnectionThread = serverConnectionThread;
+    }
 }
