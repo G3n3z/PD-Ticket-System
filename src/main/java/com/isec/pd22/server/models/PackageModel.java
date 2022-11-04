@@ -1,20 +1,20 @@
 package com.isec.pd22.server.models;
 
-import com.isec.pd22.payload.ClientConnectionPayload;
+import com.isec.pd22.payload.ServersRequestPayload;
 
 import java.net.DatagramPacket;
 
 public class PackageModel {
-    private final ClientConnectionPayload payload;
+    private final ServersRequestPayload payload;
 
     private final DatagramPacket packet;
 
-    public PackageModel(ClientConnectionPayload payload, DatagramPacket receivedPacket) {
+    public PackageModel(ServersRequestPayload payload, DatagramPacket receivedPacket) {
         this.payload = payload;
         this.packet = receivedPacket;
     }
 
-    public ClientConnectionPayload getPayload() {
+    public ServersRequestPayload getPayload() {
         return payload;
     }
 

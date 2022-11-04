@@ -1,5 +1,6 @@
 package com.isec.pd22.payload;
 
+import com.isec.pd22.enums.ClientsPayloadType;
 import com.isec.pd22.server.models.ServerHeartBeat;
 
 import java.util.HashSet;
@@ -9,11 +10,17 @@ public class ClientMSG {
     private String command; //string de onde virá a query do cliente e onde seguirá a resposta do servidor
     private Set<HeartBeat> serverList;
 
+    private ClientsPayloadType clientsPayloadType;
+
     public ClientMSG() {}
 
     public ClientMSG(String command) {
         this.command = command;
         this.serverList = new HashSet<>();
+    }
+
+    public ClientMSG(ClientsPayloadType clientsPayloadType) {
+        this.clientsPayloadType = clientsPayloadType;
     }
 
     public String getCommand() {
@@ -31,4 +38,9 @@ public class ClientMSG {
     public void setServerList(Set<HeartBeat> serverList) {
         this.serverList = serverList;
     }
+
+    public ClientsPayloadType getClientsPayloadType() {
+        return clientsPayloadType;
+    }
+
 }
