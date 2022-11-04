@@ -2,7 +2,6 @@ package com.isec.pd22.utils;
 
 import com.isec.pd22.enums.Authenticated;
 import com.isec.pd22.enums.Payment;
-import com.isec.pd22.enums.Role;
 import com.isec.pd22.payload.ClientMSG;
 import com.isec.pd22.server.models.*;
 
@@ -24,17 +23,23 @@ public class DBCommunicationManager {
         this.connection = DriverManager.getConnection(internalInfo.getUrl_db());
     }
 
-    public void executeRegisterUser(Query query) throws SQLException {
+    public void executeUserQuery(Query query) throws SQLException {
         Statement statement = connection.createStatement();
         statement.executeUpdate(query.getQuery());
         statement.close();
     }
 
-    public void loginUser(ClientMSG msgClient) throws SQLException {
-        Statement stm = connection.createStatement();
-        String query = "SELECT * FROM utilizador WHERE nome like '%" +
-                msgClient.getUsername() + "%' AND password like " + msgClient.getPassword();
-        ResultSet result = stm.executeQuery(query);
+    public boolean checkUserLogin(String username, String password) throws SQLException {
+        String query = "SELECT * from utilizador where username = ? and password = ?";
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(query);
+            preparedStatement.setString(1, username);
+            preparedStatement.setString(2, password);
+            ResultSet res = preparedStatement.executeQuery();
+            return res.next();
+        } catch (SQLException e) {
+            return false;
+        }
     }
 
     public void close() {
@@ -42,18 +47,14 @@ public class DBCommunicationManager {
             if(connection != null)
                 connection.close();
         } catch (SQLException ignored) {
-
         }
-
     }
 
-    public Query getRegisterUserQuery(ClientMSG msgClient) {
+    public Query getRegisterUserQuery(String username, String name, String password) {
         Query q;
-        String query = "INSERT INTO utilizador VALUES (NULL, " + msgClient.getUsername() + "," + msgClient.getNome() + "," + msgClient.getPassword() +", NULL, NULL)";
-        Date time = new Date();
-        long unixTime = time.getTime()/1000;
+        String query = "INSERT INTO utilizador VALUES (NULL, " + username + "," + name + "," + password +", NULL, NULL)";
         synchronized (internalInfo) {
-            q = new Query(internalInfo.getNumDB(), query, unixTime);
+            q = new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
         }
         return q;
     }
@@ -66,21 +67,21 @@ public class DBCommunicationManager {
             preparedStatement.setString(1, nome);
             preparedStatement.setString(2, userName);
             ResultSet res = preparedStatement.executeQuery();
-            return res.next();
+            return !res.next();
         } catch (SQLException e) {
-            return false;
+            return true;
         }
     }
 
 
-    public boolean canRegistUser(String nome, String userName){
+    public boolean canEditUser(String nome, String userName){
         String query = "SELECT * from utilizador where nome = ? and username = ?";
         try {
             PreparedStatement preparedStatement = connection.prepareStatement(query);
             preparedStatement.setString(1, nome);
             preparedStatement.setString(2, userName);
             ResultSet res = preparedStatement.executeQuery();
-            return !res.next();
+            return res.next();
         } catch (SQLException e) {
             return false;
         }
@@ -99,9 +100,9 @@ public class DBCommunicationManager {
         }
     }
 
-    public Query authenticate(String userName){
+    public Query setAuthenticate(String userName, Authenticated authenticated){
         String sql =   "update utilizador " +
-                       "set autenticado = " + Authenticated.AUTHENTICATED + " " +
+                       "set autenticado = " + authenticated + " " +
                        "where username = " + userName;
 
         return new Query( internalInfo.getNumDB()+1,sql, new Date().getTime());
@@ -114,6 +115,7 @@ public class DBCommunicationManager {
         return new Query(internalInfo.getNumDB()+1,sql, new Date().getTime());
     }
 
+    //Será consultaReservasByUser?
     public List<Reserva> consultasReservadasByUser(int idUser, Payment payment){
         List<Reserva> consultas = new ArrayList<>();
         String query = "SELECT * from reserva where id_utilizador = " + idUser;
@@ -134,6 +136,7 @@ public class DBCommunicationManager {
 
     }
 
+    //Será consultaReservasByAdmin?
     public List<Reserva> consultasReservadasAguardamPagamentoByUser(Payment payment){
         List<Reserva> consultas = new ArrayList<>();
         String query = "SELECT * from reserva";

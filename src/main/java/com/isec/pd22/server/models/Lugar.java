@@ -1,11 +1,12 @@
 package com.isec.pd22.server.models;
 
+import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class Lugar {
+public class Lugar implements Serializable {
 
-    int id;
+    int idLugar;
     String fila;
     String assento;
     double preco;
@@ -14,7 +15,7 @@ public class Lugar {
     public static Lugar mapToEntity(ResultSet res) {
         Lugar lugar = new Lugar();
         try {
-            lugar.setId(res.getInt("id"));
+            lugar.setIdLugar(res.getInt("id"));
             lugar.setFila(res.getString("fila"));
             lugar.setAssento(res.getString("assento"));
             lugar.setPreco(res.getDouble("preco"));
@@ -26,12 +27,12 @@ public class Lugar {
     }
 
 
-    public int getId() {
-        return id;
+    public int getIdLugar() {
+        return idLugar;
     }
 
-    public void setId(int id) {
-        this.id = id;
+    public void setIdLugar(int idLugar) {
+        this.idLugar = idLugar;
     }
 
     public String getFila() {

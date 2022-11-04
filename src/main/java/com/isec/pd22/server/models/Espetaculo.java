@@ -2,20 +2,20 @@ package com.isec.pd22.server.models;
 
 import com.isec.pd22.utils.Constants;
 
+import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
-public class Espetaculo {
+public class Espetaculo implements Serializable {
 
-    int id;
+    int idEspetaculo;
     String descricao;
     String tipo;
-    Date data_hota;
+    Date data_hora;
     int duracao;
     String local;
     String localidade;
@@ -31,10 +31,10 @@ public class Espetaculo {
     public static Espetaculo mapToEntity(ResultSet res) throws SQLException {
         Espetaculo espetaculo = new Espetaculo();
         try {
-            espetaculo.id = res.getInt("id");
+            espetaculo.idEspetaculo = res.getInt("id");
             espetaculo.descricao = res.getString("descricao");
             espetaculo.tipo = res.getString("tipo");
-            espetaculo.data_hota = Constants.stringToDate(res.getString("data_hora"));
+            espetaculo.data_hora = Constants.stringToDate(res.getString("data_hora"));
             espetaculo.duracao = res.getInt("duracao");
             espetaculo.local = res.getString("local");
             espetaculo.pais = res.getString("pais");
@@ -48,12 +48,12 @@ public class Espetaculo {
         return espetaculo;
     }
 
-    public int getId() {
-        return id;
+    public int getIdEspetaculo() {
+        return idEspetaculo;
     }
 
-    public void setId(int id) {
-        this.id = id;
+    public void setIdEspetaculo(int idEspetaculo) {
+        this.idEspetaculo = idEspetaculo;
     }
 
     public String getDescricao() {
@@ -72,12 +72,12 @@ public class Espetaculo {
         this.tipo = tipo;
     }
 
-    public String getData_hota() {
-        return data_hota;
+    public Date getData_hora() {
+        return data_hora;
     }
 
-    public void setData_hota(String data_hota) {
-        this.data_hota = data_hota;
+    public void setData_hora(Date data_hora) {
+        this.data_hora = data_hora;
     }
 
     public int getDuracao() {

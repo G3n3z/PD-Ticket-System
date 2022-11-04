@@ -1,13 +1,10 @@
 package com.isec.pd22.server.threads;
 
-import com.isec.pd22.enums.Status;
-import com.isec.pd22.enums.TypeOfMulticastMsg;
-import com.isec.pd22.payload.Abort;
-import com.isec.pd22.payload.ClientMSG;
-import com.isec.pd22.payload.Commit;
-import com.isec.pd22.payload.Prepare;
+import com.isec.pd22.enums.*;
+import com.isec.pd22.payload.*;
 import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.Query;
+import com.isec.pd22.server.models.Reserva;
 import com.isec.pd22.utils.Constants;
 import com.isec.pd22.utils.DBCommunicationManager;
 import com.isec.pd22.utils.ObjectStream;
@@ -18,13 +15,15 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.*;
 import java.sql.SQLException;
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 public class AttendClientThread extends Thread{
     private Socket clientSocket;
     private InternalInfo internalInfo;
     private DBCommunicationManager dbComm;
+    private Role role;
 
     public AttendClientThread(Socket clientSocket, InternalInfo internalInfo) {
         this.clientSocket = clientSocket;
@@ -78,39 +77,98 @@ public class AttendClientThread extends Thread{
 
     private void handleClientRequest(ClientMSG msgClient, ObjectOutputStream oos){
         try {
-            //TODO verificação de autenticado
             dbComm = new DBCommunicationManager(msgClient, internalInfo);
             ClientMSG ansMsg = new ClientMSG();
-            switch (msgClient.getAction()) {
-                case REGISTER_USER -> {
-                    //TODO verificação se pode ser feito
-                    Query query = dbComm.getRegisterUserQuery(msgClient);
-                    if(startUpdateRoutine(query, internalInfo)) {
-                        dbComm.executeRegisterUser(query);
+            if(dbComm.isLogged(msgClient.getUser().getUsername())){
+                switch (msgClient.getAction()) {
+                    case EDIT_USER -> {
+                        if(dbComm.canEditUser(msgClient.getUser().getNome(), msgClient.getUser().getUsername())){
+                            Query query = dbComm.editUtilizador(
+                                    msgClient.getUser().getUsername(),
+                                    msgClient.getUser().getNome(),
+                                    msgClient.getUser().getPassword()
+                            );
+                            if (startUpdateRoutine(query, internalInfo)) {
+                                dbComm.executeUserQuery(query);
+                            } else {
+                                //TODO enviar mensagem a cliente: impossel realizar transação, tente mais tarde
+                            }
+                        }
+                    }
+                    case CONSULT_UNPAYED_RESERVATION -> {
+                        List<Reserva> unpayedReservations; //TODO Lista para colocar na estrutura de comunicação
+                        if(role == Role.ADMIN) {
+                            unpayedReservations = dbComm.consultasReservadasAguardamPagamentoByUser(Payment.NOT_PAYED);
+                        }
+                        unpayedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(),Payment.NOT_PAYED);
+                    }
+                    case CONSULT_PAYED_RESERVATION -> {
+                        List<Reserva> unpayedReservations; //Lista para colocar na estrutura de comunicação
+                        if(role == Role.ADMIN) {
+                            unpayedReservations = dbComm.consultasReservadasAguardamPagamentoByUser(Payment.PAYED);
+                        }
+                        unpayedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(),Payment.PAYED);
+                    }
+                    case CONSULT_SPECTACLE -> {
+
+                    }
+                    case CHOOSE_SPECTACLE -> {
+                    }
+                    case SUBMIT_RESERVATION -> {
+                        //Verificação
+                    }
+                    case CANCEL_RESERVATION -> {
+                        //Verificação id reserva
+                        int idReserva=0; //TODO colocar reserva na estrutura de comunicação
+                        Query query = dbComm.deleteReservaNotPayed(idReserva);
+                    }
+                    case ADD_SPECTACLE -> {
+                        if(role == Role.ADMIN){
+
+                        }
+                    }
+                    case DELETE_SPECTACLE -> {}
+                    case LOGOUT -> {
+                        Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(),Authenticated.NOT_AUTHENTICATED);
+                        if (startUpdateRoutine(query, internalInfo)) {
+                            dbComm.executeUserQuery(query);
+                        } else {
+                            //TODO enviar mensagem a cliente: impossel realizar transação, tente mais tarde
+                        }
                     }
                 }
-                case LOGIN -> { dbComm.loginUser(msgClient); }
-                case EDIT_USER -> {
+            }else {
+                switch (msgClient.getAction()) {
+                    case REGISTER_USER -> {
+                        if (dbComm.existsUserByUsernameOrName(msgClient.getUser().getNome(), msgClient.getUser().getUsername())) {
+                            Query query = dbComm.getRegisterUserQuery(
+                                    msgClient.getUser().getUsername(),
+                                    msgClient.getUser().getNome(),
+                                    msgClient.getUser().getPassword()
+                            );
+                            if (startUpdateRoutine(query, internalInfo)) {
+                                dbComm.executeUserQuery(query);
+                            } else {
+                                //TODO enviar mensagem a cliente: impossel realizar transação, tente mais tarde
+                            }
+                        } else {
+                            //TODO enviar mensagem a cliente: user already exists
+                        }
+                    }
+                    case LOGIN -> {
+                        if(dbComm.checkUserLogin(msgClient.getUser().getUsername(), msgClient.getUser().getPassword()))
+                        {
+                            Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.AUTHENTICATED);
+                            if (startUpdateRoutine(query, internalInfo)) {
+                                dbComm.executeUserQuery(query);
+                            } else {
+                                //TODO enviar mensagem a cliente: impossel realizar transação, tente mais tarde
+                            }
+                        }else {
+                            //TODO enviar mensagem a cliente: invalid username or password
+                        }
+                    }
                 }
-                case CONSULT_RESERVATION -> {
-                }
-                case CONSULT_SPECTACLE -> {
-                }
-                case CHOOSE_SPECTACLE -> {
-                }
-                case VIEW_SEATS -> {
-                }
-                case SUBMIT_RESERVATION -> {
-                }
-                case CANCEL_RESERVATION -> {
-                }
-                case ADD_SPECTACLE -> {
-                }
-                case LOGOUT -> {
-                }
-                case SHUTDOWN -> {
-                }
-
             }
             dbComm.close();
         } catch (SQLException e) {
@@ -131,7 +189,7 @@ public class AttendClientThread extends Thread{
     private boolean startUpdateRoutine(Query query, InternalInfo internalInfo) {
         boolean repeat = true;
         int confirmationCounter = 1;
-        List<Prepare> confirmationList = new ArrayList<>();
+        Set<Prepare> confirmationList = new HashSet<>();
         //Mudar estado para UPDATE
         synchronized (internalInfo){
             internalInfo.setStatus(Status.UPDATING);
@@ -144,7 +202,8 @@ public class AttendClientThread extends Thread{
             Prepare prepareMsg = new Prepare(
                     TypeOfMulticastMsg.PREPARE,
                     query,
-                    query.getNumVersion() + 1,
+                    query.getNumVersion(),
+                    internalInfo.getIp(),
                     confirmationSocket.getLocalPort()
             );
             byte[] bytes = new byte[10000];
@@ -223,14 +282,27 @@ public class AttendClientThread extends Thread{
         internalInfo.getMulticastSocket().send(dp);
     }
 
-    private boolean verifyConfirmations(List<Prepare> confirmationList) {
-        return true;
+    private boolean verifyConfirmations(Set<Prepare> confirmationList) {
+        if(confirmationList.size() == internalInfo.getHeatBeats().size()) {
+            int count = 0;
+            for (Prepare p : confirmationList) {
+                for (HeartBeat hb : internalInfo.getHeatBeats())
+                    if (p.getIp().equals(hb.getIp()) && p.getPortUdpClients() == hb.getPortUdp()) {
+                        count++;
+                        break;
+                    }
+            }
+            if (count == internalInfo.getHeatBeats().size())
+                return true;
+        }
+        return false;
     }
 
     private void closeClient() {
         try {
             ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream());
             ClientMSG ansMsg = new ClientMSG();
+            //TODO remover o proprio heartbeat
             ansMsg.setServerList(internalInfo.getHeatBeats());
             oos.writeObject(ansMsg);
         } catch (IOException e) {
