@@ -20,5 +20,8 @@ public class Constants {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd hh:mm:ss");
         return dateFormat.parse(date);
     }
-
+    public static String dateToString(Date date) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd hh:mm:ss");
+        return dateFormat.format(date);
+    }
 }

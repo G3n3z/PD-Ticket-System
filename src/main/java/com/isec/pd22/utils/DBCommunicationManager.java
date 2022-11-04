@@ -4,9 +4,7 @@ import com.isec.pd22.enums.Authenticated;
 import com.isec.pd22.enums.Payment;
 import com.isec.pd22.enums.Role;
 import com.isec.pd22.payload.ClientMSG;
-import com.isec.pd22.server.models.InternalInfo;
-import com.isec.pd22.server.models.Query;
-import com.isec.pd22.server.models.Reserva;
+import com.isec.pd22.server.models.*;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -155,6 +153,79 @@ public class DBCommunicationManager {
         return consultas;
     }
 
-    
+    public Espetaculo getEspetaculoLess24HoursById(int id){
+        //TODO check this
+        String query = "Select * from espetaculo, lugar where espetaculo.id = ? and lugar.espetaculo_id = ? and espetaculo.data_hora >= datetime('now','-24 hours')";
+        Espetaculo espetaculo = null;
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(query);
+            preparedStatement.setInt(1, id);
+            preparedStatement.setInt(2, id);
+            ResultSet res = preparedStatement.executeQuery();
+            espetaculo = new Espetaculo();
+            int i = 0;
+            while (res.next()){
+                if(i == 0){
+                    espetaculo = Espetaculo.mapToEntity(res);
+                    i++;
+                }
+                Lugar lugar = Lugar.mapToEntity(res);
+                if(lugar!= null){
+                    espetaculo.getLugares().add(lugar);
+                }
+            }
+        } catch (SQLException e) {
+            return null;
+        }
+        return espetaculo;
+    }
+    public List<Espetaculo> getEspetaculosLess24Hours(){
+        String query = "Select * from espetaculo, lugar where espetaculo.data_hora >= datetime('now','-24 hours')";
+        List<Espetaculo> espetaculos = new ArrayList<>();
+        try {
+            Statement statement = connection.createStatement();
+            ResultSet res = statement.executeQuery(query);
+            Espetaculo espetaculo = new Espetaculo();
+            while (res.next()){
+                espetaculo = Espetaculo.mapToEntity(res);
+                espetaculos.add(espetaculo);
+            }
 
+        } catch (SQLException e) {
+            return null;
+        }
+        return espetaculos;
+    }
+
+    public boolean haveReservaByIdUserAndIDEspetaculoNotPayed(int idUser, int idEspetaculo){
+        String query = "SELECT * from  reserva where reserva.id_utilizador =  ? and reserva.id_espetaculo = ? " +
+                "and reserva.pago = ?";
+        try {
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, idUser);
+            statement.setInt(2, idEspetaculo);
+            statement.setInt(3, Payment.NOT_PAYED.ordinal());
+            ResultSet res = statement.executeQuery();
+            if(res.next()){
+                return true;
+            }
+
+        } catch (SQLException e) {
+            return false;
+        }
+        return false;
+    }
+
+    public Query deleteReservaNotPayed(int idReserva){
+        String query = "delete from reserva_lugar where reserva_lugar.id_reserva = ?; delete from reserva where id = ? and pago = ?; ";
+
+        return new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
+    }
+
+    public Query submissionOfReserva(List<Integer> idsLugar, int idUser, int idEspetaculo){
+        String query = "insert into reserva values(null, " + Constants.dateToString(new Date()) + ", " + Payment.NOT_PAYED.ordinal()
+                + ", " + idUser + ", " + idEspetaculo;
+
+        return new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
+    }
 }
