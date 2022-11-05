@@ -10,7 +10,7 @@ public class Query implements Serializable {
     public Query() {
     }
 
-    public Query(int numVersion, String query, int timestamp) {
+    public Query(int numVersion, String query, long timestamp) {
         this.numVersion = numVersion;
         this.query = query;
         this.timestamp = timestamp;

@@ -1,7 +1,8 @@
 package com.isec.pd22.server.threads;
 
+import com.isec.pd22.enums.TypeOfMulticastMsg;
+import com.isec.pd22.payload.HeartBeat;
 import com.isec.pd22.server.models.InternalInfo;
-import com.isec.pd22.server.models.ServerHeartBeat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -39,25 +40,22 @@ public class ServerSocketThread extends Thread
             //flag para sair do ciclo de atender clientes break;
             if(internalInfo.isFinish())
                 break;
-
             try {
                 serverSocket.setSoTimeout(5000);
-                //cria socket cliente para receber o cliente aceite pelo serversocket
                 Socket clientSocket = serverSocket.accept();
 
-                //adicionar socket criado à lista de sockets atendidos
                 internalInfo.getAllClientSockets().add(clientSocket);
 
-                //lançar thread de atendendimento de clientes
                 AttendClientThread clientThread = new AttendClientThread(clientSocket, internalInfo);
                 clientThread.start();
 
-                internalInfo.incrementNumClients();
+                synchronized (internalInfo) {
+                    internalInfo.incrementNumClients();
+                }
 
                 allClientThreads.add(clientThread);
 
                 sendHeartbeat();
-
 
             }catch (SocketTimeoutException e){
                 continue;
@@ -83,23 +81,34 @@ public class ServerSocketThread extends Thread
             }catch (InterruptedException e){
 
             }
-            internalInfo.decrementNumClients();
+            synchronized (internalInfo) {
+                internalInfo.decrementNumClients();
+            }
         }
     }
 
-    private void sendHeartbeat() throws IOException {
-        //internalinfo.multicast
-
+    private void sendHeartbeat(){
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        ObjectOutputStream oos = new ObjectOutputStream(baos);
-
-        ServerHeartBeat heartBeat = null; //TODO: criar mensagem de heartbeat com informação atualizada para enviar
-
-        oos.writeObject(heartBeat);
-
-        DatagramPacket dp = new DatagramPacket(baos.toByteArray(), baos.size(), InetAddress.getByName(MULTICAST_IP), MULTICAST_PORT);
-
-        //internalinfo.multicast.send(dp)
+        try {
+            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            HeartBeat heartBeat;
+            synchronized (internalInfo) {
+                heartBeat = new HeartBeat(
+                        TypeOfMulticastMsg.HEARTBEAT,
+                        internalInfo.getIp(),
+                        internalInfo.getPortTcp(),
+                        internalInfo.getNumClients(),
+                        internalInfo.getStatus(),
+                        internalInfo.getNumDB(),
+                        internalInfo.getPortUdp()
+                );
+            }
+            oos.writeObject(heartBeat);
+            DatagramPacket dp = new DatagramPacket(baos.toByteArray(), baos.size(), InetAddress.getByName(MULTICAST_IP), MULTICAST_PORT);
+            internalInfo.getMulticastSocket().send(dp);
+        } catch (IOException e){
+            System.out.println("[ServerSocketThread] - error on sending heartbeat");
+        }
     }
 
 }

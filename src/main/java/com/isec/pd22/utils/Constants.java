@@ -1,5 +1,9 @@
 package com.isec.pd22.utils;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Date;
+
 public class Constants {
 
     public static final String INITIAL_DB_BASE_URL= "src/main/resources/databases/BaseDB/PD-2022-23-TP.db";
@@ -10,4 +14,14 @@ public class Constants {
 
     public static final String NAME_DEFAULT_DB = "PD-2022-23-TP.db";
 
+
+
+    public static Date stringToDate(String date) throws ParseException {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd hh:mm:ss");
+        return dateFormat.parse(date);
+    }
+    public static String dateToString(Date date) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd hh:mm:ss");
+        return dateFormat.format(date);
+    }
 }
