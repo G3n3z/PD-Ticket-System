@@ -2,14 +2,10 @@ package com.isec.pd22.client.ui;
 
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.ui.utils.AlertSingleton;
-import com.isec.pd22.client.ui.utils.RegisterView;
-import com.isec.pd22.enums.StatusClient;
 import javafx.application.Platform;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
-
-import java.util.List;
 
 public class RootPane extends BorderPane {
     ModelManager modelManager;

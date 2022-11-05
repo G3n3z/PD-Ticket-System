@@ -2,6 +2,8 @@ package com.isec.pd22.server.threads;
 
 import com.isec.pd22.enums.*;
 import com.isec.pd22.payload.*;
+import com.isec.pd22.payload.tcp.ClientMSG;
+import com.isec.pd22.payload.tcp.Request.Register;
 import com.isec.pd22.server.models.Espetaculo;
 import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.Query;
@@ -16,6 +18,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.*;
 import java.sql.SQLException;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -80,10 +83,34 @@ public class AttendClientThread extends Thread{
         try {
             dbComm = new DBCommunicationManager(msgClient, internalInfo);
             ClientMSG ansMsg = new ClientMSG();
-            if(dbComm.isLogged(msgClient.getUser().getUsername())){
+
+            switch (msgClient.getAction()){
+                case REGISTER_USER -> {
+                    doRegister(msgClient, dbComm, oos);
+                }
+                case LOGIN -> {
+                    doLogin(msgClient, dbComm);
+
+                }
+                default -> actionsLogged(msgClient, oos, dbComm);
+            }
+
+        } catch (SQLException | IOException e) {
+            System.out.println("[AttendClientThread] - failed to initialize DB communication: "+ e.getMessage());
+        }
+
+        //TODO preencher mensagem de retorno com resultado da query e enviar a cliente
+
+    }
+
+
+
+    private void actionsLogged(ClientMSG msgClient, ObjectOutputStream oos, DBCommunicationManager dbComm) {
+        try {
+            if (dbComm.isLogged(msgClient.getUser().getUsername())) {
                 switch (msgClient.getAction()) {
                     case EDIT_USER -> {
-                        if(dbComm.canEditUser(msgClient.getUser().getNome(), msgClient.getUser().getUsername())){
+                        if (dbComm.canEditUser(msgClient.getUser().getNome(), msgClient.getUser().getUsername())) {
                             Query query = dbComm.editUtilizador(
                                     msgClient.getUser().getUsername(),
                                     msgClient.getUser().getNome(),
@@ -98,17 +125,17 @@ public class AttendClientThread extends Thread{
                     }
                     case CONSULT_UNPAYED_RESERVATION -> {
                         List<Reserva> unpayedReservations; //TODO Lista para colocar na estrutura de comunicação
-                        if(role == Role.ADMIN) {
+                        if (role == Role.ADMIN) {
                             unpayedReservations = dbComm.consultasReservadasAguardamPagamentoByUser(Payment.NOT_PAYED);
                         }
-                        unpayedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(),Payment.NOT_PAYED);
+                        unpayedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.NOT_PAYED);
                     }
                     case CONSULT_PAYED_RESERVATION -> {
                         List<Reserva> unpayedReservations; //Lista para colocar na estrutura de comunicação
-                        if(role == Role.ADMIN) {
+                        if (role == Role.ADMIN) {
                             unpayedReservations = dbComm.consultasReservadasAguardamPagamentoByUser(Payment.PAYED);
                         }
-                        unpayedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(),Payment.PAYED);
+                        unpayedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.PAYED);
                     }
                     case CONSULT_SPECTACLE -> {
 
@@ -130,13 +157,14 @@ public class AttendClientThread extends Thread{
                         }
                     }
                     case ADD_SPECTACLE -> {
-                        if(role == Role.ADMIN){
+                        if (role == Role.ADMIN) {
 
                         }
                     }
-                    case DELETE_SPECTACLE -> {}
+                    case DELETE_SPECTACLE -> {
+                    }
                     case LOGOUT -> {
-                        Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(),Authenticated.NOT_AUTHENTICATED);
+                        Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
                         if (startUpdateRoutine(query, internalInfo)) {
                             dbComm.executeUserQuery(query);
                         } else {
@@ -144,45 +172,19 @@ public class AttendClientThread extends Thread{
                         }
                     }
                 }
-            }else {
+            } else {
                 switch (msgClient.getAction()) {
                     case REGISTER_USER -> {
-                        if (dbComm.existsUserByUsernameOrName(msgClient.getUser().getNome(), msgClient.getUser().getUsername())) {
-                            Query query = dbComm.getRegisterUserQuery(
-                                    msgClient.getUser().getUsername(),
-                                    msgClient.getUser().getNome(),
-                                    msgClient.getUser().getPassword()
-                            );
-                            if (startUpdateRoutine(query, internalInfo)) {
-                                dbComm.executeUserQuery(query);
-                            } else {
-                                //TODO enviar mensagem a cliente: impossel realizar transação, tente mais tarde
-                            }
-                        } else {
-                            //TODO enviar mensagem a cliente: user already exists
-                        }
+
                     }
-                    case LOGIN -> {
-                        if(dbComm.checkUserLogin(msgClient.getUser().getUsername(), msgClient.getUser().getPassword()))
-                        {
-                            Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.AUTHENTICATED);
-                            if (startUpdateRoutine(query, internalInfo)) {
-                                dbComm.executeUserQuery(query);
-                            } else {
-                                //TODO enviar mensagem a cliente: impossel realizar transação, tente mais tarde
-                            }
-                        }else {
-                            //TODO enviar mensagem a cliente: invalid username or password
-                        }
-                    }
+
                 }
             }
             dbComm.close();
-        } catch (SQLException e) {
-            System.out.println("[AttendClientThread] - failed to initialize DB communication: "+ e.getMessage());
+        }catch (SQLException e){
+            System.out.println(Arrays.toString(e.getStackTrace()));
         }
 
-        //TODO preencher mensagem de retorno com resultado da query e enviar a cliente
 
     }
 
@@ -314,6 +316,37 @@ public class AttendClientThread extends Thread{
             oos.writeObject(ansMsg);
         } catch (IOException e) {
             System.out.println("[AttendClientThread] - failed to send server list" + e.getMessage());
+        }
+    }
+
+
+
+    private void doRegister(ClientMSG msgClient, DBCommunicationManager dbComm, ObjectOutputStream oos) throws SQLException, IOException {
+        Register r = (Register) msgClient;
+        if (dbComm.existsUserByUsernameOrName(r.getNome(), r.getUserName())) {
+            Query query = dbComm.getRegisterUserQuery(r.getUserName(), r.getNome(), r.getPassword());
+            if (startUpdateRoutine(query, internalInfo)) {
+                dbComm.executeUserQuery(query);
+            } else {
+                ClientMSG msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
+                oos.writeObject(msg);
+            }
+        } else {
+            ClientMSG msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
+            oos.writeObject(msg);
+        }
+    }
+
+    private void doLogin(ClientMSG msgClient, DBCommunicationManager dbComm) throws SQLException {
+        if (dbComm.checkUserLogin(msgClient.getUser().getUsername(), msgClient.getUser().getPassword())) {
+            Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.AUTHENTICATED);
+            if (startUpdateRoutine(query, internalInfo)) {
+                dbComm.executeUserQuery(query);
+            } else {
+                //TODO enviar mensagem a cliente: impossel realizar transação, tente mais tarde
+            }
+        } else {
+            //TODO enviar mensagem a cliente: invalid username or password
         }
     }
 

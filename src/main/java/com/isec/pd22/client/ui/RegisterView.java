@@ -1,8 +1,11 @@
-package com.isec.pd22.client.ui.utils;
+package com.isec.pd22.client.ui;
 
 import com.isec.pd22.client.models.ModelManager;
+import com.isec.pd22.client.ui.utils.AlertSingleton;
+import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.StatusClient;
-import com.isec.pd22.payload.ClientMSG;
+import com.isec.pd22.payload.tcp.Request.Register;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -73,12 +76,27 @@ public class RegisterView extends BorderPane {
             String email = tfEmail.getText();
             String password = tfPassword.getText();
             String name = tfName.getText();
-            modelManager.sendMessage(new ClientMSG());
+            Register register = new Register(ClientActions.REGISTER_USER, email, password, name);
+            modelManager.sendMessage(register);
         });
+        modelManager.addPropertyChangeListener(ModelManager.ACTION_COMPLETE, evt -> Platform.runLater(this::registerComplete));
+        modelManager.addPropertyChangeListener(ModelManager.ERROR_CONNECTION, evt -> Platform.runLater(this::badRequest));
 
+    }
+
+    private void badRequest() {
+        AlertSingleton.getInstanceWarning().setAlertText("Erro de Mensagem", "", "Não foi possivel fazer o pedido ao servidor");
+        AlertSingleton.getInstanceWarning().showAndWait();
     }
 
     private void updateView() {
         this.setVisible(modelManager != null && modelManager.getStatusClient() == StatusClient.REGISTER);
+    }
+
+    public void registerComplete(){
+        AlertSingleton.getInstanceOK().setAlertText("Acção Bem Sucedida", "Utilizador registado", "Faça login por favor");
+        AlertSingleton.getInstanceOK().showAndWait().ifPresent( buttonType -> {
+            modelManager.setStatusClient(StatusClient.NOT_LOGGED);
+        });
     }
 }

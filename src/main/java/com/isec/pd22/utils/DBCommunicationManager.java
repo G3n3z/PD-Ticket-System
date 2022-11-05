@@ -2,7 +2,7 @@ package com.isec.pd22.utils;
 
 import com.isec.pd22.enums.Authenticated;
 import com.isec.pd22.enums.Payment;
-import com.isec.pd22.payload.ClientMSG;
+import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.server.models.*;
 
 import java.sql.*;

@@ -22,6 +22,13 @@ public class AlertSingleton extends Alert {
         }
         return instance;
     }
+    public static AlertSingleton getInstanceOK() {
+        if(instance == null || instance.getAlertType() != AlertType.CONFIRMATION){
+            instance = new AlertSingleton(AlertType.CONFIRMATION, ButtonType.YES);
+        }
+        return instance;
+    }
+
     public int countOfLines(String text){
         int count = 1;
         for (char c : text.toCharArray()) {

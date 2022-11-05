@@ -6,7 +6,8 @@ import com.isec.pd22.client.models.Data;
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.threads.ServerConnectionThread;
 import com.isec.pd22.enums.ClientsPayloadType;
-import com.isec.pd22.payload.ClientMSG;
+import com.isec.pd22.enums.StatusClient;
+import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.ServersRequestPayload;
 import com.isec.pd22.payload.HeartBeat;
 import com.isec.pd22.utils.UdpUtils;
@@ -42,8 +43,13 @@ public class Client {
             case CONNECTION_LOST -> {
                 reestablishNewServerConnection();
             }
-
+            case USER_REGISTER -> {
+                if (modelManager.getStatusClient() == StatusClient.REGISTER){
+                    modelManager.registerCompleted();
+                }
+            }
         }
+
     }
 
     public void sendMessage(ClientMSG msg) throws IOException {

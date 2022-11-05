@@ -2,7 +2,7 @@ package com.isec.pd22.client.threads;
 
 import com.isec.pd22.client.models.ConnectionModel;
 import com.isec.pd22.enums.ClientsPayloadType;
-import com.isec.pd22.payload.ClientMSG;
+import com.isec.pd22.payload.tcp.ClientMSG;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;

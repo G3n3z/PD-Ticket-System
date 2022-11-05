@@ -1,7 +1,8 @@
-package com.isec.pd22.payload;
+package com.isec.pd22.payload.tcp;
 
 import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.Role;
+import com.isec.pd22.payload.HeartBeat;
 import com.isec.pd22.server.models.Espetaculo;
 import com.isec.pd22.server.models.User;
 import com.isec.pd22.enums.ClientsPayloadType;
@@ -17,7 +18,11 @@ public class ClientMSG implements Serializable {
     Espetaculo espetaculo;
     private Set<HeartBeat> serverList;
 
-    
+
+    public ClientMSG(ClientActions action) {
+        this.action = action;
+    }
+
     private ClientsPayloadType clientsPayloadType;
 
     public ClientMSG() {
@@ -35,24 +40,11 @@ public class ClientMSG implements Serializable {
         return action;
     }
 
-    public void setAction(ClientActions action) {
-        this.action = action;
-    }
-    public void setUser(User user) {
-        this.user = user;
-    }
 
     public void setServerList(Set<HeartBeat> serverList) {
         this.serverList = serverList;
     }
 
-    public Espetaculo getEspetaculo() {
-        return espetaculo;
-    }
-
-    public void setEspetaculo(Espetaculo espetaculo) {
-        this.espetaculo = espetaculo;
-    }
     public ClientsPayloadType getClientsPayloadType() {
         return clientsPayloadType;
     }

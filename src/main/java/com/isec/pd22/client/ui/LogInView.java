@@ -2,18 +2,14 @@ package com.isec.pd22.client.ui;
 
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.enums.StatusClient;
-import com.isec.pd22.payload.ClientMSG;
+import com.isec.pd22.payload.tcp.ClientMSG;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-
-
-import java.util.List;
 
 public class LogInView extends BorderPane {
 

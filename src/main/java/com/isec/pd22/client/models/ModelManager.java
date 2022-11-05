@@ -3,7 +3,7 @@ package com.isec.pd22.client.models;
 import com.isec.pd22.client.Client;
 import com.isec.pd22.client.ui.utils.AlertSingleton;
 import com.isec.pd22.enums.StatusClient;
-import com.isec.pd22.payload.ClientMSG;
+import com.isec.pd22.payload.tcp.ClientMSG;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -14,6 +14,9 @@ public class ModelManager {
     public static final String PROP_STATUS = "STATUS";
     public static final String PROP_ESPETACULOS = "ESPECTACULOS";
     public static final String ERROR_CONNECTION = "ERROR_CONNECTION";
+    public static final String BAD_REQUEST = "BAD_REQUEST";
+
+    public static final String ACTION_COMPLETE = "ACTION_COMPLETE";
     PropertyChangeSupport pcs;
     private StatusClient statusClient;
 
@@ -67,5 +70,15 @@ public class ModelManager {
 
     public void setErrorConnection() {
         pcs.firePropertyChange(ERROR_CONNECTION, null, null);
+    }
+
+    public void badRequest(ClientMSG msg){
+        pcs.firePropertyChange(BAD_REQUEST, null, null);
+    }
+
+    public void registerCompleted() {
+        pcs.firePropertyChange(ACTION_COMPLETE, null, null);
+
+
     }
 }
