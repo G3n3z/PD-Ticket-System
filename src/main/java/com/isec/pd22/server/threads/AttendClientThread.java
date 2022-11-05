@@ -2,6 +2,7 @@ package com.isec.pd22.server.threads;
 
 import com.isec.pd22.enums.*;
 import com.isec.pd22.payload.*;
+import com.isec.pd22.server.models.Espetaculo;
 import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.Query;
 import com.isec.pd22.server.models.Reserva;
@@ -112,15 +113,21 @@ public class AttendClientThread extends Thread{
                     case CONSULT_SPECTACLE -> {
 
                     }
-                    case CHOOSE_SPECTACLE -> {
+                    case CHOOSE_SPECTACLE_24H -> {
+                        List<Espetaculo> espetaculos = dbComm.getEspetaculosAfter24Hours();
                     }
                     case SUBMIT_RESERVATION -> {
                         //Verificação
                     }
                     case CANCEL_RESERVATION -> {
                         //Verificação id reserva
-                        int idReserva=0; //TODO colocar reserva na estrutura de comunicação
+                        int idReserva = 0; //TODO colocar reserva na estrutura de comunicação
                         Query query = dbComm.deleteReservaNotPayed(idReserva);
+                        if (startUpdateRoutine(query, internalInfo)) {
+                            dbComm.executeUserQuery(query);
+                        } else {
+                            //TODO enviar mensagem a cliente: impossel realizar transação, tente mais tarde
+                        }
                     }
                     case ADD_SPECTACLE -> {
                         if(role == Role.ADMIN){

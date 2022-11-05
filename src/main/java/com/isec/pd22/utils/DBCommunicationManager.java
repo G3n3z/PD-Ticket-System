@@ -158,7 +158,7 @@ public class DBCommunicationManager {
 
     public Espetaculo getEspetaculoLess24HoursById(int id){
         //TODO check this
-        String query = "Select * from espetaculo, lugar where espetaculo.id = ? and lugar.espetaculo_id = ? and espetaculo.data_hora >= datetime('now','-24 hours')";
+        String query = "Select * from espetaculo, lugar where espetaculo.id = ? and lugar.espetaculo_id = ? and espetaculo.data_hora >= datetime('now','+24 hours')";
         Espetaculo espetaculo = null;
         try {
             PreparedStatement preparedStatement = connection.prepareStatement(query);
@@ -182,8 +182,8 @@ public class DBCommunicationManager {
         }
         return espetaculo;
     }
-    public List<Espetaculo> getEspetaculosLess24Hours(){
-        String query = "Select * from espetaculo, lugar where espetaculo.data_hora >= datetime('now','-24 hours')";
+    public List<Espetaculo> getEspetaculosAfter24Hours(){
+        String query = "Select * from espetaculo, lugar where espetaculo.data_hora >= datetime('now','+24 hours')";
         List<Espetaculo> espetaculos = new ArrayList<>();
         try {
             Statement statement = connection.createStatement();
