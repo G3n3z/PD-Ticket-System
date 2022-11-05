@@ -231,4 +231,29 @@ public class DBCommunicationManager {
 
         return new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
     }
+
+    public Query logout(int idUser){
+        String sql = "UPDATE utilizador " +
+                     "set autenticado = " + Authenticated.NOT_AUTHENTICATED.ordinal() +
+                     " where id = " + idUser;
+        return new Query(internalInfo.getNumDB()+1, sql, new Date().getTime());
+    }
+
+    public boolean canRemoveEspecatulo(int idEspetaculo){
+        String query = "";
+        try {
+            PreparedStatement statement = connection.prepareStatement(query);
+
+            ResultSet res = statement.executeQuery();
+            if(res.next()){
+                return true;
+            }
+
+        } catch (SQLException e) {
+            return false;
+        }
+        return false;
+
+
+    }
 }
