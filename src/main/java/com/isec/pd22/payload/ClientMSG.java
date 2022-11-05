@@ -20,19 +20,12 @@ public class ClientMSG implements Serializable {
     
     private ClientsPayloadType clientsPayloadType;
 
-    public ClientMSG() {}
-
-    public ClientMSG(String command) {
-        this.command = command;
+    public ClientMSG() {
         this.serverList = new HashSet<>();
     }
 
     public ClientMSG(ClientsPayloadType clientsPayloadType) {
         this.clientsPayloadType = clientsPayloadType;
-    }
-
-    public String getCommand() {
-        return command;
     }
 
     public User getUser() {
