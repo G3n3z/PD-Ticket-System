@@ -1,6 +1,6 @@
 package com.isec.pd22.utils;
 
-import com.isec.pd22.payload.ClientConnectionPayload;
+import com.isec.pd22.payload.ServersRequestPayload;
 
 import java.io.*;
 import java.net.DatagramPacket;
@@ -24,16 +24,11 @@ public class UdpUtils {
 
     public static <T> T receiveObject(DatagramSocket socket) throws IOException, ClassNotFoundException {
         DatagramPacket packet = new DatagramPacket(
-                new byte[ClientConnectionPayload.MAX_PAYLOAD_BYTES],
-                ClientConnectionPayload.MAX_PAYLOAD_BYTES
+                new byte[ServersRequestPayload.MAX_PAYLOAD_BYTES],
+                ServersRequestPayload.MAX_PAYLOAD_BYTES
         );
 
-        socket.receive(packet);
-
-        ByteArrayInputStream byteArrayOutputStream = new ByteArrayInputStream(packet.getData(), 0, packet.getLength());
-        ObjectInputStream inputStream = new ObjectInputStream(byteArrayOutputStream);
-
-        return (T) inputStream.readObject();
+        return receiveObject(socket, packet);
     }
 
     public static <T> T receiveObject(DatagramSocket socket, DatagramPacket packet) throws IOException, ClassNotFoundException {

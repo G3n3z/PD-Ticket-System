@@ -4,6 +4,8 @@ import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.Role;
 import com.isec.pd22.server.models.Espetaculo;
 import com.isec.pd22.server.models.User;
+import com.isec.pd22.enums.ClientsPayloadType;
+import com.isec.pd22.server.models.ServerHeartBeat;
 
 import java.io.Serializable;
 import java.util.HashSet;
@@ -15,10 +17,27 @@ public class ClientMSG implements Serializable {
     Espetaculo espetaculo;
     private Set<HeartBeat> serverList;
 
-    public ClientMSG() {
+    
+    private ClientsPayloadType clientsPayloadType;
+
+    public ClientMSG() {}
+
+    public ClientMSG(String command) {
+        this.command = command;
         this.serverList = new HashSet<>();
     }
 
+    public ClientMSG(ClientsPayloadType clientsPayloadType) {
+        this.clientsPayloadType = clientsPayloadType;
+    }
+
+    public String getCommand() {
+        return command;
+    }
+
+    public User getUser() {
+        return user;
+    }
     public ClientActions getAction() {
         return action;
     }
@@ -26,11 +45,6 @@ public class ClientMSG implements Serializable {
     public void setAction(ClientActions action) {
         this.action = action;
     }
-
-    public User getUser() {
-        return user;
-    }
-
     public void setUser(User user) {
         this.user = user;
     }
@@ -46,4 +60,8 @@ public class ClientMSG implements Serializable {
     public void setEspetaculo(Espetaculo espetaculo) {
         this.espetaculo = espetaculo;
     }
+    public ClientsPayloadType getClientsPayloadType() {
+        return clientsPayloadType;
+    }
+
 }

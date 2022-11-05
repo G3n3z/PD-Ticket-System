@@ -139,12 +139,12 @@ public class StartServices extends Thread {
 
     private void startThreads() {
         ServerSocket serverSocket = null;
-        DatagramSocket clientsConnectionSocket = null;
+        DatagramSocket serversRequestSocket = null;
 
         try {
             // inicia serversocket thread
             serverSocket = new ServerSocket(0);
-            clientsConnectionSocket = new DatagramSocket(internalInfo.getPortUdp());
+            serversRequestSocket = new DatagramSocket(internalInfo.getPortUdp());
         }
         catch (IOException e) {
             System.out.println("Não foi possivel iniciar recursos");
@@ -156,8 +156,8 @@ public class StartServices extends Thread {
         ServerSocketThread serverSocketThread = new ServerSocketThread(serverSocket, internalInfo);
         serverSocketThread.start();
 
-        ClientsConnectionThread clientsConnectionThread = new ClientsConnectionThread(clientsConnectionSocket, internalInfo);
-        clientsConnectionThread.start();
+        ServersRequestThread serversRequestThread = new ServersRequestThread(serversRequestSocket, internalInfo);
+        serversRequestThread.start();
 
         Timer timer = new Timer(true);
         HeartBeatTask heartBeatTask = new HeartBeatTask(internalInfo);
