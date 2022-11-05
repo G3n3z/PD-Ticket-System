@@ -55,6 +55,8 @@ public class ServerConnectionThread extends Thread {
             }
             catch (IOException e) {
                 onMessageProcessed.accept(new ClientMSG(ClientsPayloadType.CONNECTION_LOST), this);
+                break;
+                //TODO:
             }
             catch (ClassNotFoundException e) {
                 System.out.println("[ERRO] - o tipo do objeto enviado deve ser ClientMSG");

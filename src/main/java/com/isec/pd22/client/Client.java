@@ -2,6 +2,8 @@ package com.isec.pd22.client;
 
 import com.isec.pd22.client.models.ClientModel;
 import com.isec.pd22.client.models.ConnectionModel;
+import com.isec.pd22.client.models.Data;
+import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.threads.ServerConnectionThread;
 import com.isec.pd22.enums.ClientsPayloadType;
 import com.isec.pd22.payload.ClientMSG;
@@ -14,17 +16,20 @@ import java.net.*;
 
 public class Client {
     private static final int REQUESTS_FOR_SERVERS_ATTEMPTS = 3;
-    private static ClientModel clientModel;
+    private ClientModel clientModel;
+    private Data data;
+    private ModelManager modelManager;
 
-    public static void main(String[] args) throws RuntimeException, IOException, ClassNotFoundException {
+    public Client(Data data, ModelManager modelManager, String[] args) throws RuntimeException, IOException, ClassNotFoundException {
         clientModel = new ClientModel(args);
-
+        this.data = data;
+        this.modelManager = modelManager;
         requestServers();
 
         Socket tcpServerSocket = connectToServer();
 
         clientModel.setTcpServerConnection(new ConnectionModel(tcpServerSocket));
-        clientModel.setServerConnectionThread(new ServerConnectionThread(clientModel.getTcpServerConnection(), Client::onMessageReceived));
+        clientModel.setServerConnectionThread(new ServerConnectionThread(clientModel.getTcpServerConnection(), this::onMessageReceived));
         clientModel.getServerConnectionThread().start();
 
 
@@ -32,13 +37,20 @@ public class Client {
     }
 
     // TODO interpretar as mensagens recebidas do servidor aqui!
-    private static void onMessageReceived(ClientMSG mensage, ServerConnectionThread service) {
+    private void onMessageReceived(ClientMSG mensage, ServerConnectionThread service) {
         switch (mensage.getClientsPayloadType()) {
-            case CONNECTION_LOST -> reestablishNewServerConnection();
+            case CONNECTION_LOST -> {
+                reestablishNewServerConnection();
+            }
+
         }
     }
 
-    private static void requestServers() throws IOException, ClassNotFoundException {
+    public void sendMessage(ClientMSG msg) throws IOException {
+        clientModel.getServerConnectionThread().sendMessage(msg);
+    }
+
+    private  void requestServers() throws IOException, ClassNotFoundException {
         DatagramSocket socket = new DatagramSocket();
         socket.setSoTimeout(2000);
 
@@ -68,7 +80,7 @@ public class Client {
         throw new RuntimeException("Não foi possivel obter uma resposta com os servidores disponiveis.");
     }
 
-    private static Socket connectToServer() {
+    private Socket connectToServer() {
         for (HeartBeat serverDetails: clientModel.getServersList()) {
             try {
                 System.out.print("A tentar ligar a: " + serverDetails.getIp() + ":" + serverDetails.getPortTcpClients() + "...");
@@ -84,16 +96,17 @@ public class Client {
         throw new RuntimeException("Não foi possivel estabelecer ligação a nenhum servidor.");
     }
 
-    private static void reestablishNewServerConnection() {
+    private  void reestablishNewServerConnection() {
         try {
             Socket serverSocket = connectToServer();
             ConnectionModel serverConnection = new ConnectionModel(serverSocket);
 
             clientModel.setTcpServerConnection(serverConnection);
+            //TODO: lanaçar nova thread em vez de fazer o set da coneção
             clientModel.getServerConnectionThread().setConnection(serverConnection);
         } catch (RuntimeException e) {
             System.err.println(e);
-            System.exit(0);
+            modelManager.setErrorConnection();
         } catch (IOException ignored) { }
     }
 }
