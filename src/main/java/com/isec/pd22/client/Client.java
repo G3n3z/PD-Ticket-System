@@ -24,17 +24,26 @@ public class Client {
         clientModel = new ClientModel(args);
         this.data = data;
         this.modelManager = modelManager;
+
         requestServers();
 
         Socket tcpServerSocket = connectToServer();
-
-        clientModel.setTcpServerConnection(new ConnectionModel(tcpServerSocket));
-        clientModel.setServerConnectionThread(new ServerConnectionThread(clientModel.getTcpServerConnection(), this::onMessageReceived));
-        clientModel.getServerConnectionThread().start();
-
+        initServerThread(tcpServerSocket);
 
         // TODO implementar sistema de processamento de comandos
     }
+
+    public void sendMessage(ClientMSG msg) throws IOException {
+        clientModel.getServerConnectionThread().sendMessage(msg);
+    }
+
+    private void initServerThread(Socket tcpServerSocket) throws IOException {
+        clientModel.setTcpServerConnection(new ConnectionModel(tcpServerSocket));
+        clientModel.setServerConnectionThread(new ServerConnectionThread(clientModel.getTcpServerConnection(), this::onMessageReceived));
+
+        clientModel.getServerConnectionThread().start();
+    }
+
 
     // TODO interpretar as mensagens recebidas do servidor aqui!
     private void onMessageReceived(ClientMSG mensage, ServerConnectionThread service) {
@@ -46,11 +55,7 @@ public class Client {
         }
     }
 
-    public void sendMessage(ClientMSG msg) throws IOException {
-        clientModel.getServerConnectionThread().sendMessage(msg);
-    }
-
-    private  void requestServers() throws IOException, ClassNotFoundException {
+    private void requestServers() throws IOException, ClassNotFoundException {
         DatagramSocket socket = new DatagramSocket();
         socket.setSoTimeout(2000);
 
@@ -83,12 +88,12 @@ public class Client {
     private Socket connectToServer() {
         for (HeartBeat serverDetails: clientModel.getServersList()) {
             try {
-                System.out.print("A tentar ligar a: " + serverDetails.getIp() + ":" + serverDetails.getPortTcpClients() + "...");
+                System.out.print("\nConexão com: " + serverDetails.getIp() + ":" + serverDetails.getPortTcpClients());
 
                 return new Socket(serverDetails.getIp(), serverDetails.getPortTcpClients());
             } catch (IOException e) {
                 // Conexão servidor falhou, processa exceção e avança para a proxima iteração
-                System.out.println("FALHOU");
+                System.out.println("...FALHOU");
             }
         }
 
@@ -96,14 +101,12 @@ public class Client {
         throw new RuntimeException("Não foi possivel estabelecer ligação a nenhum servidor.");
     }
 
-    private  void reestablishNewServerConnection() {
+    private void reestablishNewServerConnection() {
         try {
             Socket serverSocket = connectToServer();
-            ConnectionModel serverConnection = new ConnectionModel(serverSocket);
 
-            clientModel.setTcpServerConnection(serverConnection);
-            //TODO: lanaçar nova thread em vez de fazer o set da coneção
-            clientModel.getServerConnectionThread().setConnection(serverConnection);
+            initServerThread(serverSocket);
+
         } catch (RuntimeException e) {
             System.err.println(e);
             modelManager.setErrorConnection();
