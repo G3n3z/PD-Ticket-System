@@ -3,12 +3,14 @@ package com.isec.pd22.utils;
 import com.isec.pd22.enums.Authenticated;
 import com.isec.pd22.enums.Payment;
 import com.isec.pd22.payload.tcp.ClientMSG;
+import com.isec.pd22.payload.tcp.Request.Espetaculos;
 import com.isec.pd22.server.models.*;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Consumer;
 
 public class DBCommunicationManager {
@@ -256,13 +258,6 @@ public class DBCommunicationManager {
         return new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
     }
 
-    public Query logout(int idUser){
-        String sql = "UPDATE utilizador " +
-                     "set autenticado = " + Authenticated.NOT_AUTHENTICATED.ordinal() +
-                     " where id = " + idUser;
-        return new Query(internalInfo.getNumDB()+1, sql, new Date().getTime());
-    }
-
     public boolean canRemoveEspecatulo(int idEspetaculo){
         String query = "";
         try {
@@ -314,5 +309,35 @@ public class DBCommunicationManager {
                     lugar.getPreco() + ", (Select max(e.id) from espetaculo e)); ";
             query.setQuery(query.getQuery() + sql);
         }
+    }
+
+    public List<Espetaculo> getEspetaculoWithFilters(Espetaculos espetaculos){
+        Map<String,String> filtros = espetaculos.getFiltros();
+        String query = "Select * from espetaculo";
+        boolean first = true;
+        if(!filtros.isEmpty()){
+            for(Map.Entry<String, String> entry : filtros.entrySet()){
+                if(first){
+                    query += " where " + entry.getKey() + "=" + entry.getValue();
+                    first = false;
+                }else{
+                    query += " and " + entry.getKey() + "=" + entry.getValue();
+                }
+            }
+        }
+        List<Espetaculo> list = new ArrayList<>();
+        try {
+            Statement statement = connection.createStatement();
+            ResultSet res = statement.executeQuery(query);
+            Espetaculo espetaculo = new Espetaculo();
+            while (res.next()){
+                espetaculo = Espetaculo.mapToEntity(res);
+                list.add(espetaculo);
+            }
+
+        } catch (SQLException e) {
+            return null;
+        }
+        return list;
     }
 }

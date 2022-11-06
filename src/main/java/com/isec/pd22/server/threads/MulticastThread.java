@@ -78,14 +78,16 @@ public class MulticastThread extends Thread{
                 if(internalInfo.getStatus() == Status.UNAVAILABLE){
                     atualizaDB();
                 }
-                e.printStackTrace();
+                System.out.println("[MulticastThread] - socket timeout: "+ e.getMessage());
+                //e.printStackTrace();
             }
             catch (IOException e) {
-
+                System.out.println("[MulticastThread] - erro na rececao: "+ e.getMessage());
                 e.printStackTrace();
                 //                System.out.println(e);
 //                break;
             } catch (ClassNotFoundException e) {
+                System.out.println("[MulticastThread] - erro no cast da class: "+ e.getMessage());
                 e.printStackTrace();
             }
 

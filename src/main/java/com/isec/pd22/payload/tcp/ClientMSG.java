@@ -15,7 +15,6 @@ import java.util.Set;
 public class ClientMSG implements Serializable {
     ClientActions action;
     User user;
-    Espetaculo espetaculo;
     private Set<HeartBeat> serverList;
     private ClientsPayloadType clientsPayloadType;
 
