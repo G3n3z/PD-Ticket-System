@@ -1,22 +1,21 @@
 package com.isec.pd22.server.threads;
 
 import com.isec.pd22.enums.*;
+import com.isec.pd22.exception.ServerException;
 import com.isec.pd22.payload.*;
 import com.isec.pd22.payload.tcp.ClientMSG;
+import com.isec.pd22.payload.tcp.Request.FileUpload;
 import com.isec.pd22.payload.tcp.Request.Register;
-import com.isec.pd22.server.models.Espetaculo;
-import com.isec.pd22.server.models.InternalInfo;
-import com.isec.pd22.server.models.Query;
-import com.isec.pd22.server.models.Reserva;
+import com.isec.pd22.server.models.*;
 import com.isec.pd22.utils.Constants;
 import com.isec.pd22.utils.DBCommunicationManager;
+import com.isec.pd22.utils.DBVersionManager;
 import com.isec.pd22.utils.ObjectStream;
 
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
+import java.lang.ref.Cleaner;
 import java.net.*;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -27,21 +26,28 @@ public class AttendClientThread extends Thread{
     private Socket clientSocket;
     private InternalInfo internalInfo;
     private DBCommunicationManager dbComm;
+    private DBVersionManager dbVersionManager;
     private Role role;
+    ObjectOutputStream oos = null;
+    ObjectInputStream ois = null;
+    FileOutputStream fos;
+    Connection connection;
 
-    public AttendClientThread(Socket clientSocket, InternalInfo internalInfo) {
+    public AttendClientThread(Socket clientSocket, InternalInfo internalInfo, Connection connection) {
         this.clientSocket = clientSocket;
         this.internalInfo = internalInfo;
+        this.connection = connection;
     }
 
     @Override
     public void run() {
         boolean keepGoing = true;
+
+        keepGoing = openStreams();
+        dbVersionManager = new DBVersionManager(connection);
+        dbComm = new DBCommunicationManager(internalInfo, connection);
         while (keepGoing) {
             try {
-                ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream());
-                ObjectInputStream ois = new ObjectInputStream(clientSocket.getInputStream());
-
                 ClientMSG clientMsg = (ClientMSG) ois.readObject();
 
                 switch (internalInfo.getStatus())
@@ -49,7 +55,9 @@ public class AttendClientThread extends Thread{
                     case AVAILABLE -> {handleClientRequest(clientMsg, oos);}
                     case UPDATING -> {
                         //TODO enviar mensagem de update para o cliente
-                        internalInfo.wait();
+                        internalInfo.lock.lock();
+                        internalInfo.condition.await();
+                        internalInfo.lock.unlock();
                     }
                     case UNAVAILABLE -> {
                         closeClient();
@@ -67,6 +75,7 @@ public class AttendClientThread extends Thread{
             } catch (IOException | ClassNotFoundException e) {
                 //TODO tratar excecoes lançadas
                 System.out.println("[AttendClientThread] - failed comunication with client: "+ e.getMessage());
+                keepGoing = false;
             } catch (InterruptedException e) {
                 System.out.println("[AttendClientThread] - server finished updating: " + e.getMessage());
             }
@@ -79,9 +88,20 @@ public class AttendClientThread extends Thread{
         }
     }
 
+    private boolean openStreams() {
+        try{
+            oos = new ObjectOutputStream(clientSocket.getOutputStream());
+            ois = new ObjectInputStream(clientSocket.getInputStream());
+        }catch (IOException e){
+            System.out.println("[AttendClientThread] - Nao foi possivel abrir o Streams");
+            return false;
+        }
+        return true;
+    }
+
     private void handleClientRequest(ClientMSG msgClient, ObjectOutputStream oos){
         try {
-            dbComm = new DBCommunicationManager(msgClient, internalInfo);
+
             ClientMSG ansMsg = new ClientMSG();
 
             switch (msgClient.getAction()){
@@ -90,7 +110,6 @@ public class AttendClientThread extends Thread{
                 }
                 case LOGIN -> {
                     doLogin(msgClient, dbComm);
-
                 }
                 default -> actionsLogged(msgClient, oos, dbComm);
             }
@@ -107,7 +126,10 @@ public class AttendClientThread extends Thread{
 
     private void actionsLogged(ClientMSG msgClient, ObjectOutputStream oos, DBCommunicationManager dbComm) {
         try {
-            if (dbComm.isLogged(msgClient.getUser().getUsername())) {
+            //dbComm.isLogged(msgClient.getUser().getUsername());
+            ClientMSG msg = null;
+            User user = dbComm.getUser(msgClient.getUser().getUsername());
+            if (user != null && user.getAuthenticated() == Authenticated.AUTHENTICATED) {
                 switch (msgClient.getAction()) {
                     case EDIT_USER -> {
                         if (dbComm.canEditUser(msgClient.getUser().getNome(), msgClient.getUser().getUsername())) {
@@ -117,7 +139,7 @@ public class AttendClientThread extends Thread{
                                     msgClient.getUser().getPassword()
                             );
                             if (startUpdateRoutine(query, internalInfo)) {
-                                dbComm.executeUserQuery(query);
+                                //dbComm.executeUserQuery(query);
                             } else {
                                 //TODO enviar mensagem a cliente: impossel realizar transação, tente mais tarde
                             }
@@ -151,14 +173,14 @@ public class AttendClientThread extends Thread{
                         int idReserva = 0; //TODO colocar reserva na estrutura de comunicação
                         Query query = dbComm.deleteReservaNotPayed(idReserva);
                         if (startUpdateRoutine(query, internalInfo)) {
-                            dbComm.executeUserQuery(query);
+                            //dbComm.executeUserQuery(query);
                         } else {
                             //TODO enviar mensagem a cliente: impossel realizar transação, tente mais tarde
                         }
                     }
                     case ADD_SPECTACLE -> {
                         if (role == Role.ADMIN) {
-
+                            readFile(msgClient);
                         }
                     }
                     case DELETE_SPECTACLE -> {
@@ -166,25 +188,124 @@ public class AttendClientThread extends Thread{
                     case LOGOUT -> {
                         Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
                         if (startUpdateRoutine(query, internalInfo)) {
-                            dbComm.executeUserQuery(query);
+                           dbVersionManager.insertQuery(query);
+                            msg = new ClientMSG(ClientsPayloadType.LOGOUT);
                         } else {
-                            //TODO enviar mensagem a cliente: impossel realizar transação, tente mais tarde
+                            msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
+                            msg.setAction(ClientActions.LOGOUT);
                         }
                     }
                 }
             } else {
-                switch (msgClient.getAction()) {
-                    case REGISTER_USER -> {
-
-                    }
-
-                }
+               //TODO: Tentativa de acao de cliente nao ligado
             }
-            dbComm.close();
+            oos.writeObject(msg);
         }catch (SQLException e){
             System.out.println(Arrays.toString(e.getStackTrace()));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
 
+
+    }
+
+    private boolean readFile(ClientMSG msgClient) throws IOException {
+        FileUpload fileUpload = (FileUpload) msgClient;
+        if(fos == null){
+            fos = new FileOutputStream(Constants.FILES_DIR_PATH + fileUpload.getName());
+        }
+        fos.write(fileUpload.getBytes(), 0, fileUpload.getSizeBytes());
+        if(fileUpload.isLast()){
+            fos.close();
+            fos = null;
+            importToBD(fileUpload);
+        }
+        return fileUpload.isLast();
+    }
+
+    private void importToBD(FileUpload fileUpload) throws IOException {
+        BufferedReader br = new BufferedReader(new FileReader(Constants.FILES_DIR_PATH+fileUpload.getName()));
+        readHeaders(br);
+        readFilas(br);
+    }
+
+    private void readFilas(BufferedReader br) {
+    }
+
+    private void readHeaders( BufferedReader br) throws IOException {
+        int index = 0;
+        String designacao, tipo, data, local, localidade, pais;
+        int dia;
+        int mes;
+        int ano, hora, minutos, duracao, classificacao;
+        while(true){
+            String line = br.readLine();
+            String [] arguments = line.split(";");
+            switch (index){
+                case 0 -> {
+                    if(arguments[0] == null || !arguments[0].equals("Designação") || arguments.length != 2){
+                        throw new ServerException("Designação nao encontrada");
+                    }
+                    designacao = arguments[1];
+                }
+                case 1 -> {
+                    if(arguments[0] == null || !arguments[0].equals("Tipo") || arguments.length != 2){
+                        throw new ServerException("Tipo nao encontrada");
+                    }
+                    tipo = arguments[1];
+                }
+                case 2 -> {
+                    if(arguments[0] == null || !arguments[0].equals("Data") || arguments.length != 4){
+                        throw new ServerException("Tipo nao encontrada");
+                    }
+                    dia = Integer.parseInt(arguments[1]);
+                    mes = Integer.parseInt(arguments[2]);
+                    ano = Integer.parseInt(arguments[3]);
+                }
+                case 3 -> {
+                    if(arguments[0] == null || !arguments[0].equals("Hora") || arguments.length != 3){
+                        throw new ServerException("Tipo nao encontrada");
+                    }
+                    hora = Integer.parseInt(arguments[1]);
+                    duracao = Integer.parseInt(arguments[2]);
+
+                }
+                case 4 -> {
+                    if(arguments[0] == null || !arguments[0].equals("Duracao") || arguments.length != 2){
+                        throw new ServerException("Tipo nao encontrada");
+                    }
+                    duracao = Integer.parseInt(arguments[1]);
+                }
+                case 5 -> {
+                    if(arguments[0] == null || !arguments[0].equals("Local") || arguments.length != 2){
+                        throw new ServerException("Tipo nao encontrada");
+                    }
+                    local = arguments[1];
+                }
+                case 6 -> {
+                    if(arguments[0] == null || !arguments[0].equals("Localidade") || arguments.length != 2){
+                        throw new ServerException("Tipo nao encontrada");
+                    }
+                    localidade = arguments[1];
+                }
+                case 7 -> {
+                    if(arguments[0] == null || !arguments[0].equals("Pais") || arguments.length != 2){
+                        throw new ServerException("Tipo nao encontrada");
+                    }
+                    pais = arguments[1];
+                }
+                case 8 -> {
+                    if(arguments[0] == null || !arguments[0].equals("Classificação") || arguments.length != 2){
+                        throw new ServerException("Tipo nao encontrada");
+                    }
+                    classificacao = Integer.parseInt(arguments[1]);
+                }
+
+            }
+            index++;
+        }
+
+        //TODO insert event
 
     }
 
@@ -231,7 +352,7 @@ public class AttendClientThread extends Thread{
                         Prepare confirmation = objectStream.readObject(dp, Prepare.class);
                         confirmationList.add(confirmation);
                     }
-                } catch (SocketException e) {
+                } catch (SocketException | SocketTimeoutException e) {
                     //Verificar confirmações com lista de servidores
                     if(confirmationCounter == 0){
                         break;
@@ -260,9 +381,7 @@ public class AttendClientThread extends Thread{
             sendAbort(dp);
             //Cancelar a operação e informar utilizador
 
-        } catch (SocketException e) {
-            System.out.println("[AttendClientThread] - error on updateRoutine - could not open confirmation socket: "+ e.getMessage());
-        } catch (IOException e) {
+        }  catch (IOException e) {
             System.out.println("[AttendClientThread] - error on updateRoutine - could not send prepare: "+ e.getMessage());
         }
         return false;
@@ -285,7 +404,7 @@ public class AttendClientThread extends Thread{
      * @throws IOException when it fails sending the packet
      */
     private void sendCommit(DatagramPacket dp) throws IOException {
-        Commit commitMsg = new Commit();
+        Commit commitMsg = new Commit(TypeOfMulticastMsg.COMMIT);
         ObjectStream os = new ObjectStream();
         os.writeObject(dp,commitMsg);
         internalInfo.getMulticastSocket().send(dp);
@@ -323,31 +442,39 @@ public class AttendClientThread extends Thread{
 
     private void doRegister(ClientMSG msgClient, DBCommunicationManager dbComm, ObjectOutputStream oos) throws SQLException, IOException {
         Register r = (Register) msgClient;
+        ClientMSG msg;
         if (dbComm.existsUserByUsernameOrName(r.getNome(), r.getUserName())) {
             Query query = dbComm.getRegisterUserQuery(r.getUserName(), r.getNome(), r.getPassword());
             if (startUpdateRoutine(query, internalInfo)) {
-                dbComm.executeUserQuery(query);
+                dbVersionManager.insertQuery(query);
+                msg = new ClientMSG(ClientsPayloadType.USER_REGISTER);
             } else {
-                ClientMSG msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
-                oos.writeObject(msg);
+                msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
             }
         } else {
-            ClientMSG msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
-            oos.writeObject(msg);
+            msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
+
         }
+        oos.writeObject(msg);
     }
 
-    private void doLogin(ClientMSG msgClient, DBCommunicationManager dbComm) throws SQLException {
-        if (dbComm.checkUserLogin(msgClient.getUser().getUsername(), msgClient.getUser().getPassword())) {
+    private void doLogin(ClientMSG msgClient, DBCommunicationManager dbComm) throws SQLException, IOException {
+        ClientMSG msg;
+        User u = dbComm.getUser(msgClient.getUser().getUsername());
+        if (u != null && u.getPassword().equals(msgClient.getUser().getPassword())) {
             Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.AUTHENTICATED);
             if (startUpdateRoutine(query, internalInfo)) {
-                dbComm.executeUserQuery(query);
+                dbVersionManager.insertQuery(query);
+                msg = new ClientMSG(ClientsPayloadType.LOGGED_IN);
+                msg.setUser(new User(u.getIdUser(),u.getRole(),u.getUsername(), u.getNome()));
             } else {
-                //TODO enviar mensagem a cliente: impossel realizar transação, tente mais tarde
+                msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
             }
         } else {
-            //TODO enviar mensagem a cliente: invalid username or password
+
+            msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
         }
+        oos.writeObject(msg);
     }
 
 }

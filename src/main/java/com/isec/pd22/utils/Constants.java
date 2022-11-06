@@ -13,7 +13,7 @@ public class Constants {
     public static final int MULTICAST_PORT = 4004;
 
     public static final String NAME_DEFAULT_DB = "PD-2022-23-TP.db";
-
+    public static final String FILES_DIR_PATH= "src/main/resources/files/";
 
 
     public static Date stringToDate(String date) throws ParseException {

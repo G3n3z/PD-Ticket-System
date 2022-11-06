@@ -3,7 +3,9 @@ package com.isec.pd22.client.ui;
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.ui.utils.ButtonMenu;
 import com.isec.pd22.client.ui.utils.MenuVertical;
+import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.StatusClient;
+import com.isec.pd22.payload.tcp.ClientMSG;
 import javafx.scene.layout.BorderPane;
 
 public class AdminView extends BorderPane {
@@ -37,6 +39,11 @@ public class AdminView extends BorderPane {
 
     private void registerHandlers() {
         modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, evt -> updateView());
+        btnLogout.setOnAction( evt -> {
+            ClientMSG msg = new ClientMSG(ClientActions.LOGOUT);
+            msg.setUser(modelManager.getUser());
+            modelManager.sendMessage(msg);
+        });
     }
 
     private void updateView() {

@@ -10,6 +10,8 @@ import java.net.MulticastSocket;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
 
 public class InternalInfo {
 
@@ -31,6 +33,10 @@ public class InternalInfo {
     Set<HeartBeat> heartBeats = new HashSet<>();
 
     private ArrayList<Socket> allClientSockets;
+
+    public Lock lock;
+
+    public Condition condition;
 
     public InternalInfo() {
     }

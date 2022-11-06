@@ -54,6 +54,7 @@ public class ServerConnectionThread extends Thread {
                 onMessageProcessed.accept(messageReceived, this);
             }
             catch (IOException e) {
+                System.out.println(e);
                 onMessageProcessed.accept(new ClientMSG(ClientsPayloadType.CONNECTION_LOST), this);
                 break;
                 //TODO:

@@ -33,9 +33,22 @@ public class ClientMSG implements Serializable {
         this.clientsPayloadType = clientsPayloadType;
     }
 
+    public void setClientsPayloadType(ClientsPayloadType clientsPayloadType) {
+        this.clientsPayloadType = clientsPayloadType;
+    }
+
+    public void setAction(ClientActions action) {
+        this.action = action;
+    }
+
     public User getUser() {
         return user;
     }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
+
     public ClientActions getAction() {
         return action;
     }

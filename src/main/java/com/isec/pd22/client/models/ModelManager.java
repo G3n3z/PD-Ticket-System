@@ -4,6 +4,7 @@ import com.isec.pd22.client.Client;
 import com.isec.pd22.client.ui.utils.AlertSingleton;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
+import com.isec.pd22.server.models.User;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -17,6 +18,7 @@ public class ModelManager {
     public static final String BAD_REQUEST = "BAD_REQUEST";
 
     public static final String ACTION_COMPLETE = "ACTION_COMPLETE";
+    public static final String LOGOUT = "LOGOUT";
     PropertyChangeSupport pcs;
     private StatusClient statusClient;
 
@@ -27,11 +29,13 @@ public class ModelManager {
     public ModelManager() {
         pcs = new PropertyChangeSupport(this);
         statusClient = StatusClient.NOT_LOGGED;
+        data = new Data();
     }
 
     public void addPropertyChangeListener(String property, PropertyChangeListener listener){
         pcs.addPropertyChangeListener(property, listener);
     }
+
 
     public StatusClient getStatusClient() {
         return statusClient;
@@ -73,6 +77,7 @@ public class ModelManager {
     }
 
     public void badRequest(ClientMSG msg){
+        System.out.println("BADREQUEST");
         pcs.firePropertyChange(BAD_REQUEST, null, null);
     }
 
@@ -80,5 +85,13 @@ public class ModelManager {
         pcs.firePropertyChange(ACTION_COMPLETE, null, null);
 
 
+    }
+
+    public User getUser() {
+       return data.getUser();
+    }
+
+    public void logout() {
+        pcs.firePropertyChange(LOGOUT, null, null);
     }
 }

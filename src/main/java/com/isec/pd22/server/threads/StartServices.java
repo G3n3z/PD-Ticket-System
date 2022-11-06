@@ -20,6 +20,8 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Timer;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 public class StartServices extends Thread {
 
@@ -116,7 +118,7 @@ public class StartServices extends Thread {
         MulticastMSG msg = null;
 
         long startTime = new Date().getTime();
-        while( (new Date().getTime() - startTime) < 30000){
+        while( (new Date().getTime() - startTime) < 10000){
             try {
                 socket.receive(packet);
             }catch (SocketTimeoutException e){
@@ -140,7 +142,7 @@ public class StartServices extends Thread {
     private void startThreads() {
         ServerSocket serverSocket = null;
         DatagramSocket serversRequestSocket = null;
-
+        startCondition();
         try {
             // inicia serversocket thread
             serverSocket = new ServerSocket(0);
@@ -177,6 +179,11 @@ public class StartServices extends Thread {
         }
 
         System.out.println("A sair da thread Start Services");
+    }
+
+    private void startCondition() {
+        internalInfo.lock = new ReentrantLock();
+        internalInfo.condition = internalInfo.lock.newCondition();
     }
 
     /**

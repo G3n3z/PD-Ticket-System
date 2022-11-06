@@ -6,6 +6,7 @@ import com.isec.pd22.client.models.Data;
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.threads.ServerConnectionThread;
 import com.isec.pd22.enums.ClientsPayloadType;
+import com.isec.pd22.enums.Role;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.ServersRequestPayload;
@@ -48,6 +49,18 @@ public class Client {
                     modelManager.registerCompleted();
                 }
             }
+            case BAD_REQUEST -> {
+                modelManager.badRequest(mensage);
+            }
+            case LOGGED_IN -> {
+                if(mensage.getUser().getRole() == Role.USER){
+                    modelManager.setStatusClient(StatusClient.USER);
+                }else {
+                    modelManager.setStatusClient(StatusClient.ADMIN);
+                }
+                data.setUser(mensage.getUser());
+            }
+            case LOGOUT -> modelManager.logout();
         }
 
     }

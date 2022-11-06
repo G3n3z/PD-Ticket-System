@@ -23,6 +23,11 @@ public class DBCommunicationManager {
         this.connection = DriverManager.getConnection(internalInfo.getUrl_db());
     }
 
+    public DBCommunicationManager(InternalInfo internalInfo, Connection connection) {
+        this.connection = connection;
+        this.internalInfo = internalInfo;
+    }
+
     public void executeUserQuery(Query query) throws SQLException {
         Statement statement = connection.createStatement();
         statement.executeUpdate(query.getQuery());
@@ -52,7 +57,8 @@ public class DBCommunicationManager {
 
     public Query getRegisterUserQuery(String username, String name, String password) {
         Query q;
-        String query = "INSERT INTO utilizador VALUES (NULL, " + username + "," + name + "," + password +", NULL, NULL)";
+        String query = "INSERT INTO utilizador VALUES (NULL, '" + username + "', '" + name + "', '" + password +"', " + 1
+                +", " + 0 + ")";
         synchronized (internalInfo) {
             q = new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
         }
@@ -102,8 +108,8 @@ public class DBCommunicationManager {
 
     public Query setAuthenticate(String userName, Authenticated authenticated){
         String sql =   "update utilizador " +
-                       "set autenticado = " + authenticated + " " +
-                       "where username = " + userName;
+                       "set autenticado = " + authenticated.ordinal() + " " +
+                       "where username = '" + userName + "'";
 
         return new Query( internalInfo.getNumDB()+1,sql, new Date().getTime());
     }
@@ -255,5 +261,21 @@ public class DBCommunicationManager {
         return false;
 
 
+    }
+
+    public User getUser(String username) {
+        String query = "SELECT * from utilizador where username = ?";
+        try {
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setString(1, username);
+            ResultSet res = statement.executeQuery();
+            if(res.next()){
+               return User.mapToEntity(res);
+            }
+
+        } catch (SQLException e) {
+            return null;
+        }
+        return null;
     }
 }

@@ -116,25 +116,7 @@ public class MulticastThread extends Thread{
                 new UpdateDBTask(internalInfo, msgUpdate).start();
             }
             case PREPARE -> {
-                Prepare prepare = (Prepare) msg;
-                synchronized (internalInfo){
-                    internalInfo.setStatus(Status.UPDATING);
-                }
-                query = prepare.getQuery();
-                Integer i = prepare.getNumVersion();
-
-                try {
-                    //TODO: implement with Hugo changes
-                    packet = new DatagramPacket(new byte[3000], 3000, InetAddress.getByName(""), prepare.getConfirmationUDPPort());
-                    objectStream.writeObject(packet, prepare);
-                    multicastSocket.send(packet);
-                } catch (IOException e) {
-                    synchronized (internalInfo){
-                        internalInfo.setStatus(Status.AVAILABLE);
-                    }
-                    System.out.println("Nao consegui enviar a confirmacao do prepare");
-                }
-
+                responseToPrepare(msg);
             }
         }
     }
@@ -145,25 +127,32 @@ public class MulticastThread extends Thread{
             case HEARTBEAT -> {
                 HeartBeat heartBeat = (HeartBeat) msg;
                 new SaveHeartBeatTask(internalInfo, heartBeat).start();}
+            case PREPARE -> {
+                responseToPrepare(msg);
+            }
             case ABORT -> {
                 synchronized (internalInfo){
                     internalInfo.setStatus(Status.AVAILABLE);
                 }
-                internalInfo.notifyAll();
+                internalInfo.lock.lock();
+                internalInfo.condition.signalAll();
+                internalInfo.lock.unlock();
             }
             case COMMIT -> {
-                try {
-                    DBVersionManager dbVersionManager = new DBVersionManager(internalInfo.getUrl_db());
-                    dbVersionManager.insertQuery(query);
-                    dbVersionManager.closeConnection();
+//                try {
+//                    DBVersionManager dbVersionManager = new DBVersionManager(internalInfo.getUrl_db());
+//                    dbVersionManager.insertQuery(query);
+//                    dbVersionManager.closeConnection();
                     synchronized (internalInfo){
                         internalInfo.setStatus(Status.AVAILABLE);
                     }
-                    internalInfo.notifyAll();
-                } catch (SQLException e) {
-                    //TODO: Ver como resolver
-                    System.out.println(e);
-                }
+                    internalInfo.lock.lock();
+                    internalInfo.condition.signalAll();
+                    internalInfo.lock.unlock();
+//                } catch (SQLException e) {
+//                    //TODO: Ver como resolver
+//                    System.out.println(e);
+//                }
             }
         }
     }
@@ -184,7 +173,27 @@ public class MulticastThread extends Thread{
 
     }
 
+    void responseToPrepare(MulticastMSG msg){
+        Prepare prepare = (Prepare) msg;
+        synchronized (internalInfo){
+            internalInfo.setStatus(Status.UPDATING);
+        }
+        query = prepare.getQuery();
 
+        try {
+            packet = new DatagramPacket(new byte[3000], 3000, InetAddress.getByName(prepare.getIp()), prepare.getConfirmationUDPPort());
+            prepare.setIp(internalInfo.getIp());
+            prepare.setPortUdpClients(internalInfo.getPortUdp());
+            objectStream.writeObject(packet, prepare);
+            multicastSocket.send(packet);
+        } catch (IOException e) {
+            synchronized (internalInfo){
+                internalInfo.setStatus(Status.AVAILABLE);
+            }
+            System.out.println("Nao consegui enviar a confirmacao do prepare");
+        }
+
+    }
     private void sendHeartBeat() {
         Timer timer1 = new Timer();
         timer1.schedule(new HeartBeatTask(internalInfo, timer1), 0);

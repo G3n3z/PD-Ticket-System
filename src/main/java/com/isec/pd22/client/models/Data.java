@@ -9,4 +9,12 @@ public class Data {
     Espetaculo espetaculo;
     List<Espetaculo> espetaculos;
     User user;
+
+    public User getUser() {
+        return user;
+    }
+
+    public void setUser(User user) {
+        this.user = user;
+    }
 }

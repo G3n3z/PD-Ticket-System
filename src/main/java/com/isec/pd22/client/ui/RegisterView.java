@@ -80,13 +80,7 @@ public class RegisterView extends BorderPane {
             modelManager.sendMessage(register);
         });
         modelManager.addPropertyChangeListener(ModelManager.ACTION_COMPLETE, evt -> Platform.runLater(this::registerComplete));
-        modelManager.addPropertyChangeListener(ModelManager.ERROR_CONNECTION, evt -> Platform.runLater(this::badRequest));
 
-    }
-
-    private void badRequest() {
-        AlertSingleton.getInstanceWarning().setAlertText("Erro de Mensagem", "", "Não foi possivel fazer o pedido ao servidor");
-        AlertSingleton.getInstanceWarning().showAndWait();
     }
 
     private void updateView() {
