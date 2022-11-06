@@ -3,10 +3,7 @@ package com.isec.pd22.server.threads;
 import com.isec.pd22.enums.Status;
 import com.isec.pd22.enums.TypeOfMulticastMsg;
 import com.isec.pd22.exception.ServerException;
-import com.isec.pd22.payload.HeartBeat;
-import com.isec.pd22.payload.MulticastMSG;
-import com.isec.pd22.payload.Prepare;
-import com.isec.pd22.payload.UpdateDB;
+import com.isec.pd22.payload.*;
 import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.Query;
 import com.isec.pd22.server.tasks.SaveHeartBeatTask;
@@ -50,7 +47,7 @@ public class MulticastThread extends Thread{
         this.multicastSocket = internalInfo.getMulticastSocket();
         this.timer = timer;
         objectStream = new ObjectStream();
-        bytes = new byte[2000];
+        bytes = new byte[20000];
         packet = new DatagramPacket(bytes, bytes.length);
     }
 
@@ -68,6 +65,7 @@ public class MulticastThread extends Thread{
                     System.out.println("Erro na rececao de mensagem");
                     continue;
                 }
+                System.out.println("MSG RECEBIDA: " + msg.getTypeMsg() + " from " + packet.getPort());
                 switch (internalInfo.getStatus()){
                     case AVAILABLE -> responseToMsgAvailable(msg, packet);
                     case UPDATING -> {responseToMsgUpdating(msg, packet);}
@@ -78,11 +76,13 @@ public class MulticastThread extends Thread{
                 if(internalInfo.getStatus() == Status.UNAVAILABLE){
                     atualizaDB();
                 }
-                System.out.println(e);
+                e.printStackTrace();
             }
             catch (IOException e) {
-                System.out.println(e);
-                break;
+
+                e.printStackTrace();
+                //                System.out.println(e);
+//                break;
             }
 
         }
@@ -139,20 +139,23 @@ public class MulticastThread extends Thread{
                 internalInfo.lock.unlock();
             }
             case COMMIT -> {
-//                try {
-//                    DBVersionManager dbVersionManager = new DBVersionManager(internalInfo.getUrl_db());
-//                    dbVersionManager.insertQuery(query);
-//                    dbVersionManager.closeConnection();
-                    synchronized (internalInfo){
-                        internalInfo.setStatus(Status.AVAILABLE);
+                Commit commit = (Commit) msg;
+                if (!(commit.getIp().equalsIgnoreCase(internalInfo.getIp()) && commit.getPortUdp() == internalInfo.getPortUdp())){
+                    try {
+                        DBVersionManager dbVersionManager = new DBVersionManager(internalInfo.getUrl_db());
+                        dbVersionManager.insertQuery(query);
+                        dbVersionManager.closeConnection();
+                    }catch (SQLException e) {
+                        throw new RuntimeException(e);
                     }
-                    internalInfo.lock.lock();
-                    internalInfo.condition.signalAll();
-                    internalInfo.lock.unlock();
-//                } catch (SQLException e) {
-//                    //TODO: Ver como resolver
-//                    System.out.println(e);
-//                }
+                }
+                synchronized (internalInfo){
+                    internalInfo.setStatus(Status.AVAILABLE);
+                }
+                internalInfo.lock.lock();
+                internalInfo.condition.signalAll();
+                internalInfo.lock.unlock();
+
             }
         }
     }

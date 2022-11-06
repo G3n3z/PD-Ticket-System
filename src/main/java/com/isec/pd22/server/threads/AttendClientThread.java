@@ -13,14 +13,10 @@ import com.isec.pd22.utils.DBVersionManager;
 import com.isec.pd22.utils.ObjectStream;
 
 import java.io.*;
-import java.lang.ref.Cleaner;
 import java.net.*;
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 
 public class AttendClientThread extends Thread{
     private Socket clientSocket;
@@ -179,8 +175,19 @@ public class AttendClientThread extends Thread{
                         }
                     }
                     case ADD_SPECTACLE -> {
-                        if (role == Role.ADMIN) {
-                            readFile(msgClient);
+                        if (user.getRole() == Role.ADMIN) {
+                            if(readFile(msgClient)){
+                                Query query = importToBD((FileUpload) msgClient);
+                                if (startUpdateRoutine(query, internalInfo)) {
+                                    dbVersionManager.insertQuery(query);
+                                    msg = new ClientMSG(ClientsPayloadType.FILE_UPDATED);
+                                } else {
+                                    msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
+                                    msg.setAction(ClientActions.ADD_SPECTACLE);
+                                }
+                            }else{
+                                msg = new ClientMSG(ClientsPayloadType.PART_OF_FILE_UPLOADED);
+                            }
                         }
                     }
                     case DELETE_SPECTACLE -> {
@@ -214,33 +221,75 @@ public class AttendClientThread extends Thread{
         if(fos == null){
             fos = new FileOutputStream(Constants.FILES_DIR_PATH + fileUpload.getName());
         }
-        fos.write(fileUpload.getBytes(), 0, fileUpload.getSizeBytes());
         if(fileUpload.isLast()){
             fos.close();
             fos = null;
-            importToBD(fileUpload);
-        }
+        }else {
+            fos.write(fileUpload.getBytes(), 0, fileUpload.getSizeBytes());
+       }
         return fileUpload.isLast();
     }
 
-    private void importToBD(FileUpload fileUpload) throws IOException {
+    private Query importToBD(FileUpload fileUpload) throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(Constants.FILES_DIR_PATH+fileUpload.getName()));
-        readHeaders(br);
-        readFilas(br);
+        Espetaculo espetaculo = readHeaders(br);
+        List<Lugar> lugares = readFilas(br);
+        br.close();
+        Query query = dbComm.insertEspetaculo(espetaculo);
+        Query query1 = new Query(internalInfo.getNumDB()+1, "Select * from utilizador", 1000);
+        //dbComm.insertLugares(lugares, query);
+        return query1;
     }
 
-    private void readFilas(BufferedReader br) {
+    private List<Lugar> readFilas(BufferedReader br)  {
+        char fila;
+        List<Lugar> lugars = new ArrayList<>();
+        while (true){
+            try {
+                String line = br.readLine();
+                if(line == null){
+                    break;
+                }
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("\"Fila")){
+                    continue;
+                }
+                String [] args = line.split(";");
+                args = retiraAspas(args);
+                if(args.length < 2){
+                    continue;
+                }
+                readLineLugares(args, lugars);
+            } catch (IOException e) {
+                break;
+            }
+        }
+        return lugars;
     }
 
-    private void readHeaders( BufferedReader br) throws IOException {
+    private void readLineLugares(String[] args, List<Lugar> lugars) {
+        String fila = args[0]; String assento; double preco;
+        for (int i = 1; i < args.length; i++) {
+            String []lugar = args[i].split(":");
+            if(lugar.length != 2){
+                continue;
+            }
+            assento = lugar[0].replaceAll("\"", "");
+            preco = Double.parseDouble(lugar[1].replaceAll("\"", ""));
+            lugars.add(new Lugar(fila, assento, preco));
+        }
+    }
+
+    private Espetaculo readHeaders( BufferedReader br) throws IOException {
         int index = 0;
-        String designacao, tipo, data, local, localidade, pais;
-        int dia;
-        int mes;
-        int ano, hora, minutos, duracao, classificacao;
-        while(true){
+        String designacao = null, tipo = null, data, local = null, localidade = null, pais = null, classificacao = null;
+        int dia = 0;
+        int mes = 0;
+        int ano = 0, hora = 0, minutos = 0, duracao = 0;
+        while(index <= 8){
             String line = br.readLine();
             String [] arguments = line.split(";");
+            arguments = retiraAspas(arguments);
             switch (index){
                 case 0 -> {
                     if(arguments[0] == null || !arguments[0].equals("Designação") || arguments.length != 2){
@@ -267,11 +316,11 @@ public class AttendClientThread extends Thread{
                         throw new ServerException("Tipo nao encontrada");
                     }
                     hora = Integer.parseInt(arguments[1]);
-                    duracao = Integer.parseInt(arguments[2]);
+                    minutos = Integer.parseInt(arguments[2]);
 
                 }
                 case 4 -> {
-                    if(arguments[0] == null || !arguments[0].equals("Duracao") || arguments.length != 2){
+                    if(arguments[0] == null || !arguments[0].equals("Duração") || arguments.length != 2){
                         throw new ServerException("Tipo nao encontrada");
                     }
                     duracao = Integer.parseInt(arguments[1]);
@@ -289,24 +338,31 @@ public class AttendClientThread extends Thread{
                     localidade = arguments[1];
                 }
                 case 7 -> {
-                    if(arguments[0] == null || !arguments[0].equals("Pais") || arguments.length != 2){
+                    if(arguments[0] == null || !arguments[0].equals("País") || arguments.length != 2){
                         throw new ServerException("Tipo nao encontrada");
                     }
                     pais = arguments[1];
                 }
                 case 8 -> {
-                    if(arguments[0] == null || !arguments[0].equals("Classificação") || arguments.length != 2){
+                    if(arguments[0] == null || !arguments[0].equals("Classificação etária") || arguments.length != 2){
                         throw new ServerException("Tipo nao encontrada");
                     }
-                    classificacao = Integer.parseInt(arguments[1]);
+                    classificacao = arguments[1];
                 }
 
             }
             index++;
         }
+        return new Espetaculo(designacao, tipo, new Date(ano, mes, dia, hora, minutos), duracao, local,
+                localidade, pais, classificacao);
 
-        //TODO insert event
+    }
 
+    private String[] retiraAspas(String[] arguments) {
+        for (int i = 0; i < arguments.length; i++) {
+            arguments[i] = arguments[i].replaceAll("\"", "");
+        }
+        return arguments;
     }
 
     /**
@@ -329,19 +385,20 @@ public class AttendClientThread extends Thread{
             DatagramSocket confirmationSocket = new DatagramSocket(0);
 
             //Enviar PREPARE por MC
-            Prepare prepareMsg = new Prepare(
-                    TypeOfMulticastMsg.PREPARE,
-                    query,
-                    query.getNumVersion(),
-                    internalInfo.getIp(),
-                    confirmationSocket.getLocalPort()
-            );
             byte[] bytes = new byte[10000];
             DatagramPacket dp = new DatagramPacket(bytes, bytes.length, InetAddress.getByName(Constants.MULTICAST_IP), Constants.MULTICAST_PORT);
-            ObjectStream objectStream = new ObjectStream();
-            objectStream.writeObject(dp, prepareMsg);
-
             while (repeat) {
+                Prepare prepareMsg = new Prepare(
+                        TypeOfMulticastMsg.PREPARE,
+                        query,
+                        query.getNumVersion(),
+                        internalInfo.getIp(),
+                        confirmationSocket.getLocalPort()
+                );
+
+                ObjectStream objectStream = new ObjectStream();
+                objectStream.writeObject(dp, prepareMsg);
+
                 //Se não estiverem todas, reenviar PREPARE por MC
                 internalInfo.getMulticastSocket().send(dp);
                 try {
@@ -392,7 +449,7 @@ public class AttendClientThread extends Thread{
      * @throws IOException when it fails sending the packet
      */
     private void sendAbort(DatagramPacket dp) throws IOException {
-        Abort abortMsg = new Abort();
+        Abort abortMsg = new Abort(TypeOfMulticastMsg.ABORT);
         ObjectStream objectStream = new ObjectStream();
         objectStream.writeObject(dp,abortMsg);
         internalInfo.getMulticastSocket().send(dp);
@@ -404,7 +461,7 @@ public class AttendClientThread extends Thread{
      * @throws IOException when it fails sending the packet
      */
     private void sendCommit(DatagramPacket dp) throws IOException {
-        Commit commitMsg = new Commit(TypeOfMulticastMsg.COMMIT);
+        Commit commitMsg = new Commit(TypeOfMulticastMsg.COMMIT, internalInfo.getIp(), internalInfo.getPortUdp());
         ObjectStream os = new ObjectStream();
         os.writeObject(dp,commitMsg);
         internalInfo.getMulticastSocket().send(dp);

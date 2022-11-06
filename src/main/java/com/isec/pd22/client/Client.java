@@ -61,6 +61,8 @@ public class Client {
                 data.setUser(mensage.getUser());
             }
             case LOGOUT -> modelManager.logout();
+            case FILE_UPDATED -> modelManager.fileUploaded();
+            case PART_OF_FILE_UPLOADED -> System.out.println("Parte do ficheiro carregado");
         }
 
     }

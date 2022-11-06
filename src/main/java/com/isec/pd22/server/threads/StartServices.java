@@ -163,7 +163,7 @@ public class StartServices extends Thread {
 
         Timer timer = new Timer(true);
         HeartBeatTask heartBeatTask = new HeartBeatTask(internalInfo);
-        timer.scheduleAtFixedRate(heartBeatTask, 0, 10000);
+        timer.scheduleAtFixedRate(heartBeatTask, 0, 20000);
         MulticastThread multicastThread = new MulticastThread(internalInfo, timer);
         multicastThread.start();
 

@@ -9,6 +9,7 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class DBCommunicationManager {
     private Connection connection;
@@ -277,5 +278,24 @@ public class DBCommunicationManager {
             return null;
         }
         return null;
+    }
+
+    public Query insertEspetaculo(Espetaculo espetaculo) {
+        
+
+        String query = "insert into espetaculo(descricao, tipo, data_hora, duracao, local, localidade, pais, classificacao_etaria) " +
+                "values ( '" + espetaculo.getDescricao() + "', '" + espetaculo.getTipo() + "','" + Constants.dateToString(espetaculo.getData_hora()) +
+                "', " + espetaculo.getDuracao() + ", '" + espetaculo.getLocal() + "', '" + espetaculo.getLocalidade() + "', '" +
+                espetaculo.getPais() + "', '" + espetaculo.getClassificacao_etaria() + "'); ";
+
+       return new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
+    }
+
+    public void insertLugares(List<Lugar> lugares, Query query) {
+        for (Lugar lugar : lugares) {
+            String sql = "insert into lugar values(null, '" + lugar.getFila() + "', '" + lugar.getAssento() + "', " +
+                    lugar.getPreco() + ", (Select max(e.id) from espetaculo e)); ";
+            query.setQuery(query.getQuery() + sql);
+        }
     }
 }

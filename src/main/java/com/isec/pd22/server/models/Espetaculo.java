@@ -28,6 +28,17 @@ public class Espetaculo implements Serializable {
         lugares = new HashSet<>();
     }
 
+    public Espetaculo(String descricao, String tipo, Date data_hora, int duracao, String local, String localidade, String pais, String classificacao_etaria) {
+        this.descricao = descricao;
+        this.tipo = tipo;
+        this.data_hora = data_hora;
+        this.duracao = duracao;
+        this.local = local;
+        this.localidade = localidade;
+        this.pais = pais;
+        this.classificacao_etaria = classificacao_etaria;
+    }
+
     public static Espetaculo mapToEntity(ResultSet res) throws SQLException {
         Espetaculo espetaculo = new Espetaculo();
         try {

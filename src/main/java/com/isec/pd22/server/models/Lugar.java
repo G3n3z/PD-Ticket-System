@@ -12,6 +12,15 @@ public class Lugar implements Serializable {
     double preco;
     int espetaculo_id;
 
+    public Lugar() {
+    }
+
+    public Lugar(String fila, String assento, double preco) {
+        this.fila = fila;
+        this.assento = assento;
+        this.preco = preco;
+    }
+
     public static Lugar mapToEntity(ResultSet res) {
         Lugar lugar = new Lugar();
         try {
