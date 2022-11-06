@@ -30,5 +30,43 @@ public class Reserva {
         return reserva;
     }
 
+    public int getId() {
+        return id;
+    }
 
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public Date getData_hora() {
+        return data_hora;
+    }
+
+    public void setData_hora(Date data_hora) {
+        this.data_hora = data_hora;
+    }
+
+    public Payment getPayment() {
+        return payment;
+    }
+
+    public void setPayment(Payment payment) {
+        this.payment = payment;
+    }
+
+    public int getIdUser() {
+        return idUser;
+    }
+
+    public void setIdUser(int idUser) {
+        this.idUser = idUser;
+    }
+
+    public int getIdEspectaculo() {
+        return idEspectaculo;
+    }
+
+    public void setIdEspectaculo(int idEspectaculo) {
+        this.idEspectaculo = idEspectaculo;
+    }
 }

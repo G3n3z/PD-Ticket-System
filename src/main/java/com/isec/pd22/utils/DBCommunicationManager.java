@@ -163,6 +163,22 @@ public class DBCommunicationManager {
         return consultas;
     }
 
+    public List<Reserva> getAllReservas(){
+        List<Reserva> reservas = new ArrayList<>();
+        String query = "SELECT * from reserva order by data_hora desc";
+        try {
+            Statement stm = connection.createStatement();
+
+            ResultSet res = stm.executeQuery(query);
+            while (res.next()){
+                reservas.add(Reserva.mapToEntity(res));
+            }
+
+        } catch (SQLException ignored) {
+        }
+        return reservas;
+    }
+
     public Espetaculo getEspetaculoLess24HoursById(int id){
         //TODO check this
         String query = "Select * from espetaculo, lugar where espetaculo.id = ? and lugar.espetaculo_id = ? and espetaculo.data_hora >= datetime('now','+24 hours')";
@@ -190,7 +206,8 @@ public class DBCommunicationManager {
         return espetaculo;
     }
     public List<Espetaculo> getEspetaculosAfter24Hours(){
-        String query = "Select * from espetaculo, lugar where espetaculo.data_hora >= datetime('now','+24 hours')";
+        String query = "Select * from espetaculo where espetaculo.data_hora > strftime('%Y/%m/%d %H:%M', 'now', '+24 hours')";
+
         List<Espetaculo> espetaculos = new ArrayList<>();
         try {
             Statement statement = connection.createStatement();

@@ -17,13 +17,13 @@ public class ClientMSG implements Serializable {
     User user;
     Espetaculo espetaculo;
     private Set<HeartBeat> serverList;
+    private ClientsPayloadType clientsPayloadType;
 
 
     public ClientMSG(ClientActions action) {
         this.action = action;
     }
 
-    private ClientsPayloadType clientsPayloadType;
 
     public ClientMSG() {
         this.serverList = new HashSet<>();

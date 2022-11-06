@@ -11,10 +11,7 @@ import com.isec.pd22.server.tasks.UpdateDBTask;
 import com.isec.pd22.utils.DBVersionManager;
 import com.isec.pd22.utils.ObjectStream;
 
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.*;
 import java.sql.SQLException;
 import java.util.Date;
@@ -59,8 +56,13 @@ public class MulticastThread extends Thread{
             }
             try {
                 multicastSocket.setSoTimeout(10000);
-                multicastSocket.receive(packet);
-                MulticastMSG msg = objectStream.readObject(packet, MulticastMSG.class);
+                DatagramPacket dp = new DatagramPacket(new byte[20000], 20000);
+                multicastSocket.receive(dp);
+                ByteArrayInputStream bais = new ByteArrayInputStream(dp.getData(),0, dp.getLength());
+                ObjectInputStream ois = new ObjectInputStream(bais);
+                //multicastSocket.receive(packet);
+                MulticastMSG msg = (MulticastMSG) ois.readObject();
+                //MulticastMSG msg = objectStream.readObject(packet, MulticastMSG.class);
                 if(msg == null){
                     System.out.println("Erro na rececao de mensagem");
                     continue;
@@ -83,6 +85,8 @@ public class MulticastThread extends Thread{
                 e.printStackTrace();
                 //                System.out.println(e);
 //                break;
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
             }
 
         }

@@ -40,8 +40,10 @@ public class Client {
 
     // TODO interpretar as mensagens recebidas do servidor aqui!
     private void onMessageReceived(ClientMSG mensage, ServerConnectionThread service) {
+        System.out.println("Mensagem recebida " + mensage.getClientsPayloadType());
         switch (mensage.getClientsPayloadType()) {
             case CONNECTION_LOST -> {
+                System.out.println("Restablished");
                 reestablishNewServerConnection();
             }
             case USER_REGISTER -> {
@@ -53,16 +55,19 @@ public class Client {
                 modelManager.badRequest(mensage);
             }
             case LOGGED_IN -> {
+                data.setUser(mensage.getUser());
                 if(mensage.getUser().getRole() == Role.USER){
                     modelManager.setStatusClient(StatusClient.USER);
                 }else {
                     modelManager.setStatusClient(StatusClient.ADMIN);
                 }
-                data.setUser(mensage.getUser());
+
             }
             case LOGOUT -> modelManager.logout();
             case FILE_UPDATED -> modelManager.fileUploaded();
             case PART_OF_FILE_UPLOADED -> System.out.println("Parte do ficheiro carregado");
+            case CONSULT_SPECTACLE -> modelManager.fireEspetaculos(mensage);
+            case RESERVAS_RESPONSE -> modelManager.fireReservasAdmin(mensage);
         }
 
     }

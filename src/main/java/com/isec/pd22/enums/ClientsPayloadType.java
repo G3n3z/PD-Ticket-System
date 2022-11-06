@@ -5,6 +5,19 @@ public enum ClientsPayloadType {
     REQUEST_SERVERS_SUCCESS,
     CONNECTION_LOST,
     BAD_REQUEST,
-    LOGGED_IN, TRY_LATER, LOGOUT, FILE_UPDATED, PART_OF_FILE_UPLOADED, USER_REGISTER
+    LOGGED_IN,
+    /**
+     * Quando se nao recebes os prepares, ou seja  quando é lançado o abort
+     */
+    TRY_LATER,
+    LOGOUT,
+    /**
+     * Ficheiro atualizado
+     */
+    FILE_UPDATED,
+    PART_OF_FILE_UPLOADED,
+    CONSULT_SPECTACLE,
+    RESERVAS_RESPONSE,
+    USER_REGISTER
 
 }

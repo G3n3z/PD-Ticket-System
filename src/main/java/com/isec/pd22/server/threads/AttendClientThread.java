@@ -4,8 +4,10 @@ import com.isec.pd22.enums.*;
 import com.isec.pd22.exception.ServerException;
 import com.isec.pd22.payload.*;
 import com.isec.pd22.payload.tcp.ClientMSG;
+import com.isec.pd22.payload.tcp.Request.Espetaculos;
 import com.isec.pd22.payload.tcp.Request.FileUpload;
 import com.isec.pd22.payload.tcp.Request.Register;
+import com.isec.pd22.payload.tcp.Request.RequestListReservas;
 import com.isec.pd22.server.models.*;
 import com.isec.pd22.utils.Constants;
 import com.isec.pd22.utils.DBCommunicationManager;
@@ -28,7 +30,7 @@ public class AttendClientThread extends Thread{
     ObjectInputStream ois = null;
     FileOutputStream fos;
     Connection connection;
-
+    boolean keepGoing = true;
     public AttendClientThread(Socket clientSocket, InternalInfo internalInfo, Connection connection) {
         this.clientSocket = clientSocket;
         this.internalInfo = internalInfo;
@@ -37,7 +39,7 @@ public class AttendClientThread extends Thread{
 
     @Override
     public void run() {
-        boolean keepGoing = true;
+
 
         keepGoing = openStreams();
         dbVersionManager = new DBVersionManager(connection);
@@ -54,6 +56,7 @@ public class AttendClientThread extends Thread{
                         internalInfo.lock.lock();
                         internalInfo.condition.await();
                         internalInfo.lock.unlock();
+                        handleClientRequest(clientMsg, oos);
                     }
                     case UNAVAILABLE -> {
                         closeClient();
@@ -107,6 +110,9 @@ public class AttendClientThread extends Thread{
                 case LOGIN -> {
                     doLogin(msgClient, dbComm);
                 }
+                case EXIT -> {
+                   exitClient(msgClient);
+                }
                 default -> actionsLogged(msgClient, oos, dbComm);
             }
 
@@ -118,6 +124,16 @@ public class AttendClientThread extends Thread{
 
     }
 
+    private void exitClient(ClientMSG msgClient) throws SQLException {
+        System.out.println("Cliente saiu");
+        keepGoing = false;
+        if (msgClient.getUser() != null){
+            Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
+            if (startUpdateRoutine(query, internalInfo)) {
+                dbVersionManager.insertQuery(query);
+            }
+        }
+    }
 
 
     private void actionsLogged(ClientMSG msgClient, ObjectOutputStream oos, DBCommunicationManager dbComm) {
@@ -156,13 +172,21 @@ public class AttendClientThread extends Thread{
                         unpayedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.PAYED);
                     }
                     case CONSULT_SPECTACLE -> {
-
+                        Espetaculos espetaculos = (Espetaculos) msgClient;
+                        List<Espetaculo> list = dbComm.getEspetaculosAfter24Hours();
+                        msg = new Espetaculos(ClientsPayloadType.CONSULT_SPECTACLE, list);
                     }
                     case CHOOSE_SPECTACLE_24H -> {
                         List<Espetaculo> espetaculos = dbComm.getEspetaculosAfter24Hours();
                     }
                     case SUBMIT_RESERVATION -> {
                         //Verificação
+                    }
+                    case GET_RESERVS -> {
+                        RequestListReservas request = new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE);
+                        List<Reserva> reservas = dbComm.getAllReservas();
+                        request.setReservas(reservas);
+                        request.setAction(ClientActions.GET_RESERVS);
                     }
                     case CANCEL_RESERVATION -> {
                         //Verificação id reserva

@@ -5,12 +5,17 @@ import com.isec.pd22.client.threads.SendFile;
 import com.isec.pd22.client.ui.utils.AlertSingleton;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
+import com.isec.pd22.payload.tcp.Request.Espetaculos;
+import com.isec.pd22.payload.tcp.Request.RequestListReservas;
+import com.isec.pd22.server.models.Espetaculo;
+import com.isec.pd22.server.models.Reserva;
 import com.isec.pd22.server.models.User;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 public class ModelManager {
 
@@ -22,6 +27,8 @@ public class ModelManager {
     public static final String ACTION_COMPLETE = "ACTION_COMPLETE";
     public static final String LOGOUT = "LOGOUT";
     public static final String FILE_UPDATED = "FILE_UPLOADED";
+    public static final String ALL_ESPETACULOS = "ALL_ESPETACULOS";
+    public static final String PROP_RESERVAS = "PROP_RESERVAS";
     PropertyChangeSupport pcs;
     private StatusClient statusClient;
 
@@ -70,6 +77,7 @@ public class ModelManager {
         try {
             client.sendMessage(msg);
         } catch (IOException e) {
+            e.printStackTrace();
             AlertSingleton.getInstanceWarning().setAlertText("Erro de Mensagem", "", "Não foi possivel fazer o pedido ao servidor");
             AlertSingleton.getInstanceWarning().showAndWait();
         }
@@ -108,5 +116,25 @@ public class ModelManager {
 
     public void fileUploaded() {
         pcs.firePropertyChange(FILE_UPDATED, null, null);
+    }
+
+    public List<Espetaculo> getEspectaculos() {
+        return data.espetaculos;
+    }
+
+    public void fireEspetaculos(ClientMSG mensage) {
+        Espetaculos e = (Espetaculos) mensage;
+        data.espetaculos = e.getEspetaculos();
+        pcs.firePropertyChange(ALL_ESPETACULOS, null, null);
+    }
+
+    public List<Reserva> getReservas() {
+        return data.getReservas();
+    }
+
+    public void fireReservasAdmin(ClientMSG mensage) {
+        RequestListReservas reservas = (RequestListReservas) mensage;
+        data.setReservas(reservas.getReservas());
+        pcs.firePropertyChange(PROP_RESERVAS, null, null);
     }
 }
