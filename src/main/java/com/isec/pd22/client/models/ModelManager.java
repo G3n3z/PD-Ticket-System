@@ -6,6 +6,7 @@ import com.isec.pd22.client.ui.utils.AlertSingleton;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.tcp.Request.Espetaculos;
+import com.isec.pd22.payload.tcp.Request.RequestDetailsEspetaculo;
 import com.isec.pd22.payload.tcp.Request.RequestListReservas;
 import com.isec.pd22.server.models.Espetaculo;
 import com.isec.pd22.server.models.Reserva;
@@ -29,6 +30,7 @@ public class ModelManager {
     public static final String FILE_UPDATED = "FILE_UPLOADED";
     public static final String ALL_ESPETACULOS = "ALL_ESPETACULOS";
     public static final String PROP_RESERVAS = "PROP_RESERVAS";
+    public static final String PROP_ESPETACULO_DETAILS = "PROP_ESPETACULO_DETAILS";
     PropertyChangeSupport pcs;
     private StatusClient statusClient;
 
@@ -136,5 +138,15 @@ public class ModelManager {
         RequestListReservas reservas = (RequestListReservas) mensage;
         data.setReservas(reservas.getReservas());
         pcs.firePropertyChange(PROP_RESERVAS, null, null);
+    }
+
+    public Espetaculo getEspectaculo() {
+        return data.espetaculo;
+    }
+
+    public void fireEspectaculo(ClientMSG mensage) {
+        RequestDetailsEspetaculo r = (RequestDetailsEspetaculo) mensage;
+        data.espetaculo = r.getEspetaculo();
+        pcs.firePropertyChange(PROP_ESPETACULO_DETAILS, null, null);
     }
 }

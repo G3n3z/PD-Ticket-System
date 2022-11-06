@@ -4,7 +4,7 @@ import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class Lugar implements Serializable {
+public class Lugar implements Serializable, Comparable<Lugar> {
 
     int idLugar;
     String fila;
@@ -12,6 +12,7 @@ public class Lugar implements Serializable {
     double preco;
     int espetaculo_id;
 
+    Reserva reserva;
     public Lugar() {
     }
 
@@ -74,5 +75,18 @@ public class Lugar implements Serializable {
 
     public void setEspetaculo_id(int espetaculo_id) {
         this.espetaculo_id = espetaculo_id;
+    }
+
+    @Override
+    public int compareTo(Lugar o) {
+        return Integer.parseInt(assento.trim()) - Integer.parseInt(o.assento.trim());
+    }
+
+    public void setReserva(Reserva reserva) {
+        this.reserva = reserva;
+    }
+
+    public Reserva getReserva() {
+        return reserva;
     }
 }

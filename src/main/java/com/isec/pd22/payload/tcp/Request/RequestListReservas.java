@@ -21,6 +21,11 @@ public class RequestListReservas extends ClientMSG {
         super(clientsPayloadType);
     }
 
+    public RequestListReservas(ClientsPayloadType clientsPayloadType, List<Reserva> reservas) {
+        super(clientsPayloadType);
+        this.reservas = reservas;
+    }
+
     public RequestListReservas(ClientActions action) {
         super(action);
     }

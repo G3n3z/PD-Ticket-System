@@ -4,10 +4,7 @@ import com.isec.pd22.enums.*;
 import com.isec.pd22.exception.ServerException;
 import com.isec.pd22.payload.*;
 import com.isec.pd22.payload.tcp.ClientMSG;
-import com.isec.pd22.payload.tcp.Request.Espetaculos;
-import com.isec.pd22.payload.tcp.Request.FileUpload;
-import com.isec.pd22.payload.tcp.Request.Register;
-import com.isec.pd22.payload.tcp.Request.RequestListReservas;
+import com.isec.pd22.payload.tcp.Request.*;
 import com.isec.pd22.server.models.*;
 import com.isec.pd22.utils.Constants;
 import com.isec.pd22.utils.DBCommunicationManager;
@@ -82,6 +79,7 @@ public class AttendClientThread extends Thread{
         } catch (IOException e) {
             System.out.println("[AttendClientThread] - error on closing client socket: "+ e.getMessage());
         }
+        System.out.println("Sai da thread do cliente");
     }
 
     private boolean openStreams() {
@@ -183,10 +181,9 @@ public class AttendClientThread extends Thread{
                         //Verificação
                     }
                     case GET_RESERVS -> {
-                        RequestListReservas request = new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE);
                         List<Reserva> reservas = dbComm.getAllReservas();
-                        request.setReservas(reservas);
-                        request.setAction(ClientActions.GET_RESERVS);
+                        msg = new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE,reservas);
+                        msg.setAction(ClientActions.GET_RESERVS);
                     }
                     case CANCEL_RESERVATION -> {
                         //Verificação id reserva
@@ -221,6 +218,14 @@ public class AttendClientThread extends Thread{
                         }
                         //send CONSULT_SPECTACLE
                     }
+                    case CONSULT_SPECTACLE_DETAILS -> {
+                        RequestDetailsEspetaculo req = (RequestDetailsEspetaculo) msgClient;
+                        Espetaculo e = dbComm.getEspetaculoDetailsByIdWithLugares(req.getEspetaculo().getIdEspetaculo());
+                        //msg = new ClientMSG(ClientActions.CONSULT_SPECTACLE_DETAILS);
+                        req.setEspetaculo(e);
+                        req.setClientsPayloadType(ClientsPayloadType.SPECTACLE_DETAILS);
+                        msg = req;
+                    }
                     case LOGOUT -> {
                         Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
                         if (startUpdateRoutine(query, internalInfo)) {
@@ -233,9 +238,9 @@ public class AttendClientThread extends Thread{
                     }
                 }
             } else {
-               //TODO: Tentativa de acao de cliente nao ligado
+               msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
             }
-            oos.writeObject(msg);
+            sendMessage(msg);
         }catch (SQLException e){
             System.out.println(Arrays.toString(e.getStackTrace()));
         } catch (IOException e) {
@@ -561,6 +566,15 @@ public class AttendClientThread extends Thread{
         } else {
 
             msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
+        }
+        oos.writeObject(msg);
+    }
+
+
+    public void sendMessage(ClientMSG msg) throws IOException {
+        if(msg == null){
+            System.out.println("Tentativa de envio de mengsane a null ");
+            return;
         }
         oos.writeObject(msg);
     }
