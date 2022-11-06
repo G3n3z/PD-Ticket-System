@@ -200,10 +200,56 @@ public class DBCommunicationManager {
                     espetaculo.getLugares().add(lugar);
                 }
             }
+
         } catch (SQLException e) {
             return null;
         }
         return espetaculo;
+    }
+
+    public Espetaculo getEspetaculoDetailsByIdWithLugares(int idEspetaculo){
+        String queryEspec = "Select * from espetaculo where espetaculo.id = ?";
+        String query = "Select lugar.id, fila, assento, preco, espetaculo_id from espetaculo, lugar where espetaculo.id = ? and lugar.espetaculo_id = ?";
+        String query2 = "SELECT * from reserva_lugar, reserva where reserva_lugar.id_lugar = ? " +
+                "and reserva_lugar.id_reserva = reserva.id";
+        Espetaculo espetaculo = null;
+        try {
+            PreparedStatement preparedStatement = connection.prepareStatement(queryEspec);
+            preparedStatement.setInt(1, idEspetaculo);
+            ResultSet res = preparedStatement.executeQuery();
+            if(res.next()){
+                espetaculo = Espetaculo.mapToEntity(res);
+            }
+            preparedStatement.close();
+
+            preparedStatement = connection.prepareStatement(query);
+            preparedStatement.setInt(1, idEspetaculo);
+            preparedStatement.setInt(2, idEspetaculo);
+            res = preparedStatement.executeQuery();
+
+            PreparedStatement preparedStatement2 = connection.prepareStatement(query2);
+            Reserva reserva = null;
+            while (res.next()){
+                Lugar lugar = Lugar.mapToEntity(res);
+                if(lugar != null){
+                    espetaculo.getLugares().add(lugar);
+                    preparedStatement2.setInt(1, lugar.getIdLugar());
+                    ResultSet resultSet = preparedStatement2.executeQuery();
+                    if(resultSet.next()){
+                        reserva = Reserva.mapToEntity(resultSet);
+                    }else {
+                        reserva = null;
+                    }
+                    lugar.setReserva(reserva);
+                }
+            }
+
+        } catch (SQLException e) {
+            return null;
+        }
+        return espetaculo;
+
+
     }
     public List<Espetaculo> getEspetaculosAfter24Hours(){
         String query = "Select * from espetaculo where espetaculo.data_hora > strftime('%Y/%m/%d %H:%M', 'now', '+24 hours')";

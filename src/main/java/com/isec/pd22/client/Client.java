@@ -68,6 +68,7 @@ public class Client {
             case PART_OF_FILE_UPLOADED -> System.out.println("Parte do ficheiro carregado");
             case CONSULT_SPECTACLE -> modelManager.fireEspetaculos(mensage);
             case RESERVAS_RESPONSE -> modelManager.fireReservasAdmin(mensage);
+            case SPECTACLE_DETAILS -> modelManager.fireEspectaculo(mensage);
         }
 
     }
