@@ -2,14 +2,15 @@ package com.isec.pd22.client.ui;
 
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.ui.utils.AlertSingleton;
-import com.isec.pd22.client.ui.utils.RegisterView;
+import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.StatusClient;
+import com.isec.pd22.payload.tcp.ClientMSG;
 import javafx.application.Platform;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
-import java.util.List;
+import java.io.IOException;
 
 public class RootPane extends BorderPane {
     ModelManager modelManager;
@@ -32,6 +33,20 @@ public class RootPane extends BorderPane {
 
     public void startServices() {
         modelManager.startServices(args);
+        stage.setOnCloseRequest(windowEvent -> {
+            AlertSingleton.getInstanceConfirmation().setAlertText("Sair", "Pretende Sair da Aplicação?", "");
+            AlertSingleton.getInstanceConfirmation().showAndWait().ifPresent(result -> {
+                if (result.getText().equalsIgnoreCase("YES")){
+                    ClientMSG msg = new ClientMSG(ClientActions.EXIT);
+                    msg.setUser(modelManager.getUser());
+                    modelManager.sendMessage(msg);
+                    Platform.exit();
+                }
+                else{
+                    windowEvent.consume();
+                }
+            });
+        });
     }
 
     private void createViews() {
@@ -44,7 +59,8 @@ public class RootPane extends BorderPane {
 
     }
     private void registerHandlers() {
-
+        modelManager.addPropertyChangeListener(ModelManager.BAD_REQUEST, evt -> Platform.runLater( this::badRequest));
+        modelManager.addPropertyChangeListener(ModelManager.LOGOUT, evt -> Platform.runLater(this::logout));
         modelManager.addPropertyChangeListener(ModelManager.ERROR_CONNECTION, (evt) -> Platform.runLater(this::showAlert));
     }
 
@@ -58,4 +74,16 @@ public class RootPane extends BorderPane {
             }
         });
     }
+
+    private void logout() {
+        AlertSingleton.getInstanceOK().setAlertText("Logout", "", "Obrigado e volte sempre");
+        AlertSingleton.getInstanceOK().showAndWait().ifPresent( action -> modelManager.setStatusClient(StatusClient.NOT_LOGGED));
+    }
+
+
+    private void badRequest() {
+        AlertSingleton.getInstanceWarning().setAlertText("Erro de Mensagem", "", "Não foi possivel fazer o pedido ao servidor");
+        AlertSingleton.getInstanceWarning().showAndWait();
+    }
+
 }

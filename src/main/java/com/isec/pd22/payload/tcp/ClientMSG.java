@@ -1,7 +1,8 @@
-package com.isec.pd22.payload;
+package com.isec.pd22.payload.tcp;
 
 import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.Role;
+import com.isec.pd22.payload.HeartBeat;
 import com.isec.pd22.server.models.Espetaculo;
 import com.isec.pd22.server.models.User;
 import com.isec.pd22.enums.ClientsPayloadType;
@@ -14,11 +15,14 @@ import java.util.Set;
 public class ClientMSG implements Serializable {
     ClientActions action;
     User user;
-    Espetaculo espetaculo;
     private Set<HeartBeat> serverList;
-
-    
     private ClientsPayloadType clientsPayloadType;
+
+
+    public ClientMSG(ClientActions action) {
+        this.action = action;
+    }
+
 
     public ClientMSG() {
         this.serverList = new HashSet<>();
@@ -28,31 +32,31 @@ public class ClientMSG implements Serializable {
         this.clientsPayloadType = clientsPayloadType;
     }
 
-    public User getUser() {
-        return user;
-    }
-    public ClientActions getAction() {
-        return action;
+    public void setClientsPayloadType(ClientsPayloadType clientsPayloadType) {
+        this.clientsPayloadType = clientsPayloadType;
     }
 
     public void setAction(ClientActions action) {
         this.action = action;
     }
+
+    public User getUser() {
+        return user;
+    }
+
     public void setUser(User user) {
         this.user = user;
     }
+
+    public ClientActions getAction() {
+        return action;
+    }
+
 
     public void setServerList(Set<HeartBeat> serverList) {
         this.serverList = serverList;
     }
 
-    public Espetaculo getEspetaculo() {
-        return espetaculo;
-    }
-
-    public void setEspetaculo(Espetaculo espetaculo) {
-        this.espetaculo = espetaculo;
-    }
     public ClientsPayloadType getClientsPayloadType() {
         return clientsPayloadType;
     }

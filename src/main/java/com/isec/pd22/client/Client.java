@@ -6,7 +6,9 @@ import com.isec.pd22.client.models.Data;
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.threads.ServerConnectionThread;
 import com.isec.pd22.enums.ClientsPayloadType;
-import com.isec.pd22.payload.ClientMSG;
+import com.isec.pd22.enums.Role;
+import com.isec.pd22.enums.StatusClient;
+import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.ServersRequestPayload;
 import com.isec.pd22.payload.HeartBeat;
 import com.isec.pd22.utils.UdpUtils;
@@ -47,12 +49,37 @@ public class Client {
 
     // TODO interpretar as mensagens recebidas do servidor aqui!
     private void onMessageReceived(ClientMSG mensage, ServerConnectionThread service) {
+        System.out.println("Mensagem recebida " + mensage.getClientsPayloadType());
         switch (mensage.getClientsPayloadType()) {
             case CONNECTION_LOST -> {
+                System.out.println("Restablished");
                 reestablishNewServerConnection();
             }
+            case USER_REGISTER -> {
+                if (modelManager.getStatusClient() == StatusClient.REGISTER){
+                    modelManager.registerCompleted();
+                }
+            }
+            case BAD_REQUEST -> {
+                modelManager.badRequest(mensage);
+            }
+            case LOGGED_IN -> {
+                data.setUser(mensage.getUser());
+                if(mensage.getUser().getRole() == Role.USER){
+                    modelManager.setStatusClient(StatusClient.USER);
+                }else {
+                    modelManager.setStatusClient(StatusClient.ADMIN);
+                }
 
+            }
+            case LOGOUT -> modelManager.logout();
+            case FILE_UPDATED -> modelManager.fileUploaded();
+            case PART_OF_FILE_UPLOADED -> System.out.println("Parte do ficheiro carregado");
+            case CONSULT_SPECTACLE -> modelManager.fireEspetaculos(mensage);
+            case RESERVAS_RESPONSE -> modelManager.fireReservasAdmin(mensage);
+            case SPECTACLE_DETAILS -> modelManager.fireEspectaculo(mensage);
         }
+
     }
 
     private void requestServers() throws IOException, ClassNotFoundException {

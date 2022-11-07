@@ -8,6 +8,9 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.net.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.SQLException;
 import java.util.ArrayList;
 
 import static com.isec.pd22.utils.Constants.MULTICAST_IP;
@@ -34,7 +37,12 @@ public class ServerSocketThread extends Thread
 
     @Override
     public void run() {
-
+        Connection connection;
+        try {
+            connection = DriverManager.getConnection(internalInfo.getUrl_db());
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
         while(true)
         {
             //flag para sair do ciclo de atender clientes break;
@@ -46,7 +54,7 @@ public class ServerSocketThread extends Thread
 
                 internalInfo.getAllClientSockets().add(clientSocket);
 
-                AttendClientThread clientThread = new AttendClientThread(clientSocket, internalInfo);
+                AttendClientThread clientThread = new AttendClientThread(clientSocket, internalInfo, connection);
                 clientThread.start();
 
                 synchronized (internalInfo) {
@@ -60,7 +68,8 @@ public class ServerSocketThread extends Thread
             }catch (SocketTimeoutException e){
                 continue;
             }catch (IOException e){
-                //TODO terminar? (por decidir o que fazer)
+                System.out.println("[ServerSocketThread] - server shutdown. Terminating..." + e.getMessage());
+                break;
             }
 
         }

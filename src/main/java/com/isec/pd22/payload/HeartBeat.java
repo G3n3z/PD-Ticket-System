@@ -27,6 +27,12 @@ public class HeartBeat extends MulticastMSG implements Comparable<HeartBeat>{
         this.portUdp = portUdp;
     }
 
+    public HeartBeat(String ip, int portUdp) {
+        super();
+        this.ip = ip;
+        this.portUdp = portUdp;
+    }
+
     public long getUnixTimeSinceLastHeartBeat() {
         return unixTimeSinceLastHeartBeat;
     }

@@ -3,10 +3,7 @@ package com.isec.pd22.server.threads;
 import com.isec.pd22.enums.Status;
 import com.isec.pd22.enums.TypeOfMulticastMsg;
 import com.isec.pd22.exception.ServerException;
-import com.isec.pd22.payload.HeartBeat;
-import com.isec.pd22.payload.MulticastMSG;
-import com.isec.pd22.payload.Prepare;
-import com.isec.pd22.payload.UpdateDB;
+import com.isec.pd22.payload.*;
 import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.Query;
 import com.isec.pd22.server.tasks.SaveHeartBeatTask;
@@ -14,10 +11,7 @@ import com.isec.pd22.server.tasks.UpdateDBTask;
 import com.isec.pd22.utils.DBVersionManager;
 import com.isec.pd22.utils.ObjectStream;
 
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.*;
 import java.sql.SQLException;
 import java.util.Date;
@@ -50,7 +44,7 @@ public class MulticastThread extends Thread{
         this.multicastSocket = internalInfo.getMulticastSocket();
         this.timer = timer;
         objectStream = new ObjectStream();
-        bytes = new byte[2000];
+        bytes = new byte[20000];
         packet = new DatagramPacket(bytes, bytes.length);
     }
 
@@ -62,12 +56,18 @@ public class MulticastThread extends Thread{
             }
             try {
                 multicastSocket.setSoTimeout(10000);
-                multicastSocket.receive(packet);
-                MulticastMSG msg = objectStream.readObject(packet, MulticastMSG.class);
+                DatagramPacket dp = new DatagramPacket(new byte[20000], 20000);
+                multicastSocket.receive(dp);
+                ByteArrayInputStream bais = new ByteArrayInputStream(dp.getData(),0, dp.getLength());
+                ObjectInputStream ois = new ObjectInputStream(bais);
+                //multicastSocket.receive(packet);
+                MulticastMSG msg = (MulticastMSG) ois.readObject();
+                //MulticastMSG msg = objectStream.readObject(packet, MulticastMSG.class);
                 if(msg == null){
                     System.out.println("Erro na rececao de mensagem");
                     continue;
                 }
+                System.out.println("MSG RECEBIDA: " + msg.getTypeMsg() + " from " + packet.getPort());
                 switch (internalInfo.getStatus()){
                     case AVAILABLE -> responseToMsgAvailable(msg, packet);
                     case UPDATING -> {responseToMsgUpdating(msg, packet);}
@@ -78,11 +78,17 @@ public class MulticastThread extends Thread{
                 if(internalInfo.getStatus() == Status.UNAVAILABLE){
                     atualizaDB();
                 }
-                System.out.println(e);
+                System.out.println("[MulticastThread] - socket timeout: "+ e.getMessage());
+                //e.printStackTrace();
             }
             catch (IOException e) {
-                System.out.println(e);
-                break;
+                System.out.println("[MulticastThread] - erro na rececao: "+ e.getMessage());
+                e.printStackTrace();
+                //                System.out.println(e);
+//                break;
+            } catch (ClassNotFoundException e) {
+                System.out.println("[MulticastThread] - erro no cast da class: "+ e.getMessage());
+                e.printStackTrace();
             }
 
         }
@@ -116,25 +122,7 @@ public class MulticastThread extends Thread{
                 new UpdateDBTask(internalInfo, msgUpdate).start();
             }
             case PREPARE -> {
-                Prepare prepare = (Prepare) msg;
-                synchronized (internalInfo){
-                    internalInfo.setStatus(Status.UPDATING);
-                }
-                query = prepare.getQuery();
-                Integer i = prepare.getNumVersion();
-
-                try {
-                    //TODO: implement with Hugo changes
-                    packet = new DatagramPacket(new byte[3000], 3000, InetAddress.getByName(""), prepare.getConfirmationUDPPort());
-                    objectStream.writeObject(packet, prepare);
-                    multicastSocket.send(packet);
-                } catch (IOException e) {
-                    synchronized (internalInfo){
-                        internalInfo.setStatus(Status.AVAILABLE);
-                    }
-                    System.out.println("Nao consegui enviar a confirmacao do prepare");
-                }
-
+                responseToPrepare(msg);
             }
         }
     }
@@ -145,25 +133,35 @@ public class MulticastThread extends Thread{
             case HEARTBEAT -> {
                 HeartBeat heartBeat = (HeartBeat) msg;
                 new SaveHeartBeatTask(internalInfo, heartBeat).start();}
+            case PREPARE -> {
+                responseToPrepare(msg);
+            }
             case ABORT -> {
                 synchronized (internalInfo){
                     internalInfo.setStatus(Status.AVAILABLE);
                 }
-                internalInfo.notifyAll();
+                internalInfo.lock.lock();
+                internalInfo.condition.signalAll();
+                internalInfo.lock.unlock();
             }
             case COMMIT -> {
-                try {
-                    DBVersionManager dbVersionManager = new DBVersionManager(internalInfo.getUrl_db());
-                    dbVersionManager.insertQuery(query);
-                    dbVersionManager.closeConnection();
-                    synchronized (internalInfo){
-                        internalInfo.setStatus(Status.AVAILABLE);
+                Commit commit = (Commit) msg;
+                if (!(commit.getIp().equalsIgnoreCase(internalInfo.getIp()) && commit.getPortUdp() == internalInfo.getPortUdp())){
+                    try {
+                        DBVersionManager dbVersionManager = new DBVersionManager(internalInfo.getUrl_db());
+                        dbVersionManager.insertQuery(query);
+                        dbVersionManager.closeConnection();
+                    }catch (SQLException e) {
+                        throw new RuntimeException(e);
                     }
-                    internalInfo.notifyAll();
-                } catch (SQLException e) {
-                    //TODO: Ver como resolver
-                    System.out.println(e);
                 }
+                synchronized (internalInfo){
+                    internalInfo.setStatus(Status.AVAILABLE);
+                }
+                internalInfo.lock.lock();
+                internalInfo.condition.signalAll();
+                internalInfo.lock.unlock();
+
             }
         }
     }
@@ -184,7 +182,27 @@ public class MulticastThread extends Thread{
 
     }
 
+    void responseToPrepare(MulticastMSG msg){
+        Prepare prepare = (Prepare) msg;
+        synchronized (internalInfo){
+            internalInfo.setStatus(Status.UPDATING);
+        }
+        query = prepare.getQuery();
 
+        try {
+            packet = new DatagramPacket(new byte[3000], 3000, InetAddress.getByName(prepare.getIp()), prepare.getConfirmationUDPPort());
+            prepare.setIp(internalInfo.getIp());
+            prepare.setPortUdpClients(internalInfo.getPortUdp());
+            objectStream.writeObject(packet, prepare);
+            multicastSocket.send(packet);
+        } catch (IOException e) {
+            synchronized (internalInfo){
+                internalInfo.setStatus(Status.AVAILABLE);
+            }
+            System.out.println("Nao consegui enviar a confirmacao do prepare");
+        }
+
+    }
     private void sendHeartBeat() {
         Timer timer1 = new Timer();
         timer1.schedule(new HeartBeatTask(internalInfo, timer1), 0);

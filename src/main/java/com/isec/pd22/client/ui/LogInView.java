@@ -1,19 +1,20 @@
 package com.isec.pd22.client.ui;
 
+import com.isec.pd22.client.models.Data;
 import com.isec.pd22.client.models.ModelManager;
+import com.isec.pd22.client.ui.utils.AlertSingleton;
+import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.StatusClient;
-import com.isec.pd22.payload.ClientMSG;
+import com.isec.pd22.payload.tcp.ClientMSG;
+import com.isec.pd22.server.models.User;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.*;
-import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
-
-
-import java.util.List;
 
 public class LogInView extends BorderPane {
 
@@ -72,16 +73,19 @@ public class LogInView extends BorderPane {
     private void registerHandlers() {
         modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, (event) -> updateView() );
         btnLogin.setOnAction(actionEvent -> {
-            String email = tfEmail.getText();
+            String username = tfEmail.getText();
             String password = tfPassword.getText();
-
-            modelManager.sendMessage(new ClientMSG());
+            ClientMSG msg = new ClientMSG(ClientActions.LOGIN);
+            msg.setUser(new User(username, password));
+            modelManager.sendMessage(msg);
         });
         btnRegister.setOnAction(actionEvent -> {
           modelManager.setStatusClient(StatusClient.REGISTER);
         });
 
+
     }
+
 
     private void updateView() {
         this.setVisible(modelManager != null && modelManager.getStatusClient() == StatusClient.NOT_LOGGED);

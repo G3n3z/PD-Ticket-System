@@ -11,6 +11,7 @@ import java.net.DatagramPacket;
 import java.net.InetAddress;
 import java.net.MulticastSocket;
 import java.net.UnknownHostException;
+import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -55,7 +56,7 @@ public class HeartBeatTask  extends TimerTask {
             System.out.println("Erro ao enviar sinal de vida");
         } catch (IOException e) {
             System.out.println(e);
-            System.out.println("Nao conseguiu enviar o datagrampacket");
+            System.out.println("[heartbeat task]Nao conseguiu enviar o datagrampacket " + new Date());
         }
 
         //Se for para executar mais que uma vez
@@ -66,6 +67,6 @@ public class HeartBeatTask  extends TimerTask {
             cancel();
             timer.cancel();
         }
-        System.out.println("Enviado HeartBeat");
+        System.out.println("Enviado HeartBeat "+ new Date());
     }
 }

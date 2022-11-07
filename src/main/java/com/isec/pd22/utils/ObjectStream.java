@@ -4,11 +4,12 @@ import java.io.*;
 import java.net.DatagramPacket;
 
 public class ObjectStream {
-
+    ObjectOutputStream oos;
+    ByteArrayOutputStream baos;
     public <T>  ByteArrayOutputStream getByteArrayOutputStreamByClass(T object){
         try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ObjectOutputStream oos = new ObjectOutputStream(baos);
+            baos = new ByteArrayOutputStream();
+            oos = new ObjectOutputStream(baos);
             oos.writeObject(object);
             return  baos;
         }catch (IOException e) {
@@ -17,13 +18,17 @@ public class ObjectStream {
         return null;
     }
 
-    public <T> boolean writeObject(DatagramPacket packet, T object){
+    public <T> boolean writeObject(DatagramPacket packet, T object) throws IOException {
         ByteArrayOutputStream baos = getByteArrayOutputStreamByClass(object);
         if(baos == null){
             return false;
         }
         packet.setData(baos.toByteArray());
         packet.setLength(baos.size());
+        oos.close();
+        baos.close();
+
+
         return true;
     }
 
@@ -37,7 +42,7 @@ public class ObjectStream {
         Object object = null;
         T obj = null;
         try {
-            object =  in.readObject();
+            object = in.readObject();
             if(object != null && tClass.isAssignableFrom(object.getClass())){
                 obj = (T) object;
             }

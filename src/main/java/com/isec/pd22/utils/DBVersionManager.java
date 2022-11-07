@@ -75,12 +75,11 @@ public class DBVersionManager {
         Statement stm = connection.createStatement();
         stm.executeUpdate(query.getQuery());
 
-        String queryVersion = "insert into versions values(?, ?, ?)";
+        String queryVersion = "insert into versions values(null, ?, ?)";
 
         PreparedStatement pstm = connection.prepareStatement(queryVersion);
-        pstm.setInt(1, query.getNumVersion());
-        pstm.setString(2, query.getQuery());
-        pstm.setLong(3, query.getTimestamp());
+        pstm.setString(1, query.getQuery());
+        pstm.setLong(2, query.getTimestamp());
         pstm.executeUpdate();
     }
 

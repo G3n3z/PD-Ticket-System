@@ -44,9 +44,6 @@ public class Prepare extends MulticastMSG{
         return this.confirmationUDPPort;
     }
 
-    public void setConfirmationUDPSocket(int confirmationUDPport) {
-        this.confirmationUDPPort = confirmationUDPPort;
-    }
 
     public void setConfirmationUDPPort(int confirmationUDPPort) {
         this.confirmationUDPPort = confirmationUDPPort;
