@@ -94,9 +94,9 @@ public class AttendClientThread extends Thread{
     }
 
     private void handleClientRequest(ClientMSG msgClient){
+        ClientMSG ansMsg = new ClientMSG();
         try {
 
-            ClientMSG ansMsg = new ClientMSG();
 
             switch (msgClient.getAction()){
                 case REGISTER_USER -> {
@@ -112,6 +112,7 @@ public class AttendClientThread extends Thread{
             }
 
         } catch (SQLException | IOException e) {
+            ansMsg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
             System.out.println("[AttendClientThread] - failed to initialize DB communication: "+ e.getMessage());
         }
     }
@@ -178,7 +179,23 @@ public class AttendClientThread extends Thread{
                         msg = new Espetaculos(ClientsPayloadType.CONSULT_SPECTACLE,list);
                     }
                     case SUBMIT_RESERVATION -> {
-                        //Verificação
+                        ListPlaces list = (ListPlaces) msgClient;
+                        if(dbComm.canSubmitReservations(list)){
+                            Query query = dbComm.submitReservations(list);
+                            if (startUpdateRoutine(query, internalInfo)) {
+                                dbVersionManager.insertQuery(query);
+                                msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
+                                msg.setClientsPayloadType(ClientsPayloadType.RESERVAS_RESPONSE);
+                                //TODO checkpaymentTimerTask
+                            } else {
+                                msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
+                                msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
+                            }
+                        }else {
+                            msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
+                            msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
+                        }
+
                     }
                     case GET_RESERVS -> {
                         List<Reserva> reservas = dbComm.getAllReservas();
@@ -186,13 +203,20 @@ public class AttendClientThread extends Thread{
                         msg.setAction(ClientActions.GET_RESERVS);
                     }
                     case CANCEL_RESERVATION -> {
-                        //Verificação id reserva
-                        int idReserva = 0; //TODO colocar reserva na estrutura de comunicação
-                        Query query = dbComm.deleteReservaNotPayed(idReserva);
-                        if (startUpdateRoutine(query, internalInfo)) {
-                            dbVersionManager.insertQuery(query);
-                        } else {
-                            //TODO enviar mensagem a cliente: impossel realizar transação, tente mais tarde
+                        RequestListReservas list = (RequestListReservas) msgClient;
+                        if(dbComm.canCancelReservation(list.getReservas().get(0).getIdReserva())) {
+                            Query query = dbComm.deleteReservaNotPayed(list.getReservas().get(0).getIdReserva());
+                            if (startUpdateRoutine(query, internalInfo)) {
+                                dbVersionManager.insertQuery(query);
+                                msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
+                                msg.setClientsPayloadType(ClientsPayloadType.RESERVAS_RESPONSE);
+                            } else {
+                                msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
+                                msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
+                            }
+                        }else{
+                            msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
+                            msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
                         }
                     }
                     case ADD_SPECTACLE -> {
@@ -214,9 +238,21 @@ public class AttendClientThread extends Thread{
                     case DELETE_SPECTACLE -> {
                         if(user.getRole() == Role.ADMIN){
                             Espetaculos list = (Espetaculos) msgClient;
-                            checkSpectacleForDelete(list.getEspetaculos().get(0));
+                            if(dbComm.canRemoveEspecatulo(list.getEspetaculos().get(0).getIdEspetaculo())){
+                                Query  query = dbComm.deleteSpectacle(list.getEspetaculos().get(0).getIdEspetaculo());
+                                if (startUpdateRoutine(query, internalInfo)) {
+                                    dbVersionManager.insertQuery(query);
+                                    msg = new ClientMSG(ClientActions.DELETE_SPECTACLE);
+                                    msg.setClientsPayloadType(ClientsPayloadType.CONSULT_SPECTACLE);
+                                } else {
+                                    msg = new ClientMSG(ClientActions.DELETE_SPECTACLE);
+                                    msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
+                                }
+                            }else {
+                                msg = new ClientMSG(ClientActions.DELETE_SPECTACLE);
+                                msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
+                            }
                         }
-                        //send CONSULT_SPECTACLE
                     }
                     case CONSULT_SPECTACLE_DETAILS -> {
                         RequestDetailsEspetaculo req = (RequestDetailsEspetaculo) msgClient;
@@ -248,9 +284,6 @@ public class AttendClientThread extends Thread{
         }
 
 
-    }
-
-    private void checkSpectacleForDelete(Espetaculo espetaculo) {
     }
 
     private boolean readFile(ClientMSG msgClient) throws IOException {
@@ -523,8 +556,10 @@ public class AttendClientThread extends Thread{
         try {
             ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream());
             ClientMSG ansMsg = new ClientMSG();
-            //TODO remover o proprio heartbeat
-            ansMsg.setServerList(internalInfo.getHeatBeats());
+            Set<HeartBeat> list = new HashSet<>();
+            list.addAll(internalInfo.getHeatBeats());
+            list.remove(new HeartBeat(internalInfo.getIp(),internalInfo.getPortUdp()));
+            ansMsg.setServerList(list);
             oos.writeObject(ansMsg);
         } catch (IOException e) {
             System.out.println("[AttendClientThread] - failed to send server list" + e.getMessage());
