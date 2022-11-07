@@ -9,7 +9,9 @@ import javafx.application.Platform;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
+import java.beans.EventHandler;
 import java.io.IOException;
 
 public class RootPane extends BorderPane {
@@ -33,20 +35,7 @@ public class RootPane extends BorderPane {
 
     public void startServices() {
         modelManager.startServices(args);
-        stage.setOnCloseRequest(windowEvent -> {
-            AlertSingleton.getInstanceConfirmation().setAlertText("Sair", "Pretende Sair da Aplicação?", "");
-            AlertSingleton.getInstanceConfirmation().showAndWait().ifPresent(result -> {
-                if (result.getText().equalsIgnoreCase("YES")){
-                    ClientMSG msg = new ClientMSG(ClientActions.EXIT);
-                    msg.setUser(modelManager.getUser());
-                    modelManager.sendMessage(msg);
-                    Platform.exit();
-                }
-                else{
-                    windowEvent.consume();
-                }
-            });
-        });
+
     }
 
     private void createViews() {
@@ -62,13 +51,37 @@ public class RootPane extends BorderPane {
         modelManager.addPropertyChangeListener(ModelManager.BAD_REQUEST, evt -> Platform.runLater( this::badRequest));
         modelManager.addPropertyChangeListener(ModelManager.LOGOUT, evt -> Platform.runLater(this::logout));
         modelManager.addPropertyChangeListener(ModelManager.ERROR_CONNECTION, (evt) -> Platform.runLater(this::showAlert));
+        stage.setOnShown(windowEvent -> {
+            System.out.println("AQui");
+
+        });
+        new Thread(){
+            @Override
+            public void run() {
+                startServices();
+            }
+        }.start();
+
+        stage.setOnCloseRequest(windowEvent -> {
+            AlertSingleton.getInstanceConfirmation().setAlertText("Sair", "Pretende Sair da Aplicação?", "")
+                    .showAndWait().ifPresent(result -> {
+                if (result.getText().equalsIgnoreCase("YES")){
+                    ClientMSG msg = new ClientMSG(ClientActions.EXIT);
+                    msg.setUser(modelManager.getUser());
+                    modelManager.sendMessage(msg);
+                    Platform.exit();
+                }
+                else{
+                    windowEvent.consume();
+                }
+            });
+        });
     }
 
     private void showAlert(){
         AlertSingleton.getInstanceWarning().setAlertText("ERRO DE CONECAO", "", "Servidores nao disponiveis.\n " +
-                "Por favor tente mais tarde");
-
-        AlertSingleton.getInstanceWarning().showAndWait().ifPresent(result -> {
+                "Por favor tente mais tarde")
+                .showAndWait().ifPresent(result -> {
             if (result.getText().equalsIgnoreCase("OK")){
                 Platform.exit();
             }
@@ -76,8 +89,8 @@ public class RootPane extends BorderPane {
     }
 
     private void logout() {
-        AlertSingleton.getInstanceOK().setAlertText("Logout", "", "Obrigado e volte sempre");
-        AlertSingleton.getInstanceOK().showAndWait().ifPresent( action -> modelManager.setStatusClient(StatusClient.NOT_LOGGED));
+        AlertSingleton.getInstanceOK().setAlertText("Logout", "", "Obrigado e volte sempre")
+                .showAndWait().ifPresent( action -> modelManager.setStatusClient(StatusClient.NOT_LOGGED));
     }
 
 

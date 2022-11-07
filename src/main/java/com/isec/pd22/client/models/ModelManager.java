@@ -3,6 +3,7 @@ package com.isec.pd22.client.models;
 import com.isec.pd22.client.Client;
 import com.isec.pd22.client.threads.SendFile;
 import com.isec.pd22.client.ui.utils.AlertSingleton;
+import com.isec.pd22.client.ui.utils.ModalIndicator;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.tcp.Request.Espetaculos;
@@ -37,6 +38,7 @@ public class ModelManager {
     Client client;
 
     Data data;
+    ModalIndicator modalIndicator = null;
 
     public ModelManager() {
         pcs = new PropertyChangeSupport(this);
@@ -76,12 +78,13 @@ public class ModelManager {
     }
 
     public void sendMessage(ClientMSG msg) {
+       // modalIndicator = new ModalIndicator(this);
         try {
             client.sendMessage(msg);
         } catch (IOException e) {
             e.printStackTrace();
-            AlertSingleton.getInstanceWarning().setAlertText("Erro de Mensagem", "", "Não foi possivel fazer o pedido ao servidor");
-            AlertSingleton.getInstanceWarning().showAndWait();
+            AlertSingleton.getInstanceWarning().setAlertText("Erro de Mensagem", "", "Não foi possivel fazer o pedido ao servidor")
+                    .showAndWait();
         }
     }
 

@@ -25,6 +25,6 @@ public class MainJavaFX extends Application {
         stage.setScene(scene);
         stage.setTitle("APP do catano");
         stage.show();
-        rootPane.startServices();
+        //rootPane.startServices();
     }
 }
