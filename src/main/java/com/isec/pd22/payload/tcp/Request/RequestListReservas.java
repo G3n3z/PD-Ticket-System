@@ -30,7 +30,6 @@ public class RequestListReservas extends ClientMSG {
         super(action);
     }
 
-
     public List<Reserva> getReservas() {
         return reservas;
     }

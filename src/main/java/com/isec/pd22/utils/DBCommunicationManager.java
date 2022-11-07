@@ -4,6 +4,7 @@ import com.isec.pd22.enums.Authenticated;
 import com.isec.pd22.enums.Payment;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.tcp.Request.Espetaculos;
+import com.isec.pd22.payload.tcp.Request.ListPlaces;
 import com.isec.pd22.server.models.*;
 
 import java.sql.*;
@@ -292,8 +293,8 @@ public class DBCommunicationManager {
     }
 
     public Query deleteReservaNotPayed(int idReserva){
-        String query = "delete from reserva_lugar where reserva_lugar.id_reserva = ?; delete from reserva where id = ? and pago = ?; ";
-
+        String query = "delete from reserva_lugar where reserva_lugar.id_reserva= "+ idReserva +
+                "; delete from reserva where id= " + idReserva + " and pago= " + 0 + ";";
         return new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
     }
 
@@ -305,21 +306,17 @@ public class DBCommunicationManager {
     }
 
     public boolean canRemoveEspecatulo(int idEspetaculo){
-        String query = "";
+        String query = "SELECT * FROM reserva WHERE espetaculo_id= " + idEspetaculo + " AND pago = " + 1;
         try {
             PreparedStatement statement = connection.prepareStatement(query);
-
             ResultSet res = statement.executeQuery();
-            if(res.next()){
-                return true;
-            }
+            if(res.next())
+                return false;
 
         } catch (SQLException e) {
-            return false;
+            return true;
         }
-        return false;
-
-
+        return true;
     }
 
     public User getUser(String username) {
@@ -385,5 +382,64 @@ public class DBCommunicationManager {
             return null;
         }
         return list;
+    }
+
+    public Query deleteSpectacle(int idEspetaculo) {
+        String q1 = "DELETE FROM reserva_lugar WHERE id_reserva IN (SELECT reserva.id FROM reserva WHERE id_espetaculo=" + idEspetaculo + ")";
+        String q2 = "DELETE FROM reserva WHERE id_espetaculo=" + idEspetaculo;
+        String q3 = "DELETE FROM lugar WHERE espataculo_id=" + idEspetaculo;
+        String q4 = "DELETE FROM espetaculo WHERE espetaculo.id= " + idEspetaculo;
+        String query = q1 + "; " + q2 + "; " + q3 + "; " + q4;
+        return new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
+    }
+
+    public boolean canCancelReservation(int idReserva) {
+        String query = "SELECT * FROM reserva WHERE reserva.id= ? AND pago= ?";
+        try {
+            PreparedStatement statement = connection.prepareStatement(query);
+            statement.setInt(1, idReserva);
+            statement.setInt(2, 1);
+            ResultSet res = statement.executeQuery(query);
+            if (res.next()){
+                return false;
+            }
+
+        } catch (SQLException e) {
+            return true;
+        }
+        return true;
+    }
+
+    public boolean canSubmitReservations(ListPlaces list) {
+        String query = "SELECT * FROM reserva_lugar WHERE id_reserva IN " +
+                "(SELECT reserva.id FROM reserva WHERE id_espetaculo= ?) " +
+                "AND id_lugar= ?";
+
+            for(Lugar place : list.getPlaces()){
+                try {
+                    PreparedStatement statement = connection.prepareStatement(query);
+                    statement.setInt(1,place.getEspetaculo_id());
+                    statement.setInt(2,place.getIdLugar());
+                    ResultSet res = statement.executeQuery(query);
+                    if (res.next()){
+                        return false;
+                    }
+                } catch (SQLException ignored) {
+                }
+            }
+        return true;
+    }
+
+    public Query submitReservations(ListPlaces list) {
+        Lugar dummy = list.getPlaces().get(0);
+        String query="INSERT INTO reserva(id, data_hora, pago, id_utilizador, id_espetaculo) " +
+                "values(NULL, '" + dummy.getReserva().getData_hora() + "', '" + 0 + "', '" + dummy.getReserva().getIdUser() +
+                "', '" + dummy.getReserva().getIdEspectaculo() + "'); ";
+        String q2;
+        for(Lugar place: list.getPlaces()) {
+            q2 = "INSERT INTO reserva_lugar(id_reserva, id_lugar) values((Select max(r.id) from reserva r), " + place.getIdLugar() + "'); ";
+            query += q2;
+        }
+        return new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
     }
 }

@@ -68,7 +68,8 @@ public class ServerSocketThread extends Thread
             }catch (SocketTimeoutException e){
                 continue;
             }catch (IOException e){
-                //TODO terminar? (por decidir o que fazer)
+                System.out.println("[ServerSocketThread] - server shutdown. Terminating..." + e.getMessage());
+                break;
             }
 
         }
