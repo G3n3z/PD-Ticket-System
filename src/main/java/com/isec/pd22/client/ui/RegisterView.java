@@ -88,8 +88,8 @@ public class RegisterView extends BorderPane {
     }
 
     public void registerComplete(){
-        AlertSingleton.getInstanceOK().setAlertText("Acção Bem Sucedida", "Utilizador registado", "Faça login por favor");
-        AlertSingleton.getInstanceOK().showAndWait().ifPresent( buttonType -> {
+        AlertSingleton.getInstanceOK().setAlertText("Acção Bem Sucedida", "Utilizador registado", "Faça login por favor")
+                .showAndWait().ifPresent( buttonType -> {
             modelManager.setStatusClient(StatusClient.NOT_LOGGED);
         });
     }
