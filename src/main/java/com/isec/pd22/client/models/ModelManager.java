@@ -152,4 +152,8 @@ public class ModelManager {
         data.espetaculo = r.getEspetaculo();
         pcs.firePropertyChange(PROP_ESPETACULO_DETAILS, null, null);
     }
+
+    public void clearData() {
+        data.clear();
+    }
 }

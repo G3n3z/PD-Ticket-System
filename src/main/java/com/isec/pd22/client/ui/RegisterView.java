@@ -23,7 +23,7 @@ public class RegisterView extends BorderPane {
     VBox vBox;
     Label label, label2, labelName;
     TextField tfEmail, tfPassword, tfName;
-    Button btnLogin, btnRegister;
+    Button btnBack, btnRegister;
 
     public RegisterView(ModelManager modelManager) {
         this.modelManager = modelManager;
@@ -61,9 +61,11 @@ public class RegisterView extends BorderPane {
         VBox.setMargin(tfEmail, new Insets(5,0,30,0));
         hbox.getChildren().addAll(vBox);
         hbox.setAlignment(Pos.CENTER);
+        btnBack = new Button("Voltar");
+        btnBack.setPrefWidth(100);btnBack.setPrefHeight(60);
         btnRegister = new Button("Registar");
         btnRegister.setPrefWidth(100);btnRegister.setPrefHeight(60);
-        HBox hboxButtons = new HBox(btnRegister);
+        HBox hboxButtons = new HBox(btnBack, btnRegister);
         hboxButtons.setAlignment(Pos.CENTER);
         hboxButtons.setSpacing(20);
         vBox.getChildren().add(hboxButtons);
@@ -80,7 +82,9 @@ public class RegisterView extends BorderPane {
             modelManager.sendMessage(register);
         });
         modelManager.addPropertyChangeListener(ModelManager.ACTION_COMPLETE, evt -> Platform.runLater(this::registerComplete));
-
+        btnBack.setOnAction(actionEvent -> {
+            modelManager.setStatusClient(StatusClient.NOT_LOGGED);
+        });
     }
 
     private void updateView() {

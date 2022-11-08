@@ -61,7 +61,8 @@ public class DBCommunicationManager {
 
     public Query getRegisterUserQuery(String username, String name, String password) {
         Query q;
-        String query = "INSERT INTO utilizador VALUES (NULL, '" + username + "', '" + name + "', '" + password +"', " + 1
+        String query = "INSERT INTO utilizador VALUES (NULL, '" + username + "', '" + name + "', '" + password +"', " +
+                Authenticated.NOT_AUTHENTICATED.ordinal()
                 +", " + 0 + ")";
         synchronized (internalInfo) {
             q = new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
@@ -306,7 +307,7 @@ public class DBCommunicationManager {
     }
 
     public boolean canRemoveEspecatulo(int idEspetaculo){
-        String query = "SELECT * FROM reserva WHERE espetaculo_id= " + idEspetaculo + " AND pago = " + 1;
+        String query = "SELECT * FROM reserva WHERE id_espetaculo = " + idEspetaculo + " AND pago = " + 1;
         try {
             PreparedStatement statement = connection.prepareStatement(query);
             ResultSet res = statement.executeQuery();

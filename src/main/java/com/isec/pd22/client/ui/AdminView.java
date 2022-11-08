@@ -84,7 +84,8 @@ public class AdminView extends BorderPane {
     }
 
     private void registerHandlers() {
-        modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, evt -> updateView());
+        modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, evt ->
+                Platform.runLater( () -> updateView()));
         btnLogout.setOnAction( evt -> {
             ClientMSG msg = new ClientMSG(ClientActions.LOGOUT);
             msg.setUser(modelManager.getUser());
@@ -131,7 +132,7 @@ public class AdminView extends BorderPane {
     private void updateDetails() {
         SpectaculeDetails spectaculeDetails = new SpectaculeDetails(modelManager, buttons);
         vBox.getChildren().clear();
-        vBox.getChildren().addAll(spectaculeDetails);
+        vBox.getChildren().addAll(title,spectaculeDetails);
 
     }
 
@@ -141,7 +142,6 @@ public class AdminView extends BorderPane {
     }
 
     private void updateTable() {
-        System.out.println(modelManager.getEspectaculos().size());
         espetaculoTableView.getItems().clear();
         espetaculoTableView.getItems().addAll(modelManager.getEspectaculos());
     }
@@ -153,14 +153,38 @@ public class AdminView extends BorderPane {
 
 
     private void updateView() {
-        this.setVisible(modelManager != null && modelManager.getStatusClient() == StatusClient.ADMIN);
-        if(modelManager != null && modelManager.getStatusClient() == StatusClient.ADMIN){
+        this.setVisible(modelManager != null && (modelManager.getStatusClient() == StatusClient.ADMIN || modelManager.getStatusClient() == StatusClient.USER));
+        if(modelManager != null && (modelManager.getStatusClient() == StatusClient.ADMIN || modelManager.getStatusClient() == StatusClient.USER)){
             espetaculoTableView.getItems().clear();
             espetaculoTableView.getItems().addAll(modelManager.getEspectaculos());
+            reservaTableView.getItems().clear();
+        }
+
+        if (modelManager.getStatusClient() == StatusClient.ADMIN){
+            updateMenuAdmin();
+            Espetaculos espetaculos = new Espetaculos(ClientActions.CONSULT_SPECTACLE);
+            espetaculos.setUser(modelManager.getUser());
+            modelManager.sendMessage(espetaculos);
+        }else if(modelManager.getStatusClient() == StatusClient.USER){
+            updateMenuUser();
             Espetaculos espetaculos = new Espetaculos(ClientActions.CONSULT_SPECTACLE);
             espetaculos.setUser(modelManager.getUser());
             modelManager.sendMessage(espetaculos);
         }
+
+
+    }
+
+    private void updateMenuUser() {
+        menuVertical.getChildren().clear();
+        menuVertical.getChildren().addAll(btnViewEspetaculos, btnConsultaReservas, btnLogout);
+        espetaculoTableView.removeButtonRemove();
+    }
+
+    private void updateMenuAdmin() {
+        menuVertical.getChildren().clear();
+        menuVertical.getChildren().addAll(btnViewEspetaculos, btnInsertEspetaculo, btnConsultaReservas, btnLogout);
+        espetaculoTableView.addButtonRemove();
     }
 
 

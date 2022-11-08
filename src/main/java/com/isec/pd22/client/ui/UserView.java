@@ -1,19 +1,19 @@
 package com.isec.pd22.client.ui;
 
 import com.isec.pd22.client.models.ModelManager;
-import com.isec.pd22.client.ui.utils.ButtonMenu;
-import com.isec.pd22.client.ui.utils.MenuVertical;
-import com.isec.pd22.client.ui.utils.TableEspetaculo;
-import com.isec.pd22.client.ui.utils.TableReserva;
+import com.isec.pd22.client.ui.utils.*;
 import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.Request.Espetaculos;
 import com.isec.pd22.server.models.Reserva;
+import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TableView;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
+
+import java.util.List;
 
 public class UserView extends BorderPane {
 
@@ -25,6 +25,7 @@ public class UserView extends BorderPane {
     TableView<Reserva> reservaTableView;
     VBox vBox;
     Label title;
+    List<ButtonLugar> buttons;
 
     public UserView(ModelManager modelManager) {
         this.modelManager = modelManager;
@@ -33,8 +34,11 @@ public class UserView extends BorderPane {
     }
     private void createViews() {
         prepareMenu();
+        title = new Label("Espetaculos");
         espetaculoTableView = new TableEspetaculo(modelManager,vBox, title, new ScrollPane());
         reservaTableView = new TableReserva(modelManager);
+        vBox.getChildren().addAll(title, espetaculoTableView);
+        setCenter(vBox);
     }
 
     private void prepareMenu() {
@@ -59,6 +63,24 @@ public class UserView extends BorderPane {
             espetaculos.setUser(modelManager.getUser());
             modelManager.sendMessage(espetaculos);
         }
+    }
+
+
+    private void updateDetails() {
+        SpectaculeDetails spectaculeDetails = new SpectaculeDetails(modelManager, buttons);
+        vBox.getChildren().clear();
+        vBox.getChildren().addAll(title,spectaculeDetails);
+
+    }
+
+    private void updateReservas() {
+        reservaTableView.getItems().clear();
+        reservaTableView.getItems().addAll(modelManager.getReservas());
+    }
+
+    private void updateTable() {
+        espetaculoTableView.getItems().clear();
+        espetaculoTableView.getItems().addAll(modelManager.getEspectaculos());
     }
 
 }
