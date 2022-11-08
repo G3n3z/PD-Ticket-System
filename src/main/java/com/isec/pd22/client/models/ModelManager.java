@@ -12,6 +12,7 @@ import com.isec.pd22.payload.tcp.Request.RequestListReservas;
 import com.isec.pd22.server.models.Espetaculo;
 import com.isec.pd22.server.models.Reserva;
 import com.isec.pd22.server.models.User;
+import javafx.stage.Stage;
 
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
@@ -32,6 +33,7 @@ public class ModelManager {
     public static final String ALL_ESPETACULOS = "ALL_ESPETACULOS";
     public static final String PROP_RESERVAS = "PROP_RESERVAS";
     public static final String PROP_ESPETACULO_DETAILS = "PROP_ESPETACULO_DETAILS";
+    public static final String PROP_TRY_LATER = "TRY_LATER";
     PropertyChangeSupport pcs;
     private StatusClient statusClient;
 
@@ -155,5 +157,19 @@ public class ModelManager {
 
     public void clearData() {
         data.clear();
+    }
+
+    public List<Reserva> getReservasPayed() {
+        return data.getReservasPayed();
+    }
+
+    public void tryLater() {
+        pcs.firePropertyChange(PROP_TRY_LATER, null, null);
+    }
+
+    public void startIndicator(Stage stage) {
+        modalIndicator = new ModalIndicator(this);
+        modalIndicator.show(stage);
+        //
     }
 }

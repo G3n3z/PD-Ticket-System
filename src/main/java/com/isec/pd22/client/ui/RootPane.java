@@ -23,6 +23,7 @@ public class RootPane extends BorderPane {
 
     StackPane stack;
 
+
     public RootPane(ModelManager modelManager, Stage stage, String [] args) {
         this.modelManager = modelManager;
         this.stage = stage;
@@ -64,17 +65,13 @@ public class RootPane extends BorderPane {
         modelManager.addPropertyChangeListener(ModelManager.LOGOUT, evt -> Platform.runLater(this::logout));
         modelManager.addPropertyChangeListener(ModelManager.ERROR_CONNECTION, (evt) -> Platform.runLater(this::showAlert));
         modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, (evt) -> Platform.runLater(this::changeView));
-        stage.setOnShown(windowEvent -> {
-            System.out.println("AQui");
-
-        });
+        modelManager.addPropertyChangeListener(ModelManager.PROP_TRY_LATER, evt -> Platform.runLater(this::tryLater));
         new Thread(){
             @Override
             public void run() {
                 startServices();
             }
         }.start();
-
         stage.setOnCloseRequest(windowEvent -> {
             AlertSingleton.getInstanceConfirmation().setAlertText("Sair", "Pretende Sair da Aplicação?", "")
                     .showAndWait().ifPresent(result -> {
@@ -89,6 +86,12 @@ public class RootPane extends BorderPane {
                 }
             });
         });
+    }
+
+    private void tryLater() {
+        AlertSingleton.getInstanceWarning().setAlertText("Ação indisponivel", "", "Não foi possivel efetuar a sua ação" +
+                        " tente outra vez")
+                .showAndWait();
     }
 
     private void showAlert(){

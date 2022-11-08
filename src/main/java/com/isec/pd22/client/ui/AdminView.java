@@ -36,6 +36,7 @@ public class AdminView extends BorderPane {
     ModelManager modelManager;
     TableEspetaculo espetaculoTableView;
     TableView<Reserva> reservaTableView;
+    TableView<Reserva> reservaTableViewPayed;
     VBox vBox;
     ScrollPane scrollPane;
     Label title;
@@ -66,6 +67,9 @@ public class AdminView extends BorderPane {
 
     private void createReservasTable() {
         reservaTableView = new TableReserva(modelManager);
+        if (modelManager.getStatusClient() == StatusClient.USER){
+            reservaTableViewPayed = new TableReserva(modelManager);
+        }
 
     }
 
@@ -139,6 +143,10 @@ public class AdminView extends BorderPane {
     private void updateReservas() {
         reservaTableView.getItems().clear();
         reservaTableView.getItems().addAll(modelManager.getReservas());
+        if (reservaTableViewPayed != null){
+            reservaTableViewPayed.getItems().clear();
+            reservaTableViewPayed.getItems().addAll(modelManager.getReservasPayed());
+        }
     }
 
     private void updateTable() {

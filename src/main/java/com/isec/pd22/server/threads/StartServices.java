@@ -118,7 +118,7 @@ public class StartServices extends Thread {
         MulticastMSG msg = null;
 
         long startTime = new Date().getTime();
-        while( (new Date().getTime() - startTime) < 10000){
+        while( (new Date().getTime() - startTime) < 30000){
             try {
                 socket.receive(packet);
             }catch (SocketTimeoutException e){
@@ -163,7 +163,7 @@ public class StartServices extends Thread {
 
         Timer timer = new Timer(true);
         HeartBeatTask heartBeatTask = new HeartBeatTask(internalInfo);
-        timer.scheduleAtFixedRate(heartBeatTask, 0, 20000);
+        timer.scheduleAtFixedRate(heartBeatTask, 0, 10000);
         MulticastThread multicastThread = new MulticastThread(internalInfo, timer);
         multicastThread.start();
 
@@ -200,10 +200,10 @@ public class StartServices extends Thread {
         //DBVersionManager dbVersionManager = new DBVersionManager(connection);
 
         DatagramPacket datagramPacket = heartBeatsPackage.get(server);
-
+        ObjectOutputStream oos = null; ObjectInputStream ois = null;
         try {
             ServerSocket serverSocket = new ServerSocket(0);
-            serverSocket.setSoTimeout(2000);
+            serverSocket.setSoTimeout(10000);
 
 
             UpdateDB updateDB = new UpdateDB(TypeOfMulticastMsg.UPDATE_DB, internalInfo.getNumDB(),serverSocket.getInetAddress().getHostAddress() ,serverSocket.getLocalPort());
@@ -212,13 +212,12 @@ public class StartServices extends Thread {
             socket.send(datagramPacket);
 
             Socket socketUpdate = serverSocket.accept();
-            socketUpdate.setSoTimeout(2000);
-            ObjectOutputStream oos = new ObjectOutputStream(socketUpdate.getOutputStream());
-            ObjectInputStream ois = new ObjectInputStream(socketUpdate.getInputStream());
+            socketUpdate.setSoTimeout(10000);
+            oos = new ObjectOutputStream(socketUpdate.getOutputStream());
+            ois = new ObjectInputStream(socketUpdate.getInputStream());
 
             oos.writeObject(internalInfo.getNumDB());
             while(true){
-
                 Query q = (Query) ois.readObject();
                 dbVersionManager.insertQuery(q);
             }
@@ -226,6 +225,14 @@ public class StartServices extends Thread {
             return;
         } catch (IOException | ClassNotFoundException | SQLException e) {
             throw e;
+        }finally {
+            internalInfo.setNumDB(dbVersionManager.getLastVersion());
+            if (ois != null){
+                ois.close();
+            }
+            if (oos != null){
+                oos.close();
+            }
         }
     }
 

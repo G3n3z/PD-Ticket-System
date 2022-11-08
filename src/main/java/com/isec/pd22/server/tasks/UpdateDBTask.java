@@ -26,12 +26,12 @@ public class UpdateDBTask extends Thread{
 
     @Override
     public void run() {
-        //System.out.println("[UPDATEDBTASK] - Começou o Update" );
+        System.out.println("[UPDATEDBTASK] - Começou o Update" );
         try{
             Socket socket = new Socket(updateDB.getIp(), updateDB.getPortTCP());
             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
-            socket.setSoTimeout(2000);
+            socket.setSoTimeout(10000);
             int numVersion = (int)ois.readObject();
             DBVersionManager dbVersionManager = new DBVersionManager(internalInfo.getUrl_db());
             List<Query> queries = dbVersionManager.getAllVersionAfter(numVersion);
@@ -39,7 +39,8 @@ public class UpdateDBTask extends Thread{
             for (Query query : queries) {
                 oos.writeUnshared(query);
             }
-
+            ois.close();
+            oos.close();
         }catch (EOFException e){
             System.out.println("[UPDATEDBTASK] - Alguem fechou o socket");
         }

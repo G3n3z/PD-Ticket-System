@@ -78,6 +78,7 @@ public class Client {
             case CONSULT_SPECTACLE -> modelManager.fireEspetaculos(mensage);
             case RESERVAS_RESPONSE -> modelManager.fireReservasAdmin(mensage);
             case SPECTACLE_DETAILS -> modelManager.fireEspectaculo(mensage);
+            case TRY_LATER -> modelManager.tryLater();
         }
 
     }

@@ -94,7 +94,12 @@ public class SpectaculeDetails extends ScrollPane {
         VBox vBox2 = preparaLugares(espetaculo);
 
         HBox hBoxButtons = prepareButtons();
-        VBox vBox3 = new VBox(vBox1, vBox2, hBoxButtons);
+        VBox vBox3;
+        if (manager.getStatusClient() == StatusClient.USER){
+            vBox3 = new VBox(vBox1, vBox2, hBoxButtons);
+        }else {
+            vBox3 = new VBox(vBox1, vBox2);
+        }
         VBox.setMargin(vBox2, new Insets(100, 0, 50,0));
 
         setContent(vBox3);
