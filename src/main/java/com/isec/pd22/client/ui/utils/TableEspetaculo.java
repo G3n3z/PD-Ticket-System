@@ -20,7 +20,7 @@ public class TableEspetaculo extends TableView<Espetaculo> {
     VBox vBox;
     Label title;
     ScrollPane scrollPane;
-
+    TableColumn<Espetaculo, Button> colRemove;
     public TableEspetaculo(ModelManager modelManager) {
         this.modelManager = modelManager;
         createTable();
@@ -57,13 +57,13 @@ public class TableEspetaculo extends TableView<Espetaculo> {
                 request.setEspetaculo(espectaculoButtonCellDataFeatures.getValue());
                 request.setUser(modelManager.getUser());
                 modelManager.sendMessage(request);
-                vBox.getChildren().clear();
+                //vBox.getChildren().clear();
                 //vBox.getChildren().addAll(title, scrollPane);
             });
             return new ReadOnlyObjectWrapper<>(button);
         });
-        TableColumn<Espetaculo, Button> colResolve = new TableColumn<>("Remover");
-        colResolve.setCellValueFactory(espetaculoButtonCellDataFeatures ->  {
+        colRemove = new TableColumn<>("Remover");
+        colRemove.setCellValueFactory(espetaculoButtonCellDataFeatures ->  {
             Button button = new Button("Remover");
             button.setOnAction(actionEvent -> {
                 Espetaculos espetaculos = new Espetaculos(ClientActions.DELETE_SPECTACLE);
@@ -75,8 +75,24 @@ public class TableEspetaculo extends TableView<Espetaculo> {
         });
         setFixedCellSize(50);
         getColumns().addAll(colDescricao, columnTipo, columnDate, columnDuracao, columnLocal, columnClassificacao, columnVisivel,
-                colShow, colResolve);
+                colShow);
         setPrefHeight(400);
         setPrefWidth(1000);
     }
+
+
+    public void addButtonRemove(){
+        if (!getColumns().contains(colRemove)){
+            getColumns().add(colRemove);
+        }
+
+    }
+
+    public void removeButtonRemove(){
+        if (getColumns().contains(colRemove)){
+            getColumns().remove(colRemove);
+        }
+
+    }
+
 }

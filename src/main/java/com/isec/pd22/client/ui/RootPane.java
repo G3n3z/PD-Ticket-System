@@ -6,6 +6,7 @@ import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import javafx.application.Platform;
+import javafx.scene.Node;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
@@ -20,7 +21,7 @@ public class RootPane extends BorderPane {
 
     String [] args;
 
-
+    StackPane stack;
 
     public RootPane(ModelManager modelManager, Stage stage, String [] args) {
         this.modelManager = modelManager;
@@ -39,18 +40,30 @@ public class RootPane extends BorderPane {
     }
 
     private void createViews() {
-        StackPane stack = new StackPane();
+        stack = new StackPane();
         LogInView logInView = new LogInView(modelManager);
         RegisterView registerView = new RegisterView(modelManager);
         AdminView adminView = new AdminView(modelManager);
-        stack.getChildren().addAll(logInView, adminView, registerView);
+//        stack.getChildren().addAll(logInView, adminView, registerView);
         setCenter(stack);
+        changeView();
 
+    }
+    public void changeView(){
+        Node node;
+        switch (modelManager.getStatusClient()){
+            case NOT_LOGGED -> node = new LogInView(modelManager);
+            case REGISTER -> node = new RegisterView(modelManager);
+            default -> node = new AdminView(modelManager);
+        }
+        stack.getChildren().clear();
+        stack.getChildren().add(node);
     }
     private void registerHandlers() {
         modelManager.addPropertyChangeListener(ModelManager.BAD_REQUEST, evt -> Platform.runLater( this::badRequest));
         modelManager.addPropertyChangeListener(ModelManager.LOGOUT, evt -> Platform.runLater(this::logout));
         modelManager.addPropertyChangeListener(ModelManager.ERROR_CONNECTION, (evt) -> Platform.runLater(this::showAlert));
+        modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, (evt) -> Platform.runLater(this::changeView));
         stage.setOnShown(windowEvent -> {
             System.out.println("AQui");
 

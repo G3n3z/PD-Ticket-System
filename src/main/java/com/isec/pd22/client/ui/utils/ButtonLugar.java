@@ -10,14 +10,17 @@ public class ButtonLugar extends Button {
     Lugar lugar;
     boolean isSelected;
     boolean isMarked;
-
-    public ButtonLugar(String text, Lugar lugar) {
+    boolean isUser;
+    public ButtonLugar(String text, Lugar lugar, Boolean isUser) {
         super(text);
         this.lugar = lugar;
         this.isSelected = true;
         isMarked = lugar.getReserva() != null;
+        this.isUser = isUser;
         toogleStatus();
-        this.setOnAction(actionEvent -> toogleStatus());
+        this.setOnAction(actionEvent -> {
+            toogleStatus();
+        });
         this.setBorder(new Border(new BorderStroke(Color.BLACK,
                 BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
     }
@@ -27,8 +30,9 @@ public class ButtonLugar extends Button {
             this.setBackground(new Background(new BackgroundFill(Color.rgb(183, 36, 58), CornerRadii.EMPTY, Insets.EMPTY)));
             return;
         }
-        isSelected = !isSelected;
-        if(isSelected == true){
+
+        isSelected = isUser ? !isSelected : false;
+        if(isSelected){
             this.setBackground(new Background(new BackgroundFill(Color.rgb(152, 179, 255), CornerRadii.EMPTY, Insets.EMPTY)));
         }else{
             this.setBackground(new Background(new BackgroundFill(Color.rgb(228, 245, 246), CornerRadii.EMPTY, Insets.EMPTY)));

@@ -36,4 +36,11 @@ public class Data {
     public void setEspetaculos(List<Espetaculo> espetaculos) {
         this.espetaculos = espetaculos;
     }
+
+    public void clear() {
+        espetaculos = new ArrayList<>();
+        espetaculo = null;
+        reservas = new ArrayList<>();
+        user = null;
+    }
 }
