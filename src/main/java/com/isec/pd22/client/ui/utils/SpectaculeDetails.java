@@ -2,10 +2,12 @@ package com.isec.pd22.client.ui.utils;
 
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.enums.ClientActions;
+import com.isec.pd22.enums.Payment;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.Request.ListPlaces;
 import com.isec.pd22.server.models.Espetaculo;
 import com.isec.pd22.server.models.Lugar;
+import com.isec.pd22.server.models.Reserva;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -42,8 +44,15 @@ public class SpectaculeDetails extends ScrollPane {
 
     private void submitReserv() {
         List<Lugar> lugarsToSubmit = new ArrayList<>();
+        Reserva reserva = new Reserva(
+                manager.getEspectaculo().getData_hora(),
+                Payment.NOT_PAYED,
+                manager.getUser().getIdUser(),
+                manager.getEspectaculo().getIdEspetaculo()
+        );
         buttons.forEach(buttonLugar -> {
             if (buttonLugar.isSelected && !buttonLugar.isMarked){
+                buttonLugar.lugar.setReserva(reserva);
                 lugarsToSubmit.add(buttonLugar.lugar);
             }
         });

@@ -386,11 +386,11 @@ public class DBCommunicationManager {
     }
 
     public Query deleteSpectacle(int idEspetaculo) {
-        String q1 = "DELETE FROM reserva_lugar WHERE id_reserva IN (SELECT reserva.id FROM reserva WHERE id_espetaculo=" + idEspetaculo + ")";
-        String q2 = "DELETE FROM reserva WHERE id_espetaculo=" + idEspetaculo;
-        String q3 = "DELETE FROM lugar WHERE espataculo_id=" + idEspetaculo;
-        String q4 = "DELETE FROM espetaculo WHERE espetaculo.id= " + idEspetaculo;
-        String query = q1 + "; " + q2 + "; " + q3 + "; " + q4;
+        String q1 = "DELETE FROM reserva_lugar WHERE id_reserva IN (SELECT reserva.id FROM reserva WHERE id_espetaculo= '" + idEspetaculo + "')";
+        String q2 = "DELETE FROM reserva WHERE id_espetaculo= '" + idEspetaculo;
+        String q3 = "DELETE FROM lugar WHERE espetaculo_id= '" + idEspetaculo;
+        String q4 = "DELETE FROM espetaculo WHERE espetaculo.id= '" + idEspetaculo;
+        String query = q1 + "; " + q2 + "'; " + q3 + "'; " + q4 + "'; ";
         return new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
     }
 
@@ -438,7 +438,7 @@ public class DBCommunicationManager {
                 "', '" + dummy.getReserva().getIdEspectaculo() + "'); ";
         String q2;
         for(Lugar place: list.getPlaces()) {
-            q2 = "INSERT INTO reserva_lugar(id_reserva, id_lugar) values((Select max(r.id) from reserva r), " + place.getIdLugar() + "'); ";
+            q2 = "INSERT INTO reserva_lugar(id_reserva, id_lugar) values((Select max(r.id) from reserva r), '" + place.getIdLugar() + "'); ";
             query += q2;
         }
         return new Query(internalInfo.getNumDB()+1, query, new Date().getTime());

@@ -79,6 +79,9 @@ public class AttendClientThread extends Thread{
         } catch (IOException e) {
             System.out.println("[AttendClientThread] - error on closing client socket: "+ e.getMessage());
         }
+        synchronized (internalInfo) {
+            internalInfo.decrementNumClients();
+        }
         System.out.println("Sai da thread do cliente");
     }
 
