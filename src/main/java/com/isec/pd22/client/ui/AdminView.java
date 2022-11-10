@@ -31,7 +31,7 @@ import java.util.*;
 public class AdminView extends BorderPane {
 
     MenuVertical menuVertical;
-    ButtonMenu btnConsultaReservas, btnViewEspetaculos, btnInsertEspetaculo, btnLogout;
+    ButtonMenu btnConsultaReservas, btnViewEspetaculos, btnInsertEspetaculo, btnLogout, btnEditUserInfo;
 
     ModelManager modelManager;
     TableEspetaculo espetaculoTableView;
@@ -83,7 +83,8 @@ public class AdminView extends BorderPane {
         btnViewEspetaculos = new ButtonMenu("Espetaculos");
         btnInsertEspetaculo = new ButtonMenu("Inserir Espetaculo");
         btnLogout = new ButtonMenu("Logout");
-        menuVertical = new MenuVertical(btnViewEspetaculos, btnInsertEspetaculo, btnConsultaReservas, btnLogout);
+        btnEditUserInfo = new ButtonMenu("Editar Dados\nPessoais");
+        menuVertical = new MenuVertical(btnEditUserInfo, btnViewEspetaculos, btnInsertEspetaculo, btnConsultaReservas, btnLogout);
         setLeft(menuVertical);
     }
 
@@ -185,13 +186,13 @@ public class AdminView extends BorderPane {
 
     private void updateMenuUser() {
         menuVertical.getChildren().clear();
-        menuVertical.getChildren().addAll(btnViewEspetaculos, btnConsultaReservas, btnLogout);
+        menuVertical.getChildren().addAll(btnEditUserInfo, btnViewEspetaculos, btnConsultaReservas, btnLogout);
         espetaculoTableView.removeButtonRemove();
     }
 
     private void updateMenuAdmin() {
         menuVertical.getChildren().clear();
-        menuVertical.getChildren().addAll(btnViewEspetaculos, btnInsertEspetaculo, btnConsultaReservas, btnLogout);
+        menuVertical.getChildren().addAll(btnEditUserInfo, btnViewEspetaculos, btnInsertEspetaculo, btnConsultaReservas, btnLogout);
         espetaculoTableView.addButtonRemove();
     }
 

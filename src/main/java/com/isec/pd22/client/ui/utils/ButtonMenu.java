@@ -8,6 +8,7 @@ import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.CornerRadii;
 import javafx.scene.paint.Color;
 import javafx.scene.text.Font;
+import javafx.scene.text.TextAlignment;
 
 public class ButtonMenu extends Button {
     Color cor, corNotOver, corOver;
@@ -31,6 +32,7 @@ public class ButtonMenu extends Button {
         //this.setPrefWidth(Double.MAX_VALUE);
          setCursor(Cursor.HAND);
         setFont(new Font(14));
+        setTextAlignment(TextAlignment.CENTER);
     }
     private void registerHandler() {
         this.setOnMouseEntered(mouseEvent -> {

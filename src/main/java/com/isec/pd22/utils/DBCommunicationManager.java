@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 public class DBCommunicationManager {
     private Connection connection;
@@ -442,5 +441,20 @@ public class DBCommunicationManager {
             query += q2;
         }
         return new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
+    }
+
+    public int getLastId(String tableName) {
+        String query = "SELECT max(id) FROM " + tableName;
+        int id = -1;
+        try {
+            Statement statement = connection.createStatement();
+            ResultSet result = statement.executeQuery(query);
+            if (result.next()){
+                id = result.getInt(1);
+            }
+        } catch (SQLException e) {
+            return id;
+        }
+        return id;
     }
 }

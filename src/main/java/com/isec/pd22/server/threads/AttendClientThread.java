@@ -156,23 +156,16 @@ public class AttendClientThread extends Thread{
                     }
                     case CONSULT_UNPAYED_RESERVATION -> {
                         List<Reserva> unpayedReservations;
-                        if (role == Role.ADMIN) {
-                            unpayedReservations = dbComm.consultasReservadasAguardamPagamentoByUser(Payment.NOT_PAYED);
-                        }
                         unpayedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.NOT_PAYED);
                         msg = new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE, unpayedReservations);
 
                     }
                     case CONSULT_PAYED_RESERVATION -> {
                         List<Reserva> payedReservations;
-                        if (role == Role.ADMIN) {
-                            payedReservations = dbComm.consultasReservadasAguardamPagamentoByUser(Payment.PAYED);
-                        }
                         payedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.PAYED);
                         msg = new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE, payedReservations);
                     }
                     case CONSULT_SPECTACLE -> {
-                        Espetaculos espetaculos = (Espetaculos) msgClient;
                         List<Espetaculo> list = dbComm.getEspetaculosAfter24Hours();
                         msg = new Espetaculos(ClientsPayloadType.CONSULT_SPECTACLE, list);
                     }
@@ -187,9 +180,15 @@ public class AttendClientThread extends Thread{
                             Query query = dbComm.submitReservations(list);
                             if (startUpdateRoutine(query, internalInfo)) {
                                 dbVersionManager.insertQuery(query);
+
+                                //Obter id da reserva inserida e iniciar o timertask que contrala o pagamento
+                                int lastId = dbComm.getLastId("reserva");
+                                System.out.println("[lastId reserva] = " + lastId);
+                                Timer timer = new Timer(true);
+                                timer.schedule(new ControlPaymentTask(lastId,connection,internalInfo,timer),Constants.PAYMENT_TIMER);
+
                                 msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
-                                msg.setClientsPayloadType(ClientsPayloadType.RESERVAS_RESPONSE);
-                                //TODO checkpaymentTimerTask
+                                msg.setClientsPayloadType(ClientsPayloadType.ACTION_SUCCEDED);
                             } else {
                                 msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
                                 msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
@@ -212,7 +211,7 @@ public class AttendClientThread extends Thread{
                             if (startUpdateRoutine(query, internalInfo)) {
                                 dbVersionManager.insertQuery(query);
                                 msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
-                                msg.setClientsPayloadType(ClientsPayloadType.RESERVAS_RESPONSE);
+                                msg.setClientsPayloadType(ClientsPayloadType.ACTION_SUCCEDED);
                             } else {
                                 msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
                                 msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
@@ -260,7 +259,6 @@ public class AttendClientThread extends Thread{
                     case CONSULT_SPECTACLE_DETAILS -> {
                         RequestDetailsEspetaculo req = (RequestDetailsEspetaculo) msgClient;
                         Espetaculo e = dbComm.getEspetaculoDetailsByIdWithLugares(req.getEspetaculo().getIdEspetaculo());
-                        //msg = new ClientMSG(ClientActions.CONSULT_SPECTACLE_DETAILS);
                         req.setEspetaculo(e);
                         req.setClientsPayloadType(ClientsPayloadType.SPECTACLE_DETAILS);
                         msg = req;
