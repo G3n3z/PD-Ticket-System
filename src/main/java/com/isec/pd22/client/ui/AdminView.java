@@ -41,6 +41,7 @@ public class AdminView extends BorderPane {
     ScrollPane scrollPane;
     Label title;
     List<ButtonLugar> buttons;
+    FormFilters formFilters;
     public AdminView(ModelManager modelManager) {
         this.modelManager = modelManager;
         createViews();
@@ -57,10 +58,11 @@ public class AdminView extends BorderPane {
         title = new Label("Espetaculos");
         title.setFont(new Font(20));
         title.setAlignment(Pos.CENTER);
-        vBox.getChildren().addAll(title, espetaculoTableView);
+        vBox.getChildren().addAll(title, espetaculoTableView, formFilters);
         vBox.setPrefWidth(1000);
         vBox.setAlignment(Pos.TOP_CENTER);
         VBox.setMargin(title, new Insets(30,0,30,0));
+        VBox.setMargin(formFilters, new Insets(30,0,0,0));
         setCenter(vBox);
         scrollPane = new ScrollPane();
     }
@@ -75,7 +77,7 @@ public class AdminView extends BorderPane {
 
     private void createTable() {
         espetaculoTableView = new TableEspetaculo(modelManager, vBox, title, scrollPane);
-
+        formFilters = new FormFilters(modelManager);
     }
 
     private void prepareMenu() {
@@ -90,7 +92,8 @@ public class AdminView extends BorderPane {
 
     private void registerHandlers() {
         modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, evt ->
-                Platform.runLater( () -> updateView()));
+                Platform.runLater(this::updateView));
+
         btnLogout.setOnAction( evt -> {
             ClientMSG msg = new ClientMSG(ClientActions.LOGOUT);
             msg.setUser(modelManager.getUser());
@@ -122,7 +125,7 @@ public class AdminView extends BorderPane {
             modelManager.sendMessage(espetaculos);
             vBox.getChildren().clear();
             title.setText("Espetaculos");
-            vBox.getChildren().addAll(title,espetaculoTableView);
+            vBox.getChildren().addAll(title,espetaculoTableView, formFilters);
         });
         btnConsultaReservas.setOnAction(actionEvent -> {
             RequestListReservas request = new RequestListReservas(ClientActions.GET_RESERVS);
@@ -165,20 +168,19 @@ public class AdminView extends BorderPane {
         this.setVisible(modelManager != null && (modelManager.getStatusClient() == StatusClient.ADMIN || modelManager.getStatusClient() == StatusClient.USER));
         if(modelManager != null && (modelManager.getStatusClient() == StatusClient.ADMIN || modelManager.getStatusClient() == StatusClient.USER)){
             espetaculoTableView.getItems().clear();
+            Espetaculos espetaculos = new Espetaculos(ClientActions.CONSULT_SPECTACLE);
+            espetaculos.setUser(modelManager.getUser());
+            modelManager.sendMessage(espetaculos);
+
             espetaculoTableView.getItems().addAll(modelManager.getEspectaculos());
             reservaTableView.getItems().clear();
         }
 
         if (modelManager.getStatusClient() == StatusClient.ADMIN){
             updateMenuAdmin();
-            Espetaculos espetaculos = new Espetaculos(ClientActions.CONSULT_SPECTACLE);
-            espetaculos.setUser(modelManager.getUser());
-            modelManager.sendMessage(espetaculos);
+
         }else if(modelManager.getStatusClient() == StatusClient.USER){
             updateMenuUser();
-            Espetaculos espetaculos = new Espetaculos(ClientActions.CONSULT_SPECTACLE);
-            espetaculos.setUser(modelManager.getUser());
-            modelManager.sendMessage(espetaculos);
         }
 
 

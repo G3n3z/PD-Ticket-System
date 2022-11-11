@@ -112,11 +112,9 @@ public class SpectaculeDetails extends ScrollPane {
         clean.setPrefWidth(80); clean.setPrefHeight(30);
         submit = new Button("Submeter");
         submit.setPrefWidth(80); submit.setPrefHeight(30);
-        if (manager.getStatusClient() == StatusClient.USER){
-            hBox.getChildren().addAll(clean, submit);
-        }else{
-            hBox.getChildren().addAll(submit);
-        }
+
+        hBox.getChildren().addAll(clean, submit);
+
         hBox.setAlignment(Pos.CENTER);
         hBox.setSpacing(20);
         return hBox;
@@ -142,8 +140,7 @@ public class SpectaculeDetails extends ScrollPane {
             Collections.sort(lugares);
             Label label = new Label(entry.getKey());
 
-            List<ButtonLugar> buttons = lugares.stream().map(lugar -> new ButtonLugar(lugar.getAssento()+":" + lugar.getPreco() + "€", lugar,
-                    manager.getStatusClient() == StatusClient.USER)).toList();
+            List<ButtonLugar> buttons = lugares.stream().map(lugar -> new ButtonLugar(lugar.getAssento()+":" + lugar.getPreco() + "€", lugar)).toList();
             HBox hBox = new HBox(); hBox.getChildren().add(label);  hBox.getChildren().addAll(buttons);
             this.buttons.addAll(buttons);
             hBox.setSpacing(10);
