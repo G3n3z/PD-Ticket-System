@@ -1,10 +1,13 @@
 package com.isec.pd22.client.ui;
 
 import com.isec.pd22.client.models.ModelManager;
+import com.isec.pd22.client.ui.utils.AlertSingleton;
 import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
+import com.isec.pd22.payload.tcp.Request.EditUser;
 import com.isec.pd22.server.models.User;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -28,7 +31,6 @@ public class EditView extends BorderPane {
         this.modelManager = modelManager;
         createViews();
         registerHandlers();
-        updateView();
     }
 
 
@@ -39,20 +41,20 @@ public class EditView extends BorderPane {
         title.setFont(new Font(30));
         HBox hBoxTitle = new HBox(title);
         hBoxTitle.setAlignment(Pos.CENTER);
-        HBox.setMargin(title, new Insets(0,0,50,0));
+        HBox.setMargin(title, new Insets(50,0,50,0));
         labelUsername = new Label("Novo Username");
         labelUsername.setFont(new Font(20));
-        tfUsername = new TextField(modelManager.getUser().getUsername());
+        tfUsername = new TextField();
         tfUsername.setPrefHeight(30);
         tfUsername.setPrefWidth(200);
         labelName = new Label("Novo Nome");
         labelName.setFont(new Font(20));
-        tfName = new TextField(modelManager.getUser().getNome());
+        tfName = new TextField();
         tfName.setPrefHeight(30);
         tfName.setPrefWidth(200);
         labelPassword = new Label("Nova Passord");
         labelPassword.setFont(new Font(20));
-        tfPassword = new TextField(modelManager.getUser().getPassword());
+        tfPassword = new TextField();
         tfPassword.setPrefHeight(30);
         tfPassword.setPrefWidth(200);
         vBox.getChildren().addAll(hBoxTitle, labelUsername, tfUsername, labelName, tfName, labelPassword, tfPassword);
@@ -77,26 +79,42 @@ public class EditView extends BorderPane {
     }
     private void registerHandlers() {
         modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, (event) -> updateView() );
+        modelManager.addPropertyChangeListener(ModelManager.EDIT_USER, (event) -> updateView());
         btnSubmit.setOnAction(actionEvent -> {
-            String username = tfUsername.getText();
-            String nome = tfName.getText();
-            String password = tfPassword.getText();
-            ClientMSG msg = new ClientMSG(ClientActions.EDIT_USER);
+            String username = (tfUsername.getText().isBlank() ? modelManager.getUser().getUsername() : tfUsername.getText());
+            String nome = (tfName.getText().isBlank() ? modelManager.getUser().getNome() : tfName.getText());
+            String password = tfPassword.getText().isBlank() ? null : tfPassword.getText();
+            EditUser msg = new EditUser(ClientActions.EDIT_USER, username, nome, password);
             User user = new User();
-            user.setUsername(username);
-            user.setNome(nome);
-            user.setPassword(password);
+            user.setIdUser(modelManager.getUser().getIdUser());
+            user.setUsername(modelManager.getUser().getUsername());
+            user.setNome(modelManager.getUser().getNome());
             msg.setUser(user);
             modelManager.sendMessage(msg);
         });
         btnBack.setOnAction(actionEvent -> {
             this.setVisible(false);
         });
-
+        modelManager.addPropertyChangeListener(ModelManager.ACTION_COMPLETE, evt -> Platform.runLater(this::editComplete));
+        modelManager.addPropertyChangeListener(ModelManager.BAD_REQUEST, evt -> Platform.runLater(this::invalidateEdit));
 
     }
 
-    private void updateView() {
+    private void invalidateEdit() {
+        AlertSingleton.getInstanceWarning().setAlertText("Acção Inválida","Impossível efetuar alteração","Username ou nome já registados")
+                .showAndWait().ifPresent(buttonType -> updateView());
+    }
 
+    private void editComplete() {
+        modelManager.getUser().setUsername(tfUsername.getText());
+        modelManager.getUser().setNome(tfName.getText());
+        AlertSingleton.getInstanceOK().setAlertText("Acção Bem Sucedida", "Alteração efetuada com sucesso",null)
+                .showAndWait().ifPresent( buttonType -> updateView());
+    }
+
+    private void updateView() {
+        this.setVisible(true);
+        tfUsername.setText(modelManager.getUser().getUsername());
+        tfName.setText(modelManager.getUser().getNome());
     }
 }

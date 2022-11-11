@@ -118,9 +118,13 @@ public class DBCommunicationManager {
         return new Query( internalInfo.getNumDB()+1,sql, new Date().getTime());
     }
 
-    public Query editUtilizador(String username, String nome, String password){
+    public Query editUtilizador(int id, String username, String nome, String password){
         String sql = "UPDATE utilizador " +
-                     "set username = " + username + ", nome = " + nome + ", password = " + password;
+                     "SET username= '" + username + "', nome= '" + nome;
+        if(password != null) {
+            sql += "', password= '" + password;
+        }
+        sql += "' WHERE id= " + id;
 
         return new Query(internalInfo.getNumDB()+1,sql, new Date().getTime());
     }
@@ -361,10 +365,10 @@ public class DBCommunicationManager {
         if(!filtros.isEmpty()){
             for(Map.Entry<String, String> entry : filtros.entrySet()){
                 if(first){
-                    query += " where " + entry.getKey() + "=" + entry.getValue();
+                    query += " where " + entry.getKey() + "= " + entry.getValue();
                     first = false;
                 }else{
-                    query += " and " + entry.getKey() + "=" + entry.getValue();
+                    query += " and " + entry.getKey() + "= " + entry.getValue();
                 }
             }
         }

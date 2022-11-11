@@ -39,6 +39,7 @@ public class AdminView extends BorderPane {
     TableView<Reserva> reservaTableViewPayed;
     VBox vBox;
     ScrollPane scrollPane;
+    EditView editView;
     Label title;
     List<ButtonLugar> buttons;
     FormFilters formFilters;
@@ -65,6 +66,8 @@ public class AdminView extends BorderPane {
         VBox.setMargin(formFilters, new Insets(30,0,0,0));
         setCenter(vBox);
         scrollPane = new ScrollPane();
+        editView = new EditView(modelManager);
+
     }
 
     private void createReservasTable() {
@@ -98,6 +101,12 @@ public class AdminView extends BorderPane {
             ClientMSG msg = new ClientMSG(ClientActions.LOGOUT);
             msg.setUser(modelManager.getUser());
             modelManager.sendMessage(msg);
+        });
+
+        btnEditUserInfo.setOnAction(actionEvent -> {
+            vBox.getChildren().clear();
+            vBox.getChildren().add(editView);
+            modelManager.editUser();
         });
 
         btnInsertEspetaculo.setOnAction(actionEvent -> {

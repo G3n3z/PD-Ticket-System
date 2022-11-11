@@ -63,6 +63,7 @@ public class Client {
             case BAD_REQUEST -> {
                 modelManager.badRequest(mensage);
             }
+            case ACTION_SUCCEDED -> modelManager.actionSuccess(mensage);
             case LOGGED_IN -> {
                 data.setUser(mensage.getUser());
                 if(mensage.getUser().getRole() == Role.USER){

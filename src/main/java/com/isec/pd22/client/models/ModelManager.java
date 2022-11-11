@@ -34,6 +34,7 @@ public class ModelManager {
     public static final String PROP_RESERVAS = "PROP_RESERVAS";
     public static final String PROP_ESPETACULO_DETAILS = "PROP_ESPETACULO_DETAILS";
     public static final String PROP_TRY_LATER = "TRY_LATER";
+    public static final String EDIT_USER = "EDIT_USER";
     PropertyChangeSupport pcs;
     private StatusClient statusClient;
 
@@ -171,5 +172,13 @@ public class ModelManager {
         modalIndicator = new ModalIndicator(this);
         modalIndicator.show(stage);
         //
+    }
+
+    public void actionSuccess(ClientMSG mensage) {
+        pcs.firePropertyChange(ACTION_COMPLETE,null,null);
+    }
+
+    public void editUser(){
+        pcs.firePropertyChange(EDIT_USER,null,null);
     }
 }

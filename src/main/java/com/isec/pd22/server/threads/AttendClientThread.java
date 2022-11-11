@@ -140,13 +140,16 @@ public class AttendClientThread extends Thread{
                 switch (msgClient.getAction()) {
                     case EDIT_USER -> {
                         if (dbComm.canEditUser(msgClient.getUser().getNome(), msgClient.getUser().getUsername())) {
+                            EditUser editUser = (EditUser) msgClient;
                             Query query = dbComm.editUtilizador(
-                                    msgClient.getUser().getUsername(),
-                                    msgClient.getUser().getNome(),
-                                    msgClient.getUser().getPassword()
+                                    editUser.getUser().getIdUser(),
+                                    editUser.getUsername(),
+                                    editUser.getNome(),
+                                    editUser.getPassword()
                             );
                             if (startUpdateRoutine(query, internalInfo)) {
                                 dbVersionManager.insertQuery(query);
+                                msg = new ClientMSG(ClientsPayloadType.ACTION_SUCCEDED);
                             } else {
                                 msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
                             }

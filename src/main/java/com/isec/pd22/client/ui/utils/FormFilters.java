@@ -30,16 +30,16 @@ public class FormFilters extends VBox {
 
     private void registerHandlers() {
         Espetaculos espetaculos = new Espetaculos(ClientActions.CONSULT_SPECTACLE);
-        espetaculos.setUser(modelManager.getUser());
 
         submit.setOnAction(actionEvent -> {
+            espetaculos.setUser(modelManager.getUser());
             for (TextField textField : list) {
                 if(textField.getText() != null && !textField.getText().isEmpty()){
                     espetaculos.getFiltros().put(textField.getPromptText().toLowerCase(), textField.getText());
                 }
             }
+            modelManager.sendMessage(espetaculos);
         });
-        modelManager.sendMessage(espetaculos);
     }
 
     private void createViews() {
