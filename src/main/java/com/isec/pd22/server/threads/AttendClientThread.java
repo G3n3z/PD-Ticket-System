@@ -302,8 +302,14 @@ public class AttendClientThread extends Thread{
 
     private Query importToBD(FileUpload fileUpload) throws IOException {
         BufferedReader br = new BufferedReader(new FileReader(Constants.FILES_DIR_PATH+fileUpload.getName()));
+
+        // ----
+
         Espetaculo espetaculo = readHeaders(br);
         List<Lugar> lugares = readFilas(br);
+
+        // ----
+
         br.close();
         Query query = dbComm.insertEspetaculo(espetaculo);
         dbComm.insertLugares(lugares, query);

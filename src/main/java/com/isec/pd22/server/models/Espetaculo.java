@@ -16,6 +16,7 @@ public class Espetaculo implements Serializable {
     String descricao;
     String tipo;
     Date data_hora;
+
     int duracao;
     String local;
     String localidade;
@@ -23,6 +24,7 @@ public class Espetaculo implements Serializable {
     String classificacao_etaria;
     int visivel;
     Set<Lugar> lugares;
+
 
     public Espetaculo() {
         lugares = new HashSet<>();
