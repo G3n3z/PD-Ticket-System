@@ -100,8 +100,7 @@ public class ModelManager {
     }
 
     public void badRequest(ClientMSG msg){
-        System.out.println("BADREQUEST");
-        pcs.firePropertyChange(BAD_REQUEST, null, null);
+        pcs.firePropertyChange(BAD_REQUEST, null, msg.getMessage());
     }
 
     public void registerCompleted() {
@@ -200,7 +199,17 @@ public class ModelManager {
         addReservations(mensage);
         pcs.firePropertyChange(PROP_ESPETACULO_DETAILS, null, null);
         pcs.firePropertyChange(PROP_ESPETACULO_DETAILS_WAITING_PAYMENT, null, null);
+    }
 
+    public void closeConnection() {
+        client.closeConnection();
+    }
 
+    public void setLastMessage(ClientMSG mensage) {
+        data.setLastMessage(mensage);
+    }
+
+    public ClientMSG getLastMessage() {
+        return data.getMessage();
     }
 }

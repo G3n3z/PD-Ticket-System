@@ -54,10 +54,6 @@ public class ShowFromFileModel {
         return show;
     }
 
-    public HashMap<String, List<Lugar>> getSeatsMap() {
-        return seatsMap;
-    }
-
     public List<Lugar> getSeats() {
         ArrayList<Lugar> seatsMerged = new ArrayList<>();
         for (List<Lugar> queue:
@@ -98,7 +94,7 @@ public class ShowFromFileModel {
                     show.setPais(value);
             case FIELD_NAME_AGE_CLASSIFICATION ->
                     show.setClassificacao_etaria(value);
-            default -> throw new ServerException("O campo [" + field + "] não é conhecido. Abortar carregamento.");
+            default -> throw new ServerException("O campo [" + field + "] não é conhecido. Carregamento abortado.");
         }
     }
 
@@ -107,7 +103,7 @@ public class ShowFromFileModel {
         String value = fields[1].trim();
 
         if (seatsMap.containsKey(field)) {
-            throw new ServerException("A fila ["+ field + "] já existe. Abortar carregamento.");
+            throw new ServerException("A fila ["+ field + "] já existe. Carregamento abortado.");
         };
 
         ArrayList<Lugar> seats = new ArrayList<>();

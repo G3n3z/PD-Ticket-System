@@ -79,6 +79,7 @@ public class RootPane extends BorderPane {
                     ClientMSG msg = new ClientMSG(ClientActions.EXIT);
                     msg.setUser(modelManager.getUser());
                     modelManager.sendMessage(msg);
+                    modelManager.closeConnection();
                     Platform.exit();
                 }
                 else{
@@ -111,8 +112,23 @@ public class RootPane extends BorderPane {
 
 
     private void badRequest() {
-        AlertSingleton.getInstanceWarning().setAlertText("Erro de Mensagem", "", "Não foi possivel fazer o pedido ao servidor");
-        AlertSingleton.getInstanceWarning().showAndWait();
+        ClientMSG lastMessage = modelManager.getLastMessage();
+
+        if (lastMessage == null) {
+            AlertSingleton.getInstanceWarning().setAlertText("Erro de Mensagem", "", "Não foi possivel fazer o pedido ao servidor")
+                    .showAndWait();
+            return;
+        }
+
+        String message = lastMessage.getMessage();
+
+        switch (lastMessage.getAction()) {
+            // TODO tratar as diferentes mensagens
+            default -> {}
+        }
+
+        AlertSingleton.getInstanceWarning().setAlertText("Erro de Mensagem", "", message)
+                .showAndWait();
     }
 
 }

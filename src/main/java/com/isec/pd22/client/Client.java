@@ -22,6 +22,8 @@ public class Client {
     private Data data;
     private ModelManager modelManager;
 
+    private boolean isClosingConnection = false;
+
     public Client(Data data, ModelManager modelManager, String[] args) throws RuntimeException, IOException, ClassNotFoundException {
         clientModel = new ClientModel(args);
         this.data = data;
@@ -31,12 +33,18 @@ public class Client {
 
         Socket tcpServerSocket = connectToServer();
         initServerThread(tcpServerSocket);
-
-        // TODO implementar sistema de processamento de comandos
     }
 
     public void sendMessage(ClientMSG msg) throws IOException {
         clientModel.getServerConnectionThread().sendMessage(msg);
+    }
+
+    public void closeConnection() {
+        isClosingConnection = true;
+
+        try {
+            clientModel.getTcpServerConnection().getSocket().close();
+        } catch (IOException ignored) {}
     }
 
     private void initServerThread(Socket tcpServerSocket) throws IOException {
@@ -50,10 +58,18 @@ public class Client {
     // TODO interpretar as mensagens recebidas do servidor aqui!
     private void onMessageReceived(ClientMSG mensage, ServerConnectionThread service) {
         System.out.println("Mensagem recebida " + mensage.getClientsPayloadType());
+
+        modelManager.setLastMessage(mensage);
+
         switch (mensage.getClientsPayloadType()) {
             case CONNECTION_LOST -> {
-                System.out.println("Restablished");
-                reestablishNewServerConnection();
+                if (!isClosingConnection) {
+                    System.out.println("Restablished");
+                    reestablishNewServerConnection();
+                    break;
+                }
+
+                System.out.println("Conexão Terminada, adeus!!");
             }
             case USER_REGISTER -> {
                 if (modelManager.getStatusClient() == StatusClient.REGISTER){

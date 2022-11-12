@@ -95,21 +95,6 @@ public class EditView extends BorderPane {
         btnBack.setOnAction(actionEvent -> {
             this.setVisible(false);
         });
-        modelManager.addPropertyChangeListener(ModelManager.ACTION_COMPLETE, evt -> Platform.runLater(this::editComplete));
-        modelManager.addPropertyChangeListener(ModelManager.BAD_REQUEST, evt -> Platform.runLater(this::invalidateEdit));
-
-    }
-
-    private void invalidateEdit() {
-        AlertSingleton.getInstanceWarning().setAlertText("Acção Inválida","Impossível efetuar alteração","Username ou nome já registados")
-                .showAndWait().ifPresent(buttonType -> updateView());
-    }
-
-    private void editComplete() {
-        modelManager.getUser().setUsername(tfUsername.getText());
-        modelManager.getUser().setNome(tfName.getText());
-        AlertSingleton.getInstanceOK().setAlertText("Acção Bem Sucedida", "Alteração efetuada com sucesso",null)
-                .showAndWait().ifPresent( buttonType -> updateView());
     }
 
     private void updateView() {

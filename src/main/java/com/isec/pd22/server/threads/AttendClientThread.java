@@ -1,7 +1,6 @@
 package com.isec.pd22.server.threads;
 
 import com.isec.pd22.enums.*;
-import com.isec.pd22.exception.ServerException;
 import com.isec.pd22.payload.*;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.tcp.Request.*;
@@ -155,13 +154,11 @@ public class AttendClientThread extends Thread{
                msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
             }
             sendMessage(msg);
-        }catch (SQLException e){
+        } catch (SQLException e){
             System.out.println(Arrays.toString(e.getStackTrace()));
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-
-
     }
 
     private ClientMSG editUser(ClientMSG msgClient) throws SQLException {
@@ -268,46 +265,55 @@ public class AttendClientThread extends Thread{
 
 
     private ClientMSG addSpectacule(ClientMSG msgClient, User user) throws IOException, SQLException {
-        ClientMSG msg;
-        if (user.getRole() == Role.ADMIN) {
-            if(readFile(msgClient)){
-                Query query = importToBD((FileUpload) msgClient);
-                if (startUpdateRoutine(query, internalInfo)) {
-                    dbVersionManager.insertQuery(query);
-                    msg = new ClientMSG(ClientsPayloadType.FILE_UPDATED);
-                } else {
-                    msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
-                    msg.setAction(ClientActions.ADD_SPECTACLE);
-                }
-            }else{
-                msg = new ClientMSG(ClientsPayloadType.PART_OF_FILE_UPLOADED);
-            }
-        }else {
-            msg = new ClientMSG(ClientActions.DELETE_SPECTACLE, ClientsPayloadType.BAD_REQUEST);
+        if (user.getRole() != Role.ADMIN) {
+            return new ClientMSG(ClientActions.DELETE_SPECTACLE, ClientsPayloadType.BAD_REQUEST);
         }
+
+        if(!readFile(msgClient)) {
+            return new ClientMSG(ClientsPayloadType.PART_OF_FILE_UPLOADED);
+        }
+
+        Query query;
+
+        try {
+            query = importToBD((FileUpload) msgClient);
+        } catch (Exception e) {
+            return new ClientMSG(ClientActions.DELETE_SPECTACLE, ClientsPayloadType.BAD_REQUEST, e.getMessage());
+        }
+
+
+        if (startUpdateRoutine(query, internalInfo)) {
+            dbVersionManager.insertQuery(query);
+            return new ClientMSG(ClientsPayloadType.FILE_UPDATED);
+        }
+
+        ClientMSG msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
+        msg.setAction(ClientActions.ADD_SPECTACLE);
+
         return msg;
     }
 
     private ClientMSG deleteSpectacle(ClientMSG msgClient, User user) throws SQLException {
-        ClientMSG msg;
+        Espetaculos msg;
         if(user.getRole() == Role.ADMIN){
             Espetaculos list = (Espetaculos) msgClient;
             if(dbComm.canRemoveEspecatulo(list.getEspetaculos().get(0).getIdEspetaculo())){
                 Query  query = dbComm.deleteSpectacle(list.getEspetaculos().get(0).getIdEspetaculo());
                 if (startUpdateRoutine(query, internalInfo)) {
                     dbVersionManager.insertQuery(query);
-                    msg = new ClientMSG(ClientActions.DELETE_SPECTACLE);
+                    msg = new Espetaculos(ClientActions.DELETE_SPECTACLE);
                     msg.setClientsPayloadType(ClientsPayloadType.CONSULT_SPECTACLE);
                 } else {
-                    msg = new ClientMSG(ClientActions.DELETE_SPECTACLE);
+                    msg = new Espetaculos(ClientActions.DELETE_SPECTACLE);
                     msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
                 }
             }else {
-                msg = new ClientMSG(ClientActions.DELETE_SPECTACLE);
+                msg = new Espetaculos(ClientActions.DELETE_SPECTACLE);
                 msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
             }
         }else {
-            msg = new ClientMSG(ClientActions.DELETE_SPECTACLE, ClientsPayloadType.BAD_REQUEST);
+            msg = new Espetaculos(ClientActions.DELETE_SPECTACLE);
+            msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
         }
         return msg;
     }
@@ -347,140 +353,15 @@ public class AttendClientThread extends Thread{
         return fileUpload.isLast();
     }
 
-    private Query importToBD(FileUpload fileUpload) throws IOException {
+    private Query importToBD(FileUpload fileUpload) throws Exception {
         BufferedReader br = new BufferedReader(new FileReader(Constants.FILES_DIR_PATH+fileUpload.getName()));
 
-        Espetaculo espetaculo = readHeaders(br);
-        List<Lugar> lugares = readFilas(br);
+        ShowFromFileModel show = new ShowFromFileModel(Constants.FILES_DIR_PATH+fileUpload.getName());
 
         br.close();
-        Query query = dbComm.insertEspetaculo(espetaculo);
-        dbComm.insertLugares(lugares, query);
+        Query query = dbComm.insertEspetaculo(show.getShow());
+        dbComm.insertLugares(show.getSeats(), query);
         return query;
-    }
-
-    private List<Lugar> readFilas(BufferedReader br)  {
-        char fila;
-        List<Lugar> lugars = new ArrayList<>();
-        while (true){
-            try {
-                String line = br.readLine();
-                if(line == null){
-                    break;
-                }
-                line = line.trim();
-                if (line.isEmpty() || line.startsWith("\"Fila")){
-                    continue;
-                }
-                String [] args = line.split(";");
-                args = retiraAspas(args);
-                if(args.length < 2){
-                    continue;
-                }
-                readLineLugares(args, lugars);
-            } catch (IOException e) {
-                break;
-            }
-        }
-        return lugars;
-    }
-
-    private void readLineLugares(String[] args, List<Lugar> lugars) {
-        String fila = args[0]; String assento; double preco;
-        for (int i = 1; i < args.length; i++) {
-            String []lugar = args[i].split(":");
-            if(lugar.length != 2){
-                continue;
-            }
-            assento = lugar[0].replaceAll("\"", "");
-            preco = Double.parseDouble(lugar[1].replaceAll("\"", ""));
-            lugars.add(new Lugar(fila, assento, preco));
-        }
-    }
-
-    private Espetaculo readHeaders( BufferedReader br) throws IOException {
-        int index = 0;
-        String designacao = null, tipo = null, data, local = null, localidade = null, pais = null, classificacao = null;
-        int dia = 0;
-        int mes = 0;
-        int ano = 0, hora = 0, minutos = 0, duracao = 0;
-        while(index <= 8){
-            String line = br.readLine();
-            String [] arguments = line.split(";");
-            arguments = retiraAspas(arguments);
-            switch (index){
-                case 0 -> {
-                    if(arguments[0] == null || !arguments[0].equals("Designação") || arguments.length != 2){
-                        throw new ServerException("Designação nao encontrada");
-                    }
-                    designacao = arguments[1];
-                }
-                case 1 -> {
-                    if(arguments[0] == null || !arguments[0].equals("Tipo") || arguments.length != 2){
-                        throw new ServerException("Tipo nao encontrada");
-                    }
-                    tipo = arguments[1];
-                }
-                case 2 -> {
-                    if(arguments[0] == null || !arguments[0].equals("Data") || arguments.length != 4){
-                        throw new ServerException("Tipo nao encontrada");
-                    }
-                    dia = Integer.parseInt(arguments[1]);
-                    mes = Integer.parseInt(arguments[2]);
-                    ano = Integer.parseInt(arguments[3]);
-                }
-                case 3 -> {
-                    if(arguments[0] == null || !arguments[0].equals("Hora") || arguments.length != 3){
-                        throw new ServerException("Tipo nao encontrada");
-                    }
-                    hora = Integer.parseInt(arguments[1]);
-                    minutos = Integer.parseInt(arguments[2]);
-
-                }
-                case 4 -> {
-                    if(arguments[0] == null || !arguments[0].equals("Duração") || arguments.length != 2){
-                        throw new ServerException("Tipo nao encontrada");
-                    }
-                    duracao = Integer.parseInt(arguments[1]);
-                }
-                case 5 -> {
-                    if(arguments[0] == null || !arguments[0].equals("Local") || arguments.length != 2){
-                        throw new ServerException("Tipo nao encontrada");
-                    }
-                    local = arguments[1];
-                }
-                case 6 -> {
-                    if(arguments[0] == null || !arguments[0].equals("Localidade") || arguments.length != 2){
-                        throw new ServerException("Tipo nao encontrada");
-                    }
-                    localidade = arguments[1];
-                }
-                case 7 -> {
-                    if(arguments[0] == null || !arguments[0].equals("País") || arguments.length != 2){
-                        throw new ServerException("Tipo nao encontrada");
-                    }
-                    pais = arguments[1];
-                }
-                case 8 -> {
-                    if(arguments[0] == null || !arguments[0].equals("Classificação etária") || arguments.length != 2){
-                        throw new ServerException("Tipo nao encontrada");
-                    }
-                    classificacao = arguments[1];
-                }
-
-            }
-            index++;
-        }
-        return new Espetaculo(designacao, tipo, new Date(ano, mes, dia, hora, minutos), duracao, local,
-                localidade, pais, classificacao);
-
-    }
-
-    private String[] retiraAspas(String[] arguments) {
-        for (int i = 0; i < arguments.length; i++) {
-            arguments[i] = arguments[i].replaceAll("\"", "");
-        }
-        return arguments;
     }
 
     /**

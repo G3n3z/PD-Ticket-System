@@ -1,5 +1,6 @@
 package com.isec.pd22.client.models;
 
+import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.tcp.Request.Espetaculos;
 import com.isec.pd22.server.models.Espetaculo;
 import com.isec.pd22.server.models.Reserva;
@@ -14,6 +15,7 @@ public class Data {
     Espetaculo espetaculo;
     List<Espetaculo> espetaculos = new ArrayList<>();
     User user;
+    private ClientMSG lastMessage;
 
     public User getUser() {
         return user;
@@ -57,5 +59,13 @@ public class Data {
 
     public Espetaculo getEspetaculo() {
         return espetaculo;
+    }
+
+    public void setLastMessage(ClientMSG lastMessage) {
+        this.lastMessage = lastMessage;
+    }
+
+    public ClientMSG getMessage() {
+        return lastMessage;
     }
 }
