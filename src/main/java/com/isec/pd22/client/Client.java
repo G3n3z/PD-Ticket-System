@@ -80,6 +80,8 @@ public class Client {
             case RESERVAS_RESPONSE -> modelManager.fireReservasAdmin(mensage);
             case SPECTACLE_DETAILS -> modelManager.fireEspectaculo(mensage);
             case TRY_LATER -> modelManager.tryLater();
+            case SUBMIT_RESERVATION_NOT_PAYED -> modelManager.reservationWaitingPay(mensage);
+            case SUBMIT_RESERVATION_COMPLETE -> modelManager.reservationComplete(mensage);
         }
 
     }

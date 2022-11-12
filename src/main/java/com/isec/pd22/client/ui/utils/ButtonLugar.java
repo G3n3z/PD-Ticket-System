@@ -1,6 +1,8 @@
 package com.isec.pd22.client.ui.utils;
 
+import com.isec.pd22.enums.Payment;
 import com.isec.pd22.server.models.Lugar;
+import com.isec.pd22.server.models.Reserva;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.layout.*;
@@ -11,6 +13,7 @@ public class ButtonLugar extends Button {
     boolean isSelected;
     boolean isMarked;
     boolean isUser;
+    boolean waitingPayment;
     public ButtonLugar(String text, Lugar lugar, Boolean isUser) {
         super(text);
         this.lugar = lugar;
@@ -30,6 +33,7 @@ public class ButtonLugar extends Button {
         this.lugar = lugar;
         this.isSelected = true;
         isMarked = lugar.getReserva() != null;
+        waitingPayment = calcWaitingPaymentFlag(lugar.getReserva());
         toogleStatus();
         this.setOnAction(actionEvent -> {
             toogleStatus();
@@ -38,7 +42,18 @@ public class ButtonLugar extends Button {
                 BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
     }
 
+    private boolean calcWaitingPaymentFlag(Reserva reserva) {
+        if (reserva == null)
+            return false;
+        return reserva.getPayment() == Payment.NOT_PAYED;
+    }
+
     public void toogleStatus(){
+        if (waitingPayment){
+            this.setBackground(new Background(new BackgroundFill(Color.rgb(223, 184, 27), CornerRadii.EMPTY, Insets.EMPTY)));
+            return;
+        }
+
         if(isMarked){
             this.setBackground(new Background(new BackgroundFill(Color.rgb(183, 36, 58), CornerRadii.EMPTY, Insets.EMPTY)));
             return;

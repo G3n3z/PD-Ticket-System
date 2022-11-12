@@ -1,5 +1,6 @@
 package com.isec.pd22.client.models;
 
+import com.isec.pd22.payload.tcp.Request.Espetaculos;
 import com.isec.pd22.server.models.Espetaculo;
 import com.isec.pd22.server.models.Reserva;
 import com.isec.pd22.server.models.User;
@@ -52,5 +53,9 @@ public class Data {
 
     public void setReservasPayed(List<Reserva> reservasPayed) {
         this.reservasPayed = reservasPayed;
+    }
+
+    public Espetaculo getEspetaculo() {
+        return espetaculo;
     }
 }

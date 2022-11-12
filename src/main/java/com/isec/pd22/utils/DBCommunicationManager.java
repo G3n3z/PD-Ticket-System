@@ -383,7 +383,8 @@ public class DBCommunicationManager {
             }
 
         } catch (SQLException e) {
-            return null;
+            System.out.println("[DBCOM] - getEspetaculoWithFilters " + e);
+            return new ArrayList<>();
         }
         return list;
     }

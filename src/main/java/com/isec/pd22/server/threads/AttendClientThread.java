@@ -138,144 +138,18 @@ public class AttendClientThread extends Thread{
             User user = dbComm.getUser(msgClient.getUser().getUsername());
             if (user != null && user.getAuthenticated() == Authenticated.AUTHENTICATED) {
                 switch (msgClient.getAction()) {
-                    case EDIT_USER -> {
-                        if (dbComm.canEditUser(msgClient.getUser().getNome(), msgClient.getUser().getUsername())) {
-                            EditUser editUser = (EditUser) msgClient;
-                            Query query = dbComm.editUtilizador(
-                                    editUser.getUser().getIdUser(),
-                                    editUser.getUsername(),
-                                    editUser.getNome(),
-                                    editUser.getPassword()
-                            );
-                            if (startUpdateRoutine(query, internalInfo)) {
-                                dbVersionManager.insertQuery(query);
-                                msg = new ClientMSG(ClientsPayloadType.ACTION_SUCCEDED);
-                            } else {
-                                msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
-                            }
-                        }else{
-                            msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
-                        }
-                    }
-                    case CONSULT_UNPAYED_RESERVATION -> {
-                        List<Reserva> unpayedReservations;
-                        unpayedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.NOT_PAYED);
-                        msg = new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE, unpayedReservations);
-
-                    }
-                    case CONSULT_PAYED_RESERVATION -> {
-                        List<Reserva> payedReservations;
-                        payedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.PAYED);
-                        msg = new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE, payedReservations);
-                    }
-                    case CONSULT_SPECTACLE -> {
-                        List<Espetaculo> list = dbComm.getEspetaculosAfter24Hours();
-                        msg = new Espetaculos(ClientsPayloadType.CONSULT_SPECTACLE, list);
-                    }
-                    case CHOOSE_SPECTACLE_24H -> {
-                        Espetaculos espetaculos = (Espetaculos) msgClient;
-                        List<Espetaculo> list = dbComm.getEspetaculoWithFilters(espetaculos);
-                        msg = new Espetaculos(ClientsPayloadType.CONSULT_SPECTACLE,list);
-                    }
-                    case SUBMIT_RESERVATION -> {
-                        ListPlaces list = (ListPlaces) msgClient;
-                        if(dbComm.canSubmitReservations(list)){
-                            Query query = dbComm.submitReservations(list);
-                            if (startUpdateRoutine(query, internalInfo)) {
-                                dbVersionManager.insertQuery(query);
-
-                                //Obter id da reserva inserida e iniciar o timertask que contrala o pagamento
-                                int lastId = dbComm.getLastId("reserva");
-                                System.out.println("[lastId reserva] = " + lastId);
-                                Timer timer = new Timer(true);
-                                timer.schedule(new ControlPaymentTask(lastId,connection,internalInfo,timer),Constants.PAYMENT_TIMER);
-
-                                msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
-                                msg.setClientsPayloadType(ClientsPayloadType.ACTION_SUCCEDED);
-                            } else {
-                                msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
-                                msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
-                            }
-                        }else {
-                            msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
-                            msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
-                        }
-
-                    }
-                    case GET_RESERVS -> {
-                        List<Reserva> reservas = dbComm.getAllReservas();
-                        msg = new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE,reservas);
-                        msg.setAction(ClientActions.GET_RESERVS);
-                    }
-                    case CANCEL_RESERVATION -> {
-                        RequestListReservas list = (RequestListReservas) msgClient;
-                        if(dbComm.canCancelReservation(list.getReservas().get(0).getIdReserva())) {
-                            Query query = dbComm.deleteReservaNotPayed(list.getReservas().get(0).getIdReserva());
-                            if (startUpdateRoutine(query, internalInfo)) {
-                                dbVersionManager.insertQuery(query);
-                                msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
-                                msg.setClientsPayloadType(ClientsPayloadType.ACTION_SUCCEDED);
-                            } else {
-                                msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
-                                msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
-                            }
-                        }else{
-                            msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
-                            msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
-                        }
-                    }
-                    case ADD_SPECTACLE -> {
-                        if (user.getRole() == Role.ADMIN) {
-                            if(readFile(msgClient)){
-                                Query query = importToBD((FileUpload) msgClient);
-                                if (startUpdateRoutine(query, internalInfo)) {
-                                    dbVersionManager.insertQuery(query);
-                                    msg = new ClientMSG(ClientsPayloadType.FILE_UPDATED);
-                                } else {
-                                    msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
-                                    msg.setAction(ClientActions.ADD_SPECTACLE);
-                                }
-                            }else{
-                                msg = new ClientMSG(ClientsPayloadType.PART_OF_FILE_UPLOADED);
-                            }
-                        }
-                    }
-                    case DELETE_SPECTACLE -> {
-                        if(user.getRole() == Role.ADMIN){
-                            Espetaculos list = (Espetaculos) msgClient;
-                            if(dbComm.canRemoveEspecatulo(list.getEspetaculos().get(0).getIdEspetaculo())){
-                                Query  query = dbComm.deleteSpectacle(list.getEspetaculos().get(0).getIdEspetaculo());
-                                if (startUpdateRoutine(query, internalInfo)) {
-                                    dbVersionManager.insertQuery(query);
-                                    msg = new ClientMSG(ClientActions.DELETE_SPECTACLE);
-                                    msg.setClientsPayloadType(ClientsPayloadType.CONSULT_SPECTACLE);
-                                } else {
-                                    msg = new ClientMSG(ClientActions.DELETE_SPECTACLE);
-                                    msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
-                                }
-                            }else {
-                                msg = new ClientMSG(ClientActions.DELETE_SPECTACLE);
-                                msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
-                            }
-                        }
-                    }
-                    case CONSULT_SPECTACLE_DETAILS -> {
-                        RequestDetailsEspetaculo req = (RequestDetailsEspetaculo) msgClient;
-                        Espetaculo e = dbComm.getEspetaculoDetailsByIdWithLugares(req.getEspetaculo().getIdEspetaculo());
-                        req.setEspetaculo(e);
-                        req.setClientsPayloadType(ClientsPayloadType.SPECTACLE_DETAILS);
-                        msg = req;
-                    }
-                    case LOGOUT -> {
-                        Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
-                        if (startUpdateRoutine(query, internalInfo)) {
-                            dbVersionManager.insertQuery(query);
-                            msg = new ClientMSG(ClientsPayloadType.LOGOUT);
-                        } else {
-                            msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
-                            msg.setAction(ClientActions.LOGOUT);
-                        }
-                    }
+                    case EDIT_USER -> msg = editUser(msgClient);
+                    case CONSULT_UNPAYED_RESERVATION -> msg = consultUnpayedReservation(msgClient);
+                    case CONSULT_PAYED_RESERVATION -> msg = consultPayedReservation(msgClient);
+                    case CONSULT_SPECTACLE -> msg = choose_spectacle(msgClient);
+                    case CHOOSE_SPECTACLE_24H -> msg = choose_spectacle_24h(msgClient);
+                    case SUBMIT_RESERVATION -> msg = submitReservation(msgClient);
+                    case GET_RESERVS -> msg = getReservs();
+                    case CANCEL_RESERVATION -> msg = cancelReservation(msgClient);
+                    case ADD_SPECTACLE -> msg = addSpectacule(msgClient, user);
+                    case DELETE_SPECTACLE -> msg = deleteSpectacle(msgClient, user);
+                    case CONSULT_SPECTACLE_DETAILS -> msg = consult_spectacle_details(msgClient);
+                    case LOGOUT -> msg = logout(msgClient);
                 }
             } else {
                msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
@@ -288,6 +162,175 @@ public class AttendClientThread extends Thread{
         }
 
 
+    }
+
+    private ClientMSG editUser(ClientMSG msgClient) throws SQLException {
+        ClientMSG msg;
+        if (dbComm.canEditUser(msgClient.getUser().getNome(), msgClient.getUser().getUsername())) {
+            EditUser editUser = (EditUser) msgClient;
+            Query query = dbComm.editUtilizador(
+                    editUser.getUser().getIdUser(),
+                    editUser.getUsername(),
+                    editUser.getNome(),
+                    editUser.getPassword()
+            );
+            if (startUpdateRoutine(query, internalInfo)) {
+                dbVersionManager.insertQuery(query);
+                msg = new ClientMSG(ClientsPayloadType.ACTION_SUCCEDED);
+            } else {
+                msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
+            }
+        }else{
+            msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
+        }
+        return msg;
+    }
+
+    private ClientMSG consultUnpayedReservation(ClientMSG msgClient) {
+        List<Reserva> unpayedReservations;
+        unpayedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.NOT_PAYED);
+        return new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE, unpayedReservations);
+    }
+
+    private ClientMSG consultPayedReservation(ClientMSG msgClient) {
+        List<Reserva> payedReservations;
+        payedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.PAYED);
+        return new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE, payedReservations);
+    }
+
+    private ClientMSG choose_spectacle(ClientMSG msgClient) {
+        Espetaculos espetaculos = (Espetaculos) msgClient;
+        List<Espetaculo> list = dbComm.getEspetaculoWithFilters(espetaculos);
+        return new Espetaculos(ClientsPayloadType.CONSULT_SPECTACLE,list);
+    }
+
+    private ClientMSG choose_spectacle_24h(ClientMSG msgClient) {
+        List<Espetaculo> list = dbComm.getEspetaculosAfter24Hours();
+        return new Espetaculos(ClientsPayloadType.CONSULT_SPECTACLE, list);
+    }
+
+    private ClientMSG submitReservation(ClientMSG msgClient) throws SQLException {
+        ClientMSG msg;
+        ListPlaces list = (ListPlaces) msgClient;
+        if(dbComm.canSubmitReservations(list)){
+            Query query = dbComm.submitReservations(list);
+            if (startUpdateRoutine(query, internalInfo)) {
+                dbVersionManager.insertQuery(query);
+
+                //Obter id da reserva inserida e iniciar o timertask que contrala o pagamento
+                int lastId = dbComm.getLastId("reserva");
+                System.out.println("[lastId reserva] = " + lastId);
+                Timer timer = new Timer(true);
+                timer.schedule(new ControlPaymentTask(lastId,connection,internalInfo,timer, list,
+                        oos),Constants.PAYMENT_TIMER);
+
+                msg = new ListPlaces(ClientActions.SUBMIT_RESERVATION, ClientsPayloadType.SUBMIT_RESERVATION_NOT_PAYED,
+                        list.getPlaces());
+
+            } else {
+                msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
+                msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
+            }
+        }else {
+            msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
+            msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
+        }
+        return msg;
+    }
+
+    private ClientMSG getReservs() {
+        ClientMSG msg;
+        List<Reserva> reservas = dbComm.getAllReservas();
+        msg = new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE,reservas);
+        msg.setAction(ClientActions.GET_RESERVS);
+        return msg;
+    }
+
+    private ClientMSG cancelReservation(ClientMSG msgClient) throws SQLException {
+        ClientMSG msg;
+        RequestListReservas list = (RequestListReservas) msgClient;
+        if(dbComm.canCancelReservation(list.getReservas().get(0).getIdReserva())) {
+            Query query = dbComm.deleteReservaNotPayed(list.getReservas().get(0).getIdReserva());
+            if (startUpdateRoutine(query, internalInfo)) {
+                dbVersionManager.insertQuery(query);
+                msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
+                msg.setClientsPayloadType(ClientsPayloadType.ACTION_SUCCEDED);
+            } else {
+                msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
+                msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
+            }
+        }else{
+            msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
+            msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
+        }
+        return msg;
+    }
+
+
+    private ClientMSG addSpectacule(ClientMSG msgClient, User user) throws IOException, SQLException {
+        ClientMSG msg;
+        if (user.getRole() == Role.ADMIN) {
+            if(readFile(msgClient)){
+                Query query = importToBD((FileUpload) msgClient);
+                if (startUpdateRoutine(query, internalInfo)) {
+                    dbVersionManager.insertQuery(query);
+                    msg = new ClientMSG(ClientsPayloadType.FILE_UPDATED);
+                } else {
+                    msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
+                    msg.setAction(ClientActions.ADD_SPECTACLE);
+                }
+            }else{
+                msg = new ClientMSG(ClientsPayloadType.PART_OF_FILE_UPLOADED);
+            }
+        }else {
+            msg = new ClientMSG(ClientActions.DELETE_SPECTACLE, ClientsPayloadType.BAD_REQUEST);
+        }
+        return msg;
+    }
+
+    private ClientMSG deleteSpectacle(ClientMSG msgClient, User user) throws SQLException {
+        ClientMSG msg;
+        if(user.getRole() == Role.ADMIN){
+            Espetaculos list = (Espetaculos) msgClient;
+            if(dbComm.canRemoveEspecatulo(list.getEspetaculos().get(0).getIdEspetaculo())){
+                Query  query = dbComm.deleteSpectacle(list.getEspetaculos().get(0).getIdEspetaculo());
+                if (startUpdateRoutine(query, internalInfo)) {
+                    dbVersionManager.insertQuery(query);
+                    msg = new ClientMSG(ClientActions.DELETE_SPECTACLE);
+                    msg.setClientsPayloadType(ClientsPayloadType.CONSULT_SPECTACLE);
+                } else {
+                    msg = new ClientMSG(ClientActions.DELETE_SPECTACLE);
+                    msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
+                }
+            }else {
+                msg = new ClientMSG(ClientActions.DELETE_SPECTACLE);
+                msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
+            }
+        }else {
+            msg = new ClientMSG(ClientActions.DELETE_SPECTACLE, ClientsPayloadType.BAD_REQUEST);
+        }
+        return msg;
+    }
+
+    private ClientMSG consult_spectacle_details(ClientMSG msgClient) {
+        RequestDetailsEspetaculo req = (RequestDetailsEspetaculo) msgClient;
+        Espetaculo e = dbComm.getEspetaculoDetailsByIdWithLugares(req.getEspetaculo().getIdEspetaculo());
+        req.setEspetaculo(e);
+        req.setClientsPayloadType(ClientsPayloadType.SPECTACLE_DETAILS);
+        return req;
+    }
+
+    private ClientMSG logout(ClientMSG msgClient) throws SQLException {
+        ClientMSG msg;
+        Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
+        if (startUpdateRoutine(query, internalInfo)) {
+            dbVersionManager.insertQuery(query);
+            msg = new ClientMSG(ClientsPayloadType.LOGOUT);
+        } else {
+            msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
+            msg.setAction(ClientActions.LOGOUT);
+        }
+        return msg;
     }
 
     private boolean readFile(ClientMSG msgClient) throws IOException {

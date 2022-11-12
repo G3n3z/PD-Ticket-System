@@ -1,11 +1,14 @@
 package com.isec.pd22.server.threads;
 
+import com.isec.pd22.enums.ClientsPayloadType;
+import com.isec.pd22.enums.Payment;
 import com.isec.pd22.enums.Status;
 import com.isec.pd22.enums.TypeOfMulticastMsg;
 import com.isec.pd22.payload.Abort;
 import com.isec.pd22.payload.Commit;
 import com.isec.pd22.payload.HeartBeat;
 import com.isec.pd22.payload.Prepare;
+import com.isec.pd22.payload.tcp.Request.ListPlaces;
 import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.Query;
 import com.isec.pd22.utils.Constants;
@@ -14,6 +17,7 @@ import com.isec.pd22.utils.DBVersionManager;
 import com.isec.pd22.utils.ObjectStream;
 
 import java.io.IOException;
+import java.io.ObjectOutputStream;
 import java.net.*;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -30,12 +34,17 @@ public class ControlPaymentTask extends TimerTask {
     private DBCommunicationManager dbComm;
     private DBVersionManager dbVM;
     Timer timer;
+    ListPlaces list;
+    ObjectOutputStream oos;
 
-    public ControlPaymentTask(int reservationId, Connection connection, InternalInfo internalInfo, Timer timer) {
+    public ControlPaymentTask(int reservationId, Connection connection, InternalInfo internalInfo, Timer timer,
+                              ListPlaces list, ObjectOutputStream oos) {
         this.reservationId = reservationId;
         this.connection = connection;
         this.internalInfo = internalInfo;
         this.timer = timer;
+        this.list = list;
+        this.oos = oos;
     }
 
     @Override
@@ -50,9 +59,14 @@ public class ControlPaymentTask extends TimerTask {
                     try {
                         dbVM.insertQuery(query);
                         System.out.println("inseri");
+                        list.setClientsPayloadType(ClientsPayloadType.SUBMIT_RESERVATION_COMPLETE);
+                        list.getPlaces().forEach(lugar -> lugar.getReserva().setPayment(Payment.PAYED));
+                        oos.writeUnshared(list);
                         break;
                     } catch (SQLException e) {
                         System.out.println("[ControlPaymentTask] - failed to insert query: " + e.getMessage());
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
                     }
                 } else{
                     try {

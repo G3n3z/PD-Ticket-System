@@ -42,9 +42,9 @@ public class RootPane extends BorderPane {
 
     private void createViews() {
         stack = new StackPane();
-        LogInView logInView = new LogInView(modelManager);
-        RegisterView registerView = new RegisterView(modelManager);
-        AdminView adminView = new AdminView(modelManager);
+//        LogInView logInView = new LogInView(modelManager);
+//        RegisterView registerView = new RegisterView(modelManager);
+//        AdminView adminView = new AdminView(modelManager);
 //        stack.getChildren().addAll(logInView, adminView, registerView);
         setCenter(stack);
         changeView();

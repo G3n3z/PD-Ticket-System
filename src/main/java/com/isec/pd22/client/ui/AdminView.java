@@ -43,6 +43,7 @@ public class AdminView extends BorderPane {
     Label title;
     List<ButtonLugar> buttons;
     FormFilters formFilters;
+    AlertSingleton alert = null;
     public AdminView(ModelManager modelManager) {
         this.modelManager = modelManager;
         createViews();
@@ -127,6 +128,9 @@ public class AdminView extends BorderPane {
         modelManager.addPropertyChangeListener(ModelManager.ALL_ESPETACULOS, evt -> Platform.runLater(this::updateTable));
         modelManager.addPropertyChangeListener(ModelManager.PROP_RESERVAS, evt -> Platform.runLater(this::updateReservas));
         modelManager.addPropertyChangeListener(ModelManager.PROP_ESPETACULO_DETAILS, evt -> Platform.runLater(this::updateDetails));
+        modelManager.addPropertyChangeListener(ModelManager.PROP_CLOSE_ALERT, evt -> Platform.runLater(this::closeAlert));
+        modelManager.addPropertyChangeListener(ModelManager.PROP_ESPETACULO_DETAILS_WAITING_PAYMENT,
+                evt -> Platform.runLater(this::waitingPayment));
 
         btnViewEspetaculos.setOnAction(actionEvent -> {
             Espetaculos espetaculos = new Espetaculos(ClientActions.CONSULT_SPECTACLE);
@@ -144,6 +148,18 @@ public class AdminView extends BorderPane {
             title.setText("Reservas");
             vBox.getChildren().addAll(title,reservaTableView);
         });
+    }
+
+    private void closeAlert() {
+        if (alert!= null){
+            alert.close();
+        }
+    }
+
+    private void waitingPayment() {
+        alert = AlertSingleton.getInstanceOK().setAlertText("Bilhetes Reservados", "",
+                        "Bilhetes Reservados com sucesso. Tem 10 segundos para remover");
+        alert.showAndWait();
     }
 
     private void updateDetails() {
