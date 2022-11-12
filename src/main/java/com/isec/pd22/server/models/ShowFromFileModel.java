@@ -1,13 +1,10 @@
 package com.isec.pd22.server.models;
 
-import com.isec.pd22.utils.Constants;
+import com.isec.pd22.exception.ServerException;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
-import java.io.IOException;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.HashMap;
+import java.util.*;
 
 public class ShowFromFileModel {
     private static final String FIELD_NAME_DESCRIPTION = "Designação";
@@ -21,10 +18,9 @@ public class ShowFromFileModel {
     private static final String FIELD_NAME_AGE_CLASSIFICATION = "Classificação etária";
     private static final String FIELD_NAME_QUEUE = "Fila";
 
-
     private final Espetaculo show = new Espetaculo();
 
-    private final HashMap<String, Lugar[]> seatsMap = new HashMap<>();
+    private final HashMap<String, List<Lugar>> seatsMap = new HashMap<>();
 
     private final Date showDate = new Date();
 
@@ -41,7 +37,7 @@ public class ShowFromFileModel {
             String[] fields = line.split(";");
             fields = removeUnnecessaryChars(fields);
 
-            if (fields[0].equals(FIELD_NAME_QUEUE)) {
+            if (line.equals("") || fields[0].equals(FIELD_NAME_QUEUE)) {
                 isReadingQueuesData = true;
                 continue;
             }
@@ -52,6 +48,24 @@ public class ShowFromFileModel {
                 collectQueuesData(fields);
             }
         }
+    }
+
+    public Espetaculo getShow() {
+        return show;
+    }
+
+    public HashMap<String, List<Lugar>> getSeatsMap() {
+        return seatsMap;
+    }
+
+    public List<Lugar> getSeats() {
+        ArrayList<Lugar> seatsMerged = new ArrayList<>();
+        for (List<Lugar> queue:
+                this.seatsMap.values()) {
+            seatsMerged.addAll(queue);
+        }
+
+        return seatsMerged;
     }
 
     private void collectHeaderData(String[] fields) {
@@ -84,7 +98,7 @@ public class ShowFromFileModel {
                     show.setPais(value);
             case FIELD_NAME_AGE_CLASSIFICATION ->
                     show.setClassificacao_etaria(value);
-            default -> throw new RuntimeException("O campo [" + field + "] não é conhecido. Abortar carregamento.");
+            default -> throw new ServerException("O campo [" + field + "] não é conhecido. Abortar carregamento.");
         }
     }
 
@@ -93,10 +107,17 @@ public class ShowFromFileModel {
         String value = fields[1].trim();
 
         if (seatsMap.containsKey(field)) {
-            throw new RuntimeException("A fila ["+ field + "] já existe. Abortar carregamento.");
+            throw new ServerException("A fila ["+ field + "] já existe. Abortar carregamento.");
         };
 
+        ArrayList<Lugar> seats = new ArrayList<>();
 
+        for (int i = 1; i < fields.length; i++) {
+            String[] seatData = fields[i].split(":");
+            seats.add(new Lugar(field, seatData[0], Double.parseDouble(seatData[1])));
+        }
+
+        seatsMap.put(field, seats);
     }
 
     private String[] removeUnnecessaryChars(String[] fields) {
