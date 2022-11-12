@@ -155,7 +155,9 @@ public class MulticastThread extends Thread{
                         throw new RuntimeException(e);
                     }
                 }
-                synchronized (internalInfo){
+
+                internalInfo.notifyAllObservers();
+                synchronized (internalInfo.getStatus()){
                     internalInfo.setStatus(Status.AVAILABLE);
                 }
                 internalInfo.lock.lock();

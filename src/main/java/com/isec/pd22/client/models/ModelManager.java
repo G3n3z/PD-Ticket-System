@@ -154,6 +154,7 @@ public class ModelManager {
     public void fireEspectaculo(ClientMSG mensage) {
         RequestDetailsEspetaculo r = (RequestDetailsEspetaculo) mensage;
         data.espetaculo = r.getEspetaculo();
+
         pcs.firePropertyChange(PROP_ESPETACULO_DETAILS, null, null);
     }
 

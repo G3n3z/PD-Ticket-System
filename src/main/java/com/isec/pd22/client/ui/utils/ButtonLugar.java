@@ -32,14 +32,20 @@ public class ButtonLugar extends Button {
         super(text);
         this.lugar = lugar;
         this.isSelected = true;
-        isMarked = lugar.getReserva() != null;
         waitingPayment = calcWaitingPaymentFlag(lugar.getReserva());
+        isMarked = calcPaymentFlag(lugar.getReserva());
         toogleStatus();
         this.setOnAction(actionEvent -> {
             toogleStatus();
         });
         this.setBorder(new Border(new BorderStroke(Color.BLACK,
                 BorderStrokeStyle.SOLID, CornerRadii.EMPTY, BorderWidths.DEFAULT)));
+    }
+
+    private boolean calcPaymentFlag(Reserva reserva) {
+        if (reserva == null)
+            return false;
+        return reserva.getPayment() == Payment.PAYED;
     }
 
     private boolean calcWaitingPaymentFlag(Reserva reserva) {
@@ -67,5 +73,11 @@ public class ButtonLugar extends Button {
     }
 
 
+    public Lugar getLugar() {
+        return lugar;
+    }
 
+    public boolean isWaitingPayment() {
+        return waitingPayment;
+    }
 }

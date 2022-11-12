@@ -99,7 +99,7 @@ public class EditView extends BorderPane {
 
     private void updateView() {
         this.setVisible(true);
-        tfUsername.setText(modelManager.getUser().getUsername());
-        tfName.setText(modelManager.getUser().getNome());
+//        tfUsername.setText(modelManager.getUser().getUsername());
+//        tfName.setText(modelManager.getUser().getNome());
     }
 }

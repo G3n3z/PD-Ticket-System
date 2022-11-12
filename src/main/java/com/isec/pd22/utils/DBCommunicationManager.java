@@ -5,6 +5,7 @@ import com.isec.pd22.enums.Payment;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.tcp.Request.Espetaculos;
 import com.isec.pd22.payload.tcp.Request.ListPlaces;
+import com.isec.pd22.payload.tcp.Request.RequestListReservas;
 import com.isec.pd22.server.models.*;
 
 import java.sql.*;
@@ -438,7 +439,8 @@ public class DBCommunicationManager {
     public Query submitReservations(ListPlaces list) {
         Lugar dummy = list.getPlaces().get(0);
         String query="INSERT INTO reserva(id, data_hora, pago, id_utilizador, id_espetaculo) " +
-                "values(NULL, '" + dummy.getReserva().getData_hora() + "', '" + 0 + "', '" + dummy.getReserva().getIdUser() +
+                "values(NULL, '" + Constants.dateToString(dummy.getReserva().getData_hora()) + "', '" + Payment.NOT_PAYED.ordinal() +
+                "', '" + dummy.getReserva().getIdUser() +
                 "', '" + dummy.getReserva().getIdEspectaculo() + "'); ";
         String q2;
         for(Lugar place: list.getPlaces()) {
@@ -461,5 +463,25 @@ public class DBCommunicationManager {
             return id;
         }
         return id;
+    }
+
+    public Query payReservations(RequestListReservas reservas) {
+        StringBuffer sb = new StringBuffer();
+        List<Integer> list;
+        list = reservas.getReservas().stream().map(Reserva::getIdReserva).distinct().toList();
+
+        sb.append("Update reserva " +
+                "set pago = ");
+        sb.append(Payment.PAYED.ordinal());
+        sb.append(" where id in (");
+
+        for (int i = 0; i < list.size(); i++) {
+            sb.append(list.get(i));
+            if(i < list.size()-1){
+                sb.append(",");
+            }
+        }
+        sb.append(");");
+        return  new Query(internalInfo.getNumDB()+1, sb.toString(), new Date().getTime());
     }
 }

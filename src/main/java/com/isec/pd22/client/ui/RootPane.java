@@ -114,7 +114,7 @@ public class RootPane extends BorderPane {
     private void badRequest() {
         ClientMSG lastMessage = modelManager.getLastMessage();
 
-        if (lastMessage == null) {
+        if (lastMessage == null || lastMessage.getAction() == null ) {
             AlertSingleton.getInstanceWarning().setAlertText("Erro de Mensagem", "", "Não foi possivel fazer o pedido ao servidor")
                     .showAndWait();
             return;

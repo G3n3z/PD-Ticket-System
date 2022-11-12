@@ -118,7 +118,7 @@ public class StartServices extends Thread {
         MulticastMSG msg = null;
 
         long startTime = new Date().getTime();
-        while( (new Date().getTime() - startTime) < 30000){
+        while( (new Date().getTime() - startTime) < Constants.INITIAL_TIMEOUT){
             try {
                 socket.receive(packet);
             }catch (SocketTimeoutException e){

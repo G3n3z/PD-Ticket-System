@@ -34,17 +34,12 @@ public class ControlPaymentTask extends TimerTask {
     private DBCommunicationManager dbComm;
     private DBVersionManager dbVM;
     Timer timer;
-    ListPlaces list;
-    ObjectOutputStream oos;
 
-    public ControlPaymentTask(int reservationId, Connection connection, InternalInfo internalInfo, Timer timer,
-                              ListPlaces list, ObjectOutputStream oos) {
+    public ControlPaymentTask(int reservationId, Connection connection, InternalInfo internalInfo, Timer timer) {
         this.reservationId = reservationId;
         this.connection = connection;
         this.internalInfo = internalInfo;
         this.timer = timer;
-        this.list = list;
-        this.oos = oos;
     }
 
     @Override
@@ -56,18 +51,7 @@ public class ControlPaymentTask extends TimerTask {
             if (dbComm.canCancelReservation(reservationId)) {
                 Query query = dbComm.deleteReservaNotPayed(reservationId);
                 if (startUpdateRoutine(query, internalInfo)) {
-                    try {
-                        dbVM.insertQuery(query);
-                        System.out.println("inseri");
-                        list.setClientsPayloadType(ClientsPayloadType.SUBMIT_RESERVATION_COMPLETE);
-                        list.getPlaces().forEach(lugar -> lugar.getReserva().setPayment(Payment.PAYED));
-                        oos.writeUnshared(list);
-                        break;
-                    } catch (SQLException e) {
-                        System.out.println("[ControlPaymentTask] - failed to insert query: " + e.getMessage());
-                    } catch (IOException e) {
-                        throw new RuntimeException(e);
-                    }
+                    break;
                 } else{
                     try {
                         System.out.println("[ControlPaymentTask] - servers busy, trying again in a second...");
@@ -138,8 +122,9 @@ public class ControlPaymentTask extends TimerTask {
             if(verifyConfirmations(confirmationList)){
                 //Se estiverem todos enviar COMMIT
                 try {
+                    dbVM.insertQuery(query);
                     sendCommit(dp);
-                } catch (IOException e) {
+                } catch (IOException | SQLException e) {
                     System.out.println("[ControlPaymentTask] - error on updateRoutine - could not send commit: "+ e.getMessage());
                     return false;
                 }

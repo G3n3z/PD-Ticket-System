@@ -33,6 +33,10 @@ public class SpectaculeDetails extends ScrollPane {
 
     }
 
+    public List<ButtonLugar> getButtons() {
+        return buttons;
+    }
+
     private void registerHandlers() {
         clean.setOnAction(actionEvent -> {
             cleanButtons();

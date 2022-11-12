@@ -7,6 +7,7 @@ import com.isec.pd22.enums.Payment;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.tcp.Request.Espetaculos;
+import com.isec.pd22.payload.tcp.Request.ListPlaces;
 import com.isec.pd22.payload.tcp.Request.RequestDetailsEspetaculo;
 import com.isec.pd22.payload.tcp.Request.RequestListReservas;
 import com.isec.pd22.server.models.Espetaculo;
@@ -44,6 +45,8 @@ public class AdminView extends BorderPane {
     List<ButtonLugar> buttons;
     FormFilters formFilters;
     AlertSingleton alert = null;
+
+    SpectaculeDetails spectaculeDetails;
     public AdminView(ModelManager modelManager) {
         this.modelManager = modelManager;
         createViews();
@@ -157,13 +160,29 @@ public class AdminView extends BorderPane {
     }
 
     private void waitingPayment() {
-        alert = AlertSingleton.getInstanceOK().setAlertText("Bilhetes Reservados", "",
+        alert = AlertSingleton.getInstanceConfirmation().setAlertText("Bilhetes Reservados", "",
                         "Bilhetes Reservados com sucesso. Tem 10 segundos para remover");
-        alert.showAndWait();
+        RequestListReservas msg = null;
+        final ClientActions[] actions = new ClientActions[1];
+        alert.showAndWait().ifPresent( buttonType -> {
+            if (buttonType == ButtonType.YES){
+                actions[0] = ClientActions.PAY_RESERVATION;
+
+            }else {
+                actions[0] = ClientActions.CANCEL_RESERVATION;
+            }
+        });
+        msg = new RequestListReservas(actions[0]);
+        msg.setUser(modelManager.getUser());
+        List<Reserva> reservas = spectaculeDetails.getButtons().stream().filter(ButtonLugar::isWaitingPayment).map(ButtonLugar::getLugar)
+                .filter(lugar -> lugar.getReserva() != null && lugar.getReserva().getIdUser() == modelManager.getUser().getIdUser())
+                .map(Lugar::getReserva).toList();
+        msg.setReservas(reservas);
+        modelManager.sendMessage(msg);
     }
 
     private void updateDetails() {
-        SpectaculeDetails spectaculeDetails = new SpectaculeDetails(modelManager, buttons);
+        spectaculeDetails = new SpectaculeDetails(modelManager, buttons);
         vBox.getChildren().clear();
         vBox.getChildren().addAll(title,spectaculeDetails);
 
