@@ -18,9 +18,17 @@ public class ClientMSG implements Serializable {
     private Set<HeartBeat> serverList;
     private ClientsPayloadType clientsPayloadType;
 
+    private String message;
+
     public ClientMSG(ClientActions action, ClientsPayloadType clientsPayloadType) {
         this.action = action;
         this.clientsPayloadType = clientsPayloadType;
+    }
+
+    public ClientMSG(ClientActions action, ClientsPayloadType clientsPayloadType, String message) {
+        this.action = action;
+        this.clientsPayloadType = clientsPayloadType;
+        this.message = message;
     }
 
     public ClientMSG(ClientActions action) {
@@ -35,6 +43,7 @@ public class ClientMSG implements Serializable {
     public ClientMSG(ClientsPayloadType clientsPayloadType) {
         this.clientsPayloadType = clientsPayloadType;
     }
+
 
     public void setClientsPayloadType(ClientsPayloadType clientsPayloadType) {
         this.clientsPayloadType = clientsPayloadType;
@@ -63,6 +72,10 @@ public class ClientMSG implements Serializable {
 
     public ClientsPayloadType getClientsPayloadType() {
         return clientsPayloadType;
+    }
+
+    public String getMessage() {
+        return message;
     }
 
 }
