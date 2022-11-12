@@ -89,5 +89,7 @@ public class LogInView extends BorderPane {
 
     private void updateView() {
         this.setVisible(modelManager != null && modelManager.getStatusClient() == StatusClient.NOT_LOGGED);
+        if(modelManager != null && modelManager.getStatusClient() == StatusClient.NOT_LOGGED)
+            modelManager.clearData();
     }
 }

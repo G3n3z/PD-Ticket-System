@@ -11,23 +11,22 @@ public class AlertSingleton extends Alert {
     }
 
     public static AlertSingleton getInstanceWarning() {
-        if(instance == null || instance.getAlertType() != AlertType.INFORMATION){
-            instance = new AlertSingleton(AlertType.INFORMATION, ButtonType.OK);
-        }
-        return instance;
+        return instance = new AlertSingleton(AlertType.INFORMATION, ButtonType.OK);
+
     }
     public static AlertSingleton getInstanceConfirmation() {
-        if(instance == null || instance.getAlertType() != AlertType.CONFIRMATION){
-            instance = new AlertSingleton(AlertType.CONFIRMATION, ButtonType.YES, ButtonType.NO);
-        }
-        return instance;
+        return instance = new AlertSingleton(AlertType.CONFIRMATION, ButtonType.YES, ButtonType.NO);
     }
     public static AlertSingleton getInstanceOK() {
-        if(instance == null || instance.getAlertType() != AlertType.CONFIRMATION){
-            instance = new AlertSingleton(AlertType.CONFIRMATION, ButtonType.YES);
-        }
+        return instance = new AlertSingleton(AlertType.CONFIRMATION, ButtonType.OK);
+    }
+
+
+    public AlertSingleton setProgress(ProgressIndicator progress){
+        instance.setGraphic(progress);
         return instance;
     }
+
 
     public int countOfLines(String text){
         int count = 1;
@@ -38,7 +37,7 @@ public class AlertSingleton extends Alert {
         }
         return count;
     }
-    public void setAlertText(String title, String header, String context){
+    public AlertSingleton setAlertText(String title, String header, String context){
         this.setTitle(title);
         this.setHeaderText(header);
         this.setContentText(context);
@@ -47,6 +46,7 @@ public class AlertSingleton extends Alert {
             this.getDialogPane().setPrefSize(480, 150 + countOfLines(context) * 20);
         }else
             this.getDialogPane().setPrefSize(300, 150);
+        return this;
     }
 
 }

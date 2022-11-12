@@ -63,6 +63,7 @@ public class Client {
             case BAD_REQUEST -> {
                 modelManager.badRequest(mensage);
             }
+            case ACTION_SUCCEDED -> modelManager.actionSuccess(mensage);
             case LOGGED_IN -> {
                 data.setUser(mensage.getUser());
                 if(mensage.getUser().getRole() == Role.USER){
@@ -78,6 +79,9 @@ public class Client {
             case CONSULT_SPECTACLE -> modelManager.fireEspetaculos(mensage);
             case RESERVAS_RESPONSE -> modelManager.fireReservasAdmin(mensage);
             case SPECTACLE_DETAILS -> modelManager.fireEspectaculo(mensage);
+            case TRY_LATER -> modelManager.tryLater();
+            case SUBMIT_RESERVATION_NOT_PAYED -> modelManager.reservationWaitingPay(mensage);
+            case SUBMIT_RESERVATION_COMPLETE -> modelManager.reservationComplete(mensage);
         }
 
     }

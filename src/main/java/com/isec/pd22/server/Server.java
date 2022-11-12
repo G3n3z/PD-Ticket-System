@@ -32,6 +32,9 @@ public class Server {
             MulticastSocket multicastSocket =  connectMulticastGroup();
             info.setMulticastSocket(multicastSocket);
             info.setIp(InetAddress.getLocalHost().getHostAddress());
+            System.out.println(info.getIp());
+            //info.setIp("10.65.132.195");
+            //info.setIp("127.0.0.1");
         } catch (IOException e) {
             System.out.println("Não foi possivel criar o socket multicast");
             return;
@@ -87,7 +90,8 @@ public class Server {
         MulticastSocket socket = new MulticastSocket(Constants.MULTICAST_PORT);
         InetAddress group = InetAddress.getByName(Constants.MULTICAST_IP);
         SocketAddress sa = new InetSocketAddress(group, Constants.MULTICAST_PORT);
-        NetworkInterface nif = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
+        //NetworkInterface nif = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
+        NetworkInterface nif = NetworkInterface.getByName("en0");
         socket.joinGroup(sa, nif);
         return socket;
     }

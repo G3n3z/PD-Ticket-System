@@ -6,10 +6,13 @@ import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import javafx.application.Platform;
+import javafx.scene.Node;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
+import javafx.stage.WindowEvent;
 
+import java.beans.EventHandler;
 import java.io.IOException;
 
 public class RootPane extends BorderPane {
@@ -18,6 +21,7 @@ public class RootPane extends BorderPane {
 
     String [] args;
 
+    StackPane stack;
 
 
     public RootPane(ModelManager modelManager, Stage stage, String [] args) {
@@ -33,9 +37,44 @@ public class RootPane extends BorderPane {
 
     public void startServices() {
         modelManager.startServices(args);
+
+    }
+
+    private void createViews() {
+        stack = new StackPane();
+//        LogInView logInView = new LogInView(modelManager);
+//        RegisterView registerView = new RegisterView(modelManager);
+//        AdminView adminView = new AdminView(modelManager);
+//        stack.getChildren().addAll(logInView, adminView, registerView);
+        setCenter(stack);
+        changeView();
+
+    }
+    public void changeView(){
+        Node node;
+        switch (modelManager.getStatusClient()){
+            case NOT_LOGGED -> node = new LogInView(modelManager);
+            case REGISTER -> node = new RegisterView(modelManager);
+            default -> node = new AdminView(modelManager);
+        }
+        stack.getChildren().clear();
+        stack.getChildren().add(node);
+    }
+    private void registerHandlers() {
+        modelManager.addPropertyChangeListener(ModelManager.BAD_REQUEST, evt -> Platform.runLater( this::badRequest));
+        modelManager.addPropertyChangeListener(ModelManager.LOGOUT, evt -> Platform.runLater(this::logout));
+        modelManager.addPropertyChangeListener(ModelManager.ERROR_CONNECTION, (evt) -> Platform.runLater(this::showAlert));
+        modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, (evt) -> Platform.runLater(this::changeView));
+        modelManager.addPropertyChangeListener(ModelManager.PROP_TRY_LATER, evt -> Platform.runLater(this::tryLater));
+        new Thread(){
+            @Override
+            public void run() {
+                startServices();
+            }
+        }.start();
         stage.setOnCloseRequest(windowEvent -> {
-            AlertSingleton.getInstanceConfirmation().setAlertText("Sair", "Pretende Sair da Aplicação?", "");
-            AlertSingleton.getInstanceConfirmation().showAndWait().ifPresent(result -> {
+            AlertSingleton.getInstanceConfirmation().setAlertText("Sair", "Pretende Sair da Aplicação?", "")
+                    .showAndWait().ifPresent(result -> {
                 if (result.getText().equalsIgnoreCase("YES")){
                     ClientMSG msg = new ClientMSG(ClientActions.EXIT);
                     msg.setUser(modelManager.getUser());
@@ -49,26 +88,16 @@ public class RootPane extends BorderPane {
         });
     }
 
-    private void createViews() {
-        StackPane stack = new StackPane();
-        LogInView logInView = new LogInView(modelManager);
-        RegisterView registerView = new RegisterView(modelManager);
-        AdminView adminView = new AdminView(modelManager);
-        stack.getChildren().addAll(logInView, adminView, registerView);
-        setCenter(stack);
-
-    }
-    private void registerHandlers() {
-        modelManager.addPropertyChangeListener(ModelManager.BAD_REQUEST, evt -> Platform.runLater( this::badRequest));
-        modelManager.addPropertyChangeListener(ModelManager.LOGOUT, evt -> Platform.runLater(this::logout));
-        modelManager.addPropertyChangeListener(ModelManager.ERROR_CONNECTION, (evt) -> Platform.runLater(this::showAlert));
+    private void tryLater() {
+        AlertSingleton.getInstanceWarning().setAlertText("Ação indisponivel", "", "Não foi possivel efetuar a sua ação" +
+                        " tente outra vez")
+                .showAndWait();
     }
 
     private void showAlert(){
         AlertSingleton.getInstanceWarning().setAlertText("ERRO DE CONECAO", "", "Servidores nao disponiveis.\n " +
-                "Por favor tente mais tarde");
-
-        AlertSingleton.getInstanceWarning().showAndWait().ifPresent(result -> {
+                "Por favor tente mais tarde")
+                .showAndWait().ifPresent(result -> {
             if (result.getText().equalsIgnoreCase("OK")){
                 Platform.exit();
             }
@@ -76,8 +105,8 @@ public class RootPane extends BorderPane {
     }
 
     private void logout() {
-        AlertSingleton.getInstanceOK().setAlertText("Logout", "", "Obrigado e volte sempre");
-        AlertSingleton.getInstanceOK().showAndWait().ifPresent( action -> modelManager.setStatusClient(StatusClient.NOT_LOGGED));
+        AlertSingleton.getInstanceOK().setAlertText("Logout", "", "Obrigado e volte sempre")
+                .showAndWait().ifPresent( action -> modelManager.setStatusClient(StatusClient.NOT_LOGGED));
     }
 
 

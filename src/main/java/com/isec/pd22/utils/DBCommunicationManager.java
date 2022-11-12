@@ -12,7 +12,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
-import java.util.function.Consumer;
 
 public class DBCommunicationManager {
     private Connection connection;
@@ -61,7 +60,8 @@ public class DBCommunicationManager {
 
     public Query getRegisterUserQuery(String username, String name, String password) {
         Query q;
-        String query = "INSERT INTO utilizador VALUES (NULL, '" + username + "', '" + name + "', '" + password +"', " + 1
+        String query = "INSERT INTO utilizador VALUES (NULL, '" + username + "', '" + name + "', '" + password +"', " +
+                Authenticated.NOT_AUTHENTICATED.ordinal()
                 +", " + 0 + ")";
         synchronized (internalInfo) {
             q = new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
@@ -118,9 +118,13 @@ public class DBCommunicationManager {
         return new Query( internalInfo.getNumDB()+1,sql, new Date().getTime());
     }
 
-    public Query editUtilizador(String username, String nome, String password){
+    public Query editUtilizador(int id, String username, String nome, String password){
         String sql = "UPDATE utilizador " +
-                     "set username = " + username + ", nome = " + nome + ", password = " + password;
+                     "SET username= '" + username + "', nome= '" + nome;
+        if(password != null) {
+            sql += "', password= '" + password;
+        }
+        sql += "' WHERE id= " + id;
 
         return new Query(internalInfo.getNumDB()+1,sql, new Date().getTime());
     }
@@ -306,7 +310,7 @@ public class DBCommunicationManager {
     }
 
     public boolean canRemoveEspecatulo(int idEspetaculo){
-        String query = "SELECT * FROM reserva WHERE espetaculo_id= " + idEspetaculo + " AND pago = " + 1;
+        String query = "SELECT * FROM reserva WHERE id_espetaculo = " + idEspetaculo + " AND pago = " + 1;
         try {
             PreparedStatement statement = connection.prepareStatement(query);
             ResultSet res = statement.executeQuery();
@@ -361,10 +365,10 @@ public class DBCommunicationManager {
         if(!filtros.isEmpty()){
             for(Map.Entry<String, String> entry : filtros.entrySet()){
                 if(first){
-                    query += " where " + entry.getKey() + "=" + entry.getValue();
+                    query += " where " + entry.getKey() + "= " + entry.getValue();
                     first = false;
                 }else{
-                    query += " and " + entry.getKey() + "=" + entry.getValue();
+                    query += " and " + entry.getKey() + "= " + entry.getValue();
                 }
             }
         }
@@ -379,17 +383,18 @@ public class DBCommunicationManager {
             }
 
         } catch (SQLException e) {
-            return null;
+            System.out.println("[DBCOM] - getEspetaculoWithFilters " + e);
+            return new ArrayList<>();
         }
         return list;
     }
 
     public Query deleteSpectacle(int idEspetaculo) {
-        String q1 = "DELETE FROM reserva_lugar WHERE id_reserva IN (SELECT reserva.id FROM reserva WHERE id_espetaculo=" + idEspetaculo + ")";
-        String q2 = "DELETE FROM reserva WHERE id_espetaculo=" + idEspetaculo;
-        String q3 = "DELETE FROM lugar WHERE espataculo_id=" + idEspetaculo;
-        String q4 = "DELETE FROM espetaculo WHERE espetaculo.id= " + idEspetaculo;
-        String query = q1 + "; " + q2 + "; " + q3 + "; " + q4;
+        String q1 = "DELETE FROM reserva_lugar WHERE id_reserva IN (SELECT reserva.id FROM reserva WHERE id_espetaculo= '" + idEspetaculo + "')";
+        String q2 = "DELETE FROM reserva WHERE id_espetaculo= '" + idEspetaculo;
+        String q3 = "DELETE FROM lugar WHERE espetaculo_id= '" + idEspetaculo;
+        String q4 = "DELETE FROM espetaculo WHERE espetaculo.id= '" + idEspetaculo;
+        String query = q1 + "; " + q2 + "'; " + q3 + "'; " + q4 + "'; ";
         return new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
     }
 
@@ -437,9 +442,24 @@ public class DBCommunicationManager {
                 "', '" + dummy.getReserva().getIdEspectaculo() + "'); ";
         String q2;
         for(Lugar place: list.getPlaces()) {
-            q2 = "INSERT INTO reserva_lugar(id_reserva, id_lugar) values((Select max(r.id) from reserva r), " + place.getIdLugar() + "'); ";
+            q2 = "INSERT INTO reserva_lugar(id_reserva, id_lugar) values((Select max(r.id) from reserva r), '" + place.getIdLugar() + "'); ";
             query += q2;
         }
         return new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
+    }
+
+    public int getLastId(String tableName) {
+        String query = "SELECT max(id) FROM " + tableName;
+        int id = -1;
+        try {
+            Statement statement = connection.createStatement();
+            ResultSet result = statement.executeQuery(query);
+            if (result.next()){
+                id = result.getInt(1);
+            }
+        } catch (SQLException e) {
+            return id;
+        }
+        return id;
     }
 }

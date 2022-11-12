@@ -3,18 +3,29 @@ package com.isec.pd22.server.models;
 import com.isec.pd22.enums.Payment;
 import com.isec.pd22.utils.Constants;
 
+import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.text.ParseException;
 import java.util.Date;
 
-public class Reserva {
+public class Reserva implements Serializable {
 
     int idReserva;
     Date data_hora;
     Payment payment;
     int idUser;
     int idEspectaculo;
+
+    public Reserva() {
+    }
+
+    public Reserva(Date data_hora, Payment payment, int idUser, int idEspectaculo) {
+        this.data_hora = data_hora;
+        this.payment = payment;
+        this.idUser = idUser;
+        this.idEspectaculo = idEspectaculo;
+    }
 
     public static Reserva mapToEntity(ResultSet res) {
         Reserva reserva = new Reserva();

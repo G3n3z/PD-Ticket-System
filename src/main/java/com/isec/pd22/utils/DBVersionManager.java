@@ -31,7 +31,7 @@ public class DBVersionManager {
     public int getLastVersion() throws SQLException {
 
         Statement stm = connection.createStatement();
-        String query = "Select version from versions order by version";
+        String query = "Select version from versions order by version desc";
         ResultSet res = stm.executeQuery(query);
         if(res.next()){
             return res.getInt("version");
@@ -97,6 +97,7 @@ public class DBVersionManager {
         List<Query> queries = new ArrayList<>();
         String query = "SELECT * from versions where version > ? order by version asc";
         PreparedStatement preparedStatement = connection.prepareStatement(query);
+        preparedStatement.setInt(1, numVersion);
         ResultSet res = preparedStatement.executeQuery();
         while (res.next()){
             queries.add(mapToQuery(res));
@@ -107,7 +108,7 @@ public class DBVersionManager {
     public Query mapToQuery(ResultSet res) throws SQLException {
         Query query = new Query();
         query.setNumVersion(res.getInt("version"));
-        query.setQuery(res.getString("query"));
+        query.setQuery(res.getString("sql"));
         query.setTimestamp(res.getLong("timestamp"));
         return query;
     }

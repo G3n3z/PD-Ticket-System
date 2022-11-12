@@ -18,6 +18,10 @@ public class ClientMSG implements Serializable {
     private Set<HeartBeat> serverList;
     private ClientsPayloadType clientsPayloadType;
 
+    public ClientMSG(ClientActions action, ClientsPayloadType clientsPayloadType) {
+        this.action = action;
+        this.clientsPayloadType = clientsPayloadType;
+    }
 
     public ClientMSG(ClientActions action) {
         this.action = action;

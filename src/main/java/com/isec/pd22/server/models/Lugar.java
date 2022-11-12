@@ -89,4 +89,24 @@ public class Lugar implements Serializable, Comparable<Lugar> {
     public Reserva getReserva() {
         return reserva;
     }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Lugar lugar = (Lugar) o;
+
+        if (getEspetaculo_id() != lugar.getEspetaculo_id()) return false;
+        if (!getFila().equals(lugar.getFila())) return false;
+        return getAssento().equals(lugar.getAssento());
+    }
+
+    @Override
+    public int hashCode() {
+        int result = getFila().hashCode();
+        result = 31 * result + getAssento().hashCode();
+        result = 31 * result + getEspetaculo_id();
+        return result;
+    }
 }
