@@ -2,10 +2,12 @@ package com.isec.pd22.client.ui.utils;
 
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.enums.ClientActions;
+import com.isec.pd22.enums.Payment;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.Request.ListPlaces;
 import com.isec.pd22.server.models.Espetaculo;
 import com.isec.pd22.server.models.Lugar;
+import com.isec.pd22.server.models.Reserva;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -42,8 +44,15 @@ public class SpectaculeDetails extends ScrollPane {
 
     private void submitReserv() {
         List<Lugar> lugarsToSubmit = new ArrayList<>();
+        Reserva reserva = new Reserva(
+                manager.getEspectaculo().getData_hora(),
+                Payment.NOT_PAYED,
+                manager.getUser().getIdUser(),
+                manager.getEspectaculo().getIdEspetaculo()
+        );
         buttons.forEach(buttonLugar -> {
             if (buttonLugar.isSelected && !buttonLugar.isMarked){
+                buttonLugar.lugar.setReserva(reserva);
                 lugarsToSubmit.add(buttonLugar.lugar);
             }
         });
@@ -85,7 +94,10 @@ public class SpectaculeDetails extends ScrollPane {
         VBox vBox2 = preparaLugares(espetaculo);
 
         HBox hBoxButtons = prepareButtons();
-        VBox vBox3 = new VBox(vBox1, vBox2, hBoxButtons);
+        VBox vBox3;
+
+        vBox3 = new VBox(vBox1, vBox2, hBoxButtons);
+
         VBox.setMargin(vBox2, new Insets(100, 0, 50,0));
 
         setContent(vBox3);
@@ -98,11 +110,9 @@ public class SpectaculeDetails extends ScrollPane {
         clean.setPrefWidth(80); clean.setPrefHeight(30);
         submit = new Button("Submeter");
         submit.setPrefWidth(80); submit.setPrefHeight(30);
-        if (manager.getStatusClient() == StatusClient.USER){
-            hBox.getChildren().addAll(clean, submit);
-        }else{
-            hBox.getChildren().addAll(submit);
-        }
+
+        hBox.getChildren().addAll(clean, submit);
+
         hBox.setAlignment(Pos.CENTER);
         hBox.setSpacing(20);
         return hBox;
@@ -128,8 +138,7 @@ public class SpectaculeDetails extends ScrollPane {
             Collections.sort(lugares);
             Label label = new Label(entry.getKey());
 
-            List<ButtonLugar> buttons = lugares.stream().map(lugar -> new ButtonLugar(lugar.getAssento()+":" + lugar.getPreco() + "€", lugar,
-                    manager.getStatusClient() == StatusClient.USER)).toList();
+            List<ButtonLugar> buttons = lugares.stream().map(lugar -> new ButtonLugar(lugar.getAssento()+":" + lugar.getPreco() + "€", lugar)).toList();
             HBox hBox = new HBox(); hBox.getChildren().add(label);  hBox.getChildren().addAll(buttons);
             this.buttons.addAll(buttons);
             hBox.setSpacing(10);

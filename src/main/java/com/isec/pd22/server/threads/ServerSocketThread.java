@@ -90,9 +90,6 @@ public class ServerSocketThread extends Thread
             }catch (InterruptedException e){
 
             }
-            synchronized (internalInfo) {
-                internalInfo.decrementNumClients();
-            }
         }
     }
 

@@ -6,6 +6,7 @@ import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.server.models.Espetaculo;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -28,6 +29,7 @@ public class Espetaculos extends ClientMSG {
 
     public Espetaculos(ClientActions action) {
         super(action);
+        filtros = new HashMap<>();
     }
 
     public Espetaculos(ClientsPayloadType clientsPayloadType, List<Espetaculo> espetaculos) {

@@ -7,12 +7,15 @@ import com.isec.pd22.client.ui.utils.ModalIndicator;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.tcp.Request.Espetaculos;
+import com.isec.pd22.payload.tcp.Request.ListPlaces;
 import com.isec.pd22.payload.tcp.Request.RequestDetailsEspetaculo;
 import com.isec.pd22.payload.tcp.Request.RequestListReservas;
 import com.isec.pd22.server.models.Espetaculo;
 import com.isec.pd22.server.models.Reserva;
 import com.isec.pd22.server.models.User;
+import javafx.stage.Stage;
 
+import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.beans.PropertyChangeSupport;
 import java.io.File;
@@ -32,6 +35,10 @@ public class ModelManager {
     public static final String ALL_ESPETACULOS = "ALL_ESPETACULOS";
     public static final String PROP_RESERVAS = "PROP_RESERVAS";
     public static final String PROP_ESPETACULO_DETAILS = "PROP_ESPETACULO_DETAILS";
+    public static final String PROP_TRY_LATER = "TRY_LATER";
+    public static final String EDIT_USER = "EDIT_USER";
+    public static final String PROP_ESPETACULO_DETAILS_WAITING_PAYMENT = "PROP_ESPETACULO_DETAILS_WAITING_PAYMENT";
+    public static final String PROP_CLOSE_ALERT = "PROP_CLOSE_ALERT";
     PropertyChangeSupport pcs;
     private StatusClient statusClient;
 
@@ -99,8 +106,6 @@ public class ModelManager {
 
     public void registerCompleted() {
         pcs.firePropertyChange(ACTION_COMPLETE, null, null);
-
-
     }
 
     public User getUser() {
@@ -155,5 +160,47 @@ public class ModelManager {
 
     public void clearData() {
         data.clear();
+    }
+
+    public List<Reserva> getReservasPayed() {
+        return data.getReservasPayed();
+    }
+
+    public void tryLater() {
+        pcs.firePropertyChange(PROP_TRY_LATER, null, null);
+    }
+
+    public void startIndicator(Stage stage) {
+        modalIndicator = new ModalIndicator(this);
+        modalIndicator.show(stage);
+    }
+
+    public void actionSuccess(ClientMSG mensage) {
+        pcs.firePropertyChange(ACTION_COMPLETE,null,null);
+    }
+
+    public void editUser(){
+        pcs.firePropertyChange(EDIT_USER,null,null);
+    }
+
+    public void addReservations(ClientMSG mensage){
+        ListPlaces listPlaces = (ListPlaces) mensage;
+        listPlaces.getPlaces().forEach(data.getEspetaculo().getLugares()::remove);
+        data.getEspetaculo().getLugares().addAll(listPlaces.getPlaces());
+    }
+    public void reservationComplete(ClientMSG mensage) {
+        addReservations(mensage);
+        closeAlert();
+        pcs.firePropertyChange(PROP_ESPETACULO_DETAILS, null, null);
+    }
+    public void closeAlert(){
+        pcs.firePropertyChange(PROP_CLOSE_ALERT, null, null);
+    }
+    public void reservationWaitingPay(ClientMSG mensage) {
+        addReservations(mensage);
+        pcs.firePropertyChange(PROP_ESPETACULO_DETAILS, null, null);
+        pcs.firePropertyChange(PROP_ESPETACULO_DETAILS_WAITING_PAYMENT, null, null);
+
+
     }
 }

@@ -10,8 +10,8 @@ public class ModalIndicator extends Popup {
 
     public ModalIndicator(ModelManager modelManager) {
         this.modelManager = modelManager;
-        indicator = new ProgressIndicator();
-        show();
+        //indicator = new ProgressIndicator();
+
     }
 
     public void stop(){

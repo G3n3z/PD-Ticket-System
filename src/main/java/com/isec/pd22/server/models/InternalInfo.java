@@ -152,7 +152,7 @@ public class InternalInfo {
      * Decrementa o número de clientes que estão a ser atendidos pelo servidor
      */
     public void decrementNumClients() {
-        numClients++;
+        numClients--;
     }
 
     public void addHeartBeat(HeartBeat heartBeat) {
