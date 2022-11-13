@@ -72,15 +72,17 @@ public class DBVersionManager {
     }
 
     public void insertQuery(Query query) throws SQLException {
-        Statement stm = connection.createStatement();
-        stm.executeUpdate(query.getQuery());
+        synchronized (connection) {
+            Statement stm = connection.createStatement();
+            stm.executeUpdate(query.getQuery());
 
-        String queryVersion = "insert into versions values(null, ?, ?)";
+            String queryVersion = "insert into versions values(null, ?, ?)";
 
-        PreparedStatement pstm = connection.prepareStatement(queryVersion);
-        pstm.setString(1, query.getQuery());
-        pstm.setLong(2, query.getTimestamp());
-        pstm.executeUpdate();
+            PreparedStatement pstm = connection.prepareStatement(queryVersion);
+            pstm.setString(1, query.getQuery());
+            pstm.setLong(2, query.getTimestamp());
+            pstm.executeUpdate();
+        }
     }
 
     public void checkIfHaveTableVersion() {

@@ -208,13 +208,13 @@ public class AttendClientThread extends Thread implements Observer {
     private ClientMSG consultUnpayedReservation(ClientMSG msgClient) {
         List<Reserva> unpayedReservations;
         unpayedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.NOT_PAYED);
-        return new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE, unpayedReservations);
+        return new RequestListReservas(msgClient.getAction(),ClientsPayloadType.RESERVAS_RESPONSE, unpayedReservations);
     }
 
     private ClientMSG consultPayedReservation(ClientMSG msgClient) {
         List<Reserva> payedReservations;
         payedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.PAYED);
-        return new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE, payedReservations);
+        return new RequestListReservas(msgClient.getAction(),ClientsPayloadType.RESERVAS_RESPONSE, payedReservations);
     }
 
     private ClientMSG choose_spectacle(ClientMSG msgClient) {
@@ -313,24 +313,27 @@ public class AttendClientThread extends Thread implements Observer {
     }
 
     private ClientMSG deleteSpectacle(ClientMSG msgClient, User user) throws SQLException {
-        Espetaculos msg;
+        RequestDetailsEspetaculo msg;
+        //TODO mudar isto para um espetaculo
         if(user.getRole() == Role.ADMIN){
-            Espetaculos list = (Espetaculos) msgClient;
-            if(dbComm.canRemoveEspecatulo(list.getEspetaculos().get(0).getIdEspetaculo())){
-                Query  query = dbComm.deleteSpectacle(list.getEspetaculos().get(0).getIdEspetaculo());
+            RequestDetailsEspetaculo espetaculo = (RequestDetailsEspetaculo) msgClient;
+            if(dbComm.canRemoveEspecatulo(espetaculo.getEspetaculo().getIdEspetaculo())){
+                Query  query = dbComm.deleteSpectacle(espetaculo.getEspetaculo().getIdEspetaculo());
                 if (startUpdateRoutine(query, internalInfo)) {
-                    msg = new Espetaculos(ClientActions.DELETE_SPECTACLE);
-                    msg.setClientsPayloadType(ClientsPayloadType.CONSULT_SPECTACLE);
+                    msg = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
+                    msg.setClientsPayloadType(ClientsPayloadType.DELETE_SPECTACLE);
+                    msg.setEspetaculo(espetaculo.getEspetaculo());
                 } else {
-                    msg = new Espetaculos(ClientActions.DELETE_SPECTACLE);
+                    msg = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
                     msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
                 }
             }else {
-                msg = new Espetaculos(ClientActions.DELETE_SPECTACLE);
+                msg = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
                 msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
+                msg.setMessage("Não pode remover um espetaculo com reservas");
             }
         }else {
-            msg = new Espetaculos(ClientActions.DELETE_SPECTACLE);
+            msg = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
             msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
         }
         return msg;
@@ -429,6 +432,10 @@ public class AttendClientThread extends Thread implements Observer {
                         confirmationSocket.receive(dp);
                         Prepare confirmation = objectStream.readObject(dp, Prepare.class);
                         confirmationList.add(confirmation);
+                        if (confirmationList.size() == internalInfo.getHeatBeats().size() && verifyConfirmations(confirmationList) ){
+                            repeat = false;
+                            break;
+                        }
                     }
                 } catch (SocketException | SocketTimeoutException e) {
                     //Verificar confirmações com lista de servidores
@@ -483,6 +490,7 @@ public class AttendClientThread extends Thread implements Observer {
      * @throws IOException when it fails sending the packet
      */
     private void sendCommit(DatagramPacket dp) throws IOException {
+        dp = new DatagramPacket(new byte[1000], 1000, InetAddress.getByName(Constants.MULTICAST_IP), Constants.MULTICAST_PORT);
         Commit commitMsg = new Commit(TypeOfMulticastMsg.COMMIT, internalInfo.getIp(), internalInfo.getPortUdp());
         ObjectStream os = new ObjectStream();
         os.writeObject(dp,commitMsg);
@@ -490,17 +498,19 @@ public class AttendClientThread extends Thread implements Observer {
     }
 
     private boolean verifyConfirmations(Set<Prepare> confirmationList) {
-        if(confirmationList.size() == internalInfo.getHeatBeats().size()) {
-            int count = 0;
-            for (Prepare p : confirmationList) {
-                for (HeartBeat hb : internalInfo.getHeatBeats())
-                    if (p.getIp().equals(hb.getIp()) && p.getPortUdpClients() == hb.getPortUdp()) {
-                        count++;
-                        break;
-                    }
+        synchronized (internalInfo.getHeatBeats()){
+            if(confirmationList.size() == internalInfo.getHeatBeats().size()) {
+                int count = 0;
+                for (Prepare p : confirmationList) {
+                    for (HeartBeat hb : internalInfo.getHeatBeats())
+                        if (p.getIp().equals(hb.getIp()) && p.getPortUdpClients() == hb.getPortUdp()) {
+                            count++;
+                            break;
+                        }
+                }
+                if (count == internalInfo.getHeatBeats().size())
+                    return true;
             }
-            if (count == internalInfo.getHeatBeats().size())
-                return true;
         }
         return false;
     }

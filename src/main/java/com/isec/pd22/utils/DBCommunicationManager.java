@@ -15,7 +15,7 @@ import java.util.List;
 import java.util.Map;
 
 public class DBCommunicationManager {
-    private Connection connection;
+    private final Connection connection;
     private ClientMSG clientMsg;
     private InternalInfo internalInfo;
 
@@ -40,14 +40,16 @@ public class DBCommunicationManager {
 
     public boolean checkUserLogin(String username, String password) throws SQLException {
         String query = "SELECT * from utilizador where username = ? and password = ?";
-        try {
-            PreparedStatement preparedStatement = connection.prepareStatement(query);
-            preparedStatement.setString(1, username);
-            preparedStatement.setString(2, password);
-            ResultSet res = preparedStatement.executeQuery();
-            return res.next();
-        } catch (SQLException e) {
-            return false;
+        synchronized (connection){
+            try {
+                PreparedStatement preparedStatement = connection.prepareStatement(query);
+                preparedStatement.setString(1, username);
+                preparedStatement.setString(2, password);
+                ResultSet res = preparedStatement.executeQuery();
+                return res.next();
+            } catch (SQLException e) {
+                return false;
+            }
         }
     }
 
@@ -73,41 +75,47 @@ public class DBCommunicationManager {
 
     public boolean existsUserByUsernameOrName(String nome, String userName){
         String query = "SELECT * from utilizador where nome = ? or username = ?";
-        try {
-            PreparedStatement preparedStatement = connection.prepareStatement(query);
-            preparedStatement.setString(1, nome);
-            preparedStatement.setString(2, userName);
-            ResultSet res = preparedStatement.executeQuery();
-            return !res.next();
-        } catch (SQLException e) {
-            return true;
+        synchronized (connection) {
+            try {
+                PreparedStatement preparedStatement = connection.prepareStatement(query);
+                preparedStatement.setString(1, nome);
+                preparedStatement.setString(2, userName);
+                ResultSet res = preparedStatement.executeQuery();
+                return !res.next();
+            } catch (SQLException e) {
+                return true;
+            }
         }
     }
 
 
     public boolean canEditUser(String nome, String userName){
         String query = "SELECT * from utilizador where nome = ? and username = ?";
-        try {
-            PreparedStatement preparedStatement = connection.prepareStatement(query);
-            preparedStatement.setString(1, nome);
-            preparedStatement.setString(2, userName);
-            ResultSet res = preparedStatement.executeQuery();
-            return res.next();
-        } catch (SQLException e) {
-            return false;
+        synchronized (connection) {
+            try {
+                PreparedStatement preparedStatement = connection.prepareStatement(query);
+                preparedStatement.setString(1, nome);
+                preparedStatement.setString(2, userName);
+                ResultSet res = preparedStatement.executeQuery();
+                return res.next();
+            } catch (SQLException e) {
+                return false;
+            }
         }
     }
 
     public boolean isLogged(String username){
         String query = "SELECT * from utilizador where username = ? and autenticado = ?";
-        try {
-            PreparedStatement preparedStatement = connection.prepareStatement(query);
-            preparedStatement.setString(1, username);
-            preparedStatement.setInt(2, Authenticated.AUTHENTICATED.ordinal());
-            ResultSet res = preparedStatement.executeQuery();
-            return !res.next();
-        } catch (SQLException e) {
-            return false;
+        synchronized (connection){
+            try {
+                PreparedStatement preparedStatement = connection.prepareStatement(query);
+                preparedStatement.setString(1, username);
+                preparedStatement.setInt(2, Authenticated.AUTHENTICATED.ordinal());
+                ResultSet res = preparedStatement.executeQuery();
+                return !res.next();
+            } catch (SQLException e) {
+                return false;
+            }
         }
     }
 
@@ -137,15 +145,17 @@ public class DBCommunicationManager {
         if(payment != null){
             query = query + " and pago = " + payment.ordinal();
         }
-        try {
-            Statement stm = connection.createStatement();
+        synchronized (connection) {
+            try {
+                Statement stm = connection.createStatement();
 
-            ResultSet res = stm.executeQuery(query);
-            while (res.next()){
-                consultas.add(Reserva.mapToEntity(res));
+                ResultSet res = stm.executeQuery(query);
+                while (res.next()) {
+                    consultas.add(Reserva.mapToEntity(res));
+                }
+
+            } catch (SQLException ignored) {
             }
-
-        } catch (SQLException ignored) {
         }
         return consultas;
 
@@ -158,15 +168,17 @@ public class DBCommunicationManager {
         if(payment != null){
             query = query + " where pago = " + payment.ordinal();
         }
-        try {
-            Statement stm = connection.createStatement();
+        synchronized (connection) {
+            try {
+                Statement stm = connection.createStatement();
 
-            ResultSet res = stm.executeQuery(query);
-            while (res.next()){
-                consultas.add(Reserva.mapToEntity(res));
+                ResultSet res = stm.executeQuery(query);
+                while (res.next()) {
+                    consultas.add(Reserva.mapToEntity(res));
+                }
+
+            } catch (SQLException ignored) {
             }
-
-        } catch (SQLException ignored) {
         }
         return consultas;
     }
@@ -174,15 +186,17 @@ public class DBCommunicationManager {
     public List<Reserva> getAllReservas(){
         List<Reserva> reservas = new ArrayList<>();
         String query = "SELECT * from reserva order by data_hora desc";
-        try {
-            Statement stm = connection.createStatement();
+        synchronized (connection) {
+            try {
+                Statement stm = connection.createStatement();
 
-            ResultSet res = stm.executeQuery(query);
-            while (res.next()){
-                reservas.add(Reserva.mapToEntity(res));
+                ResultSet res = stm.executeQuery(query);
+                while (res.next()) {
+                    reservas.add(Reserva.mapToEntity(res));
+                }
+
+            } catch (SQLException ignored) {
             }
-
-        } catch (SQLException ignored) {
         }
         return reservas;
     }
@@ -191,11 +205,15 @@ public class DBCommunicationManager {
         //TODO check this
         String query = "Select * from espetaculo, lugar where espetaculo.id = ? and lugar.espetaculo_id = ? and espetaculo.data_hora >= datetime('now','+24 hours')";
         Espetaculo espetaculo = null;
+        ResultSet res;
+
         try {
-            PreparedStatement preparedStatement = connection.prepareStatement(query);
-            preparedStatement.setInt(1, id);
-            preparedStatement.setInt(2, id);
-            ResultSet res = preparedStatement.executeQuery();
+            synchronized (connection) {
+                PreparedStatement preparedStatement = connection.prepareStatement(query);
+                preparedStatement.setInt(1, id);
+                preparedStatement.setInt(2, id);
+                res = preparedStatement.executeQuery();
+            }
             espetaculo = new Espetaculo();
             int i = 0;
             while (res.next()){
@@ -221,39 +239,41 @@ public class DBCommunicationManager {
         String query2 = "SELECT * from reserva_lugar, reserva where reserva_lugar.id_lugar = ? " +
                 "and reserva_lugar.id_reserva = reserva.id";
         Espetaculo espetaculo = null;
-        try {
-            PreparedStatement preparedStatement = connection.prepareStatement(queryEspec);
-            preparedStatement.setInt(1, idEspetaculo);
-            ResultSet res = preparedStatement.executeQuery();
-            if(res.next()){
-                espetaculo = Espetaculo.mapToEntity(res);
-            }
-            preparedStatement.close();
-
-            preparedStatement = connection.prepareStatement(query);
-            preparedStatement.setInt(1, idEspetaculo);
-            preparedStatement.setInt(2, idEspetaculo);
-            res = preparedStatement.executeQuery();
-
-            PreparedStatement preparedStatement2 = connection.prepareStatement(query2);
-            Reserva reserva = null;
-            while (res.next()){
-                Lugar lugar = Lugar.mapToEntity(res);
-                if(lugar != null){
-                    espetaculo.getLugares().add(lugar);
-                    preparedStatement2.setInt(1, lugar.getIdLugar());
-                    ResultSet resultSet = preparedStatement2.executeQuery();
-                    if(resultSet.next()){
-                        reserva = Reserva.mapToEntity(resultSet);
-                    }else {
-                        reserva = null;
-                    }
-                    lugar.setReserva(reserva);
+        synchronized (connection) {
+            try {
+                PreparedStatement preparedStatement = connection.prepareStatement(queryEspec);
+                preparedStatement.setInt(1, idEspetaculo);
+                ResultSet res = preparedStatement.executeQuery();
+                if (res.next()) {
+                    espetaculo = Espetaculo.mapToEntity(res);
                 }
-            }
+                preparedStatement.close();
 
-        } catch (SQLException e) {
-            return null;
+                preparedStatement = connection.prepareStatement(query);
+                preparedStatement.setInt(1, idEspetaculo);
+                preparedStatement.setInt(2, idEspetaculo);
+                res = preparedStatement.executeQuery();
+
+                PreparedStatement preparedStatement2 = connection.prepareStatement(query2);
+                Reserva reserva = null;
+                while (res.next()) {
+                    Lugar lugar = Lugar.mapToEntity(res);
+                    if (lugar != null) {
+                        espetaculo.getLugares().add(lugar);
+                        preparedStatement2.setInt(1, lugar.getIdLugar());
+                        ResultSet resultSet = preparedStatement2.executeQuery();
+                        if (resultSet.next()) {
+                            reserva = Reserva.mapToEntity(resultSet);
+                        } else {
+                            reserva = null;
+                        }
+                        lugar.setReserva(reserva);
+                    }
+                }
+
+            } catch (SQLException e) {
+                return null;
+            }
         }
         return espetaculo;
 
@@ -261,16 +281,19 @@ public class DBCommunicationManager {
     }
     public List<Espetaculo> getEspetaculosAfter24Hours(){
         String query = "Select * from espetaculo where espetaculo.data_hora > strftime('%Y/%m/%d %H:%M', 'now', '+24 hours')";
-
+        ResultSet res;
         List<Espetaculo> espetaculos = new ArrayList<>();
         try {
-            Statement statement = connection.createStatement();
-            ResultSet res = statement.executeQuery(query);
+            synchronized (connection) {
+                Statement statement = connection.createStatement();
+                res = statement.executeQuery(query);
+            }
             Espetaculo espetaculo = new Espetaculo();
             while (res.next()){
                 espetaculo = Espetaculo.mapToEntity(res);
                 espetaculos.add(espetaculo);
             }
+
 
         } catch (SQLException e) {
             return null;
@@ -281,12 +304,15 @@ public class DBCommunicationManager {
     public boolean haveReservaByIdUserAndIDEspetaculoNotPayed(int idUser, int idEspetaculo){
         String query = "SELECT * from  reserva where reserva.id_utilizador =  ? and reserva.id_espetaculo = ? " +
                 "and reserva.pago = ?";
+        ResultSet res;
         try {
-            PreparedStatement statement = connection.prepareStatement(query);
-            statement.setInt(1, idUser);
-            statement.setInt(2, idEspetaculo);
-            statement.setInt(3, Payment.NOT_PAYED.ordinal());
-            ResultSet res = statement.executeQuery();
+            synchronized (connection) {
+                PreparedStatement statement = connection.prepareStatement(query);
+                statement.setInt(1, idUser);
+                statement.setInt(2, idEspetaculo);
+                statement.setInt(3, Payment.NOT_PAYED.ordinal());
+                res = statement.executeQuery();
+            }
             if(res.next()){
                 return true;
             }
@@ -312,9 +338,12 @@ public class DBCommunicationManager {
 
     public boolean canRemoveEspecatulo(int idEspetaculo){
         String query = "SELECT * FROM reserva WHERE id_espetaculo = " + idEspetaculo + " AND pago = " + 1;
+        ResultSet res;
         try {
-            PreparedStatement statement = connection.prepareStatement(query);
-            ResultSet res = statement.executeQuery();
+            synchronized (connection) {
+                PreparedStatement statement = connection.prepareStatement(query);
+                res = statement.executeQuery();
+            }
             if(res.next())
                 return false;
 
@@ -326,18 +355,32 @@ public class DBCommunicationManager {
 
     public User getUser(String username) {
         String query = "SELECT * from utilizador where username = ?";
+        ResultSet res;
+        PreparedStatement statement = null;
         try {
-            PreparedStatement statement = connection.prepareStatement(query);
-            statement.setString(1, username);
-            ResultSet res = statement.executeQuery();
+            synchronized (connection) {
+                statement = connection.prepareStatement(query);
+                statement.setString(1, username);
+                res = statement.executeQuery();
+            }
             if(res.next()){
                return User.mapToEntity(res);
             }
 
         } catch (SQLException e) {
             return null;
+        }finally {
+            closeStatement(statement);
         }
         return null;
+    }
+
+    private void closeStatement(PreparedStatement statement) {
+        if (statement != null){
+            try {
+                statement.close();
+            } catch (SQLException ignored) {}
+        }
     }
 
     public Query insertEspetaculo(Espetaculo espetaculo) {
@@ -361,7 +404,7 @@ public class DBCommunicationManager {
 
     public List<Espetaculo> getEspetaculoWithFilters(Espetaculos espetaculos){
         Map<String,String> filtros = espetaculos.getFiltros();
-        String query = "Select * from espetaculo";
+        String query = "Select * from espetaculo"; ResultSet res;
         boolean first = true;
         if(!filtros.isEmpty()){
             for(Map.Entry<String, String> entry : filtros.entrySet()){
@@ -375,8 +418,10 @@ public class DBCommunicationManager {
         }
         List<Espetaculo> list = new ArrayList<>();
         try {
-            Statement statement = connection.createStatement();
-            ResultSet res = statement.executeQuery(query);
+            synchronized (connection) {
+                Statement statement = connection.createStatement();
+                res = statement.executeQuery(query);
+            }
             Espetaculo espetaculo = new Espetaculo();
             while (res.next()){
                 espetaculo = Espetaculo.mapToEntity(res);
@@ -400,12 +445,14 @@ public class DBCommunicationManager {
     }
 
     public boolean canCancelReservation(int idReserva) {
-        String query = "SELECT * FROM reserva WHERE reserva.id= ? AND pago= ?";
+        String query = "SELECT * FROM reserva WHERE reserva.id= ? AND pago= ?"; ResultSet res;
         try {
-            PreparedStatement statement = connection.prepareStatement(query);
-            statement.setInt(1, idReserva);
-            statement.setInt(2, 1);
-            ResultSet res = statement.executeQuery(query);
+            synchronized (connection) {
+                PreparedStatement statement = connection.prepareStatement(query);
+                statement.setInt(1, idReserva);
+                statement.setInt(2, 1);
+                res = statement.executeQuery(query);
+            }
             if (res.next()){
                 return false;
             }
@@ -417,16 +464,18 @@ public class DBCommunicationManager {
     }
 
     public boolean canSubmitReservations(ListPlaces list) {
+        ResultSet res;
         String query = "SELECT * FROM reserva_lugar WHERE id_reserva IN " +
                 "(SELECT reserva.id FROM reserva WHERE id_espetaculo= ?) " +
                 "AND id_lugar= ?";
-
             for(Lugar place : list.getPlaces()){
                 try {
-                    PreparedStatement statement = connection.prepareStatement(query);
-                    statement.setInt(1,place.getEspetaculo_id());
-                    statement.setInt(2,place.getIdLugar());
-                    ResultSet res = statement.executeQuery(query);
+                    synchronized (connection) {
+                        PreparedStatement statement = connection.prepareStatement(query);
+                        statement.setInt(1, place.getEspetaculo_id());
+                        statement.setInt(2, place.getIdLugar());
+                        res = statement.executeQuery(query);
+                    }
                     if (res.next()){
                         return false;
                     }
@@ -451,11 +500,13 @@ public class DBCommunicationManager {
     }
 
     public int getLastId(String tableName) {
-        String query = "SELECT max(id) FROM " + tableName;
+        String query = "SELECT max(id) FROM " + tableName; ResultSet result;
         int id = -1;
         try {
-            Statement statement = connection.createStatement();
-            ResultSet result = statement.executeQuery(query);
+            synchronized (connection) {
+                Statement statement = connection.createStatement();
+                result = statement.executeQuery(query);
+            }
             if (result.next()){
                 id = result.getInt(1);
             }

@@ -5,6 +5,7 @@ import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.payload.tcp.Request.Espetaculos;
 import com.isec.pd22.payload.tcp.Request.RequestDetailsEspetaculo;
 import com.isec.pd22.server.models.Espetaculo;
+import com.isec.pd22.utils.Constants;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -39,8 +40,10 @@ public class TableEspetaculo extends TableView<Espetaculo> {
         colDescricao.setCellValueFactory(new PropertyValueFactory<>("descricao"));
         TableColumn<Espetaculo, String> columnTipo = new TableColumn<>("Tipo");
         columnTipo.setCellValueFactory(new PropertyValueFactory<>("tipo"));
-        TableColumn<Espetaculo, Date> columnDate = new TableColumn<>("Data");
-        columnDate.setCellValueFactory(new PropertyValueFactory<>("data_hora"));
+        TableColumn<Espetaculo, String> columnDate = new TableColumn<>("Data");
+        columnDate.setCellValueFactory(espectaculoButtonCellDataFeatures ->
+                new ReadOnlyObjectWrapper<>(Constants.dateToString(espectaculoButtonCellDataFeatures.getValue()
+                        .getData_hora())));
         TableColumn<Espetaculo, Integer> columnDuracao = new TableColumn<>("Duração");
         columnDuracao.setCellValueFactory(new PropertyValueFactory<>("duracao"));
         TableColumn<Espetaculo, String> columnLocal = new TableColumn<>("Local");
@@ -66,16 +69,22 @@ public class TableEspetaculo extends TableView<Espetaculo> {
         colRemove.setCellValueFactory(espetaculoButtonCellDataFeatures ->  {
             Button button = new Button("Remover");
             button.setOnAction(actionEvent -> {
-                Espetaculos espetaculos = new Espetaculos(ClientActions.DELETE_SPECTACLE);
-                espetaculos.setEspetaculos(new ArrayList<>( List.of(espetaculoButtonCellDataFeatures.getValue())));
-                espetaculos.setUser(modelManager.getUser());
-                modelManager.sendMessage(espetaculos);
+                RequestDetailsEspetaculo espetaculo = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
+                espetaculo.setEspetaculo(espetaculoButtonCellDataFeatures.getValue());
+                espetaculo.setUser(modelManager.getUser());
+                modelManager.sendMessage(espetaculo);
             });
             return new ReadOnlyObjectWrapper<>(button);
         });
-        setFixedCellSize(50);
+        setFixedCellSize(40);
         getColumns().addAll(colDescricao, columnTipo, columnDate, columnDuracao, columnLocal, columnClassificacao, columnVisivel,
                 colShow);
+        colDescricao.setPrefWidth(200);
+        columnDate.setPrefWidth(150);
+        colShow.setPrefWidth(90);
+        colRemove.setPrefWidth(90);
+        columnLocal.setPrefWidth(200);
+
         setPrefHeight(400);
         setPrefWidth(1000);
     }

@@ -31,6 +31,7 @@ public class EditView extends BorderPane {
         this.modelManager = modelManager;
         createViews();
         registerHandlers();
+        updateView();
     }
 
 
@@ -78,7 +79,6 @@ public class EditView extends BorderPane {
         setCenter(hbox);
     }
     private void registerHandlers() {
-        modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, (event) -> updateView() );
         modelManager.addPropertyChangeListener(ModelManager.EDIT_USER, (event) -> updateView());
         btnSubmit.setOnAction(actionEvent -> {
             String username = (tfUsername.getText().isBlank() ? modelManager.getUser().getUsername() : tfUsername.getText());
@@ -98,8 +98,7 @@ public class EditView extends BorderPane {
     }
 
     private void updateView() {
-        this.setVisible(true);
-//        tfUsername.setText(modelManager.getUser().getUsername());
-//        tfName.setText(modelManager.getUser().getNome());
+        tfUsername.setText(modelManager.getUser().getUsername());
+        tfName.setText(modelManager.getUser().getNome());
     }
 }

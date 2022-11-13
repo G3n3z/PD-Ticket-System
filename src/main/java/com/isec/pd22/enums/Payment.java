@@ -13,4 +13,11 @@ public enum Payment {
         }
         return NOT_PAYED;
     }
+
+    public static String fromString(Payment payment) {
+        return switch (payment){
+            case NOT_PAYED -> "Não Pago";
+            case PAYED -> "Pago";
+        };
+    }
 }
