@@ -445,20 +445,21 @@ public class DBCommunicationManager {
     }
 
     public boolean canCancelReservation(int idReserva) {
-        String query = "SELECT * FROM reserva WHERE reserva.id= ? AND pago= ?"; ResultSet res;
+        String query = "SELECT * FROM reserva WHERE reserva.id= ? AND pago= ?";
+        ResultSet res;
         try {
             synchronized (connection) {
                 PreparedStatement statement = connection.prepareStatement(query);
                 statement.setInt(1, idReserva);
                 statement.setInt(2, 1);
-                res = statement.executeQuery(query);
+                res = statement.executeQuery();
             }
             if (res.next()){
                 return false;
             }
 
         } catch (SQLException e) {
-            return true;
+            System.out.println("[DBCOM] - cancelReservation " + e);
         }
         return true;
     }
