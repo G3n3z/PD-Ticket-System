@@ -40,15 +40,18 @@ public class DBCommunicationManager {
 
     public boolean checkUserLogin(String username, String password) throws SQLException {
         String query = "SELECT * from utilizador where username = ? and password = ?";
+        PreparedStatement preparedStatement = null;
         synchronized (connection){
             try {
-                PreparedStatement preparedStatement = connection.prepareStatement(query);
+                preparedStatement = connection.prepareStatement(query);
                 preparedStatement.setString(1, username);
                 preparedStatement.setString(2, password);
                 ResultSet res = preparedStatement.executeQuery();
                 return res.next();
             } catch (SQLException e) {
                 return false;
+            }finally {
+                closeStatement(preparedStatement);
             }
         }
     }
@@ -75,15 +78,18 @@ public class DBCommunicationManager {
 
     public boolean existsUserByUsernameOrName(String nome, String userName){
         String query = "SELECT * from utilizador where nome = ? or username = ?";
+        PreparedStatement preparedStatement = null;
         synchronized (connection) {
             try {
-                PreparedStatement preparedStatement = connection.prepareStatement(query);
+                preparedStatement = connection.prepareStatement(query);
                 preparedStatement.setString(1, nome);
                 preparedStatement.setString(2, userName);
                 ResultSet res = preparedStatement.executeQuery();
                 return !res.next();
             } catch (SQLException e) {
                 return true;
+            }finally {
+                closeStatement(preparedStatement);
             }
         }
     }
@@ -91,9 +97,10 @@ public class DBCommunicationManager {
 
     public boolean canEditUser(String nome, String userName){
         String query = "SELECT * from utilizador where nome = ? and username = ?";
+        PreparedStatement preparedStatement = null;
         synchronized (connection) {
             try {
-                PreparedStatement preparedStatement = connection.prepareStatement(query);
+                preparedStatement = connection.prepareStatement(query);
                 preparedStatement.setString(1, nome);
                 preparedStatement.setString(2, userName);
                 ResultSet res = preparedStatement.executeQuery();
@@ -106,15 +113,18 @@ public class DBCommunicationManager {
 
     public boolean isLogged(String username){
         String query = "SELECT * from utilizador where username = ? and autenticado = ?";
+        PreparedStatement preparedStatement = null;
         synchronized (connection){
             try {
-                PreparedStatement preparedStatement = connection.prepareStatement(query);
+                preparedStatement = connection.prepareStatement(query);
                 preparedStatement.setString(1, username);
                 preparedStatement.setInt(2, Authenticated.AUTHENTICATED.ordinal());
                 ResultSet res = preparedStatement.executeQuery();
                 return !res.next();
             } catch (SQLException e) {
                 return false;
+            }finally {
+                closeStatement(preparedStatement);
             }
         }
     }
@@ -145,9 +155,10 @@ public class DBCommunicationManager {
         if(payment != null){
             query = query + " and pago = " + payment.ordinal();
         }
+        Statement stm = null;
         synchronized (connection) {
             try {
-                Statement stm = connection.createStatement();
+                stm = connection.createStatement();
 
                 ResultSet res = stm.executeQuery(query);
                 while (res.next()) {
@@ -155,6 +166,8 @@ public class DBCommunicationManager {
                 }
 
             } catch (SQLException ignored) {
+            }finally {
+                closeStatement(stm);
             }
         }
         return consultas;
@@ -168,9 +181,10 @@ public class DBCommunicationManager {
         if(payment != null){
             query = query + " where pago = " + payment.ordinal();
         }
+        Statement stm = null;
         synchronized (connection) {
             try {
-                Statement stm = connection.createStatement();
+                stm = connection.createStatement();
 
                 ResultSet res = stm.executeQuery(query);
                 while (res.next()) {
@@ -178,6 +192,8 @@ public class DBCommunicationManager {
                 }
 
             } catch (SQLException ignored) {
+            }finally {
+                closeStatement(stm);
             }
         }
         return consultas;
@@ -186,9 +202,10 @@ public class DBCommunicationManager {
     public List<Reserva> getAllReservas(){
         List<Reserva> reservas = new ArrayList<>();
         String query = "SELECT * from reserva order by data_hora desc";
+        Statement stm = null;
         synchronized (connection) {
             try {
-                Statement stm = connection.createStatement();
+                 stm = connection.createStatement();
 
                 ResultSet res = stm.executeQuery(query);
                 while (res.next()) {
@@ -196,6 +213,8 @@ public class DBCommunicationManager {
                 }
 
             } catch (SQLException ignored) {
+            }finally {
+                closeStatement(stm);
             }
         }
         return reservas;
@@ -206,10 +225,10 @@ public class DBCommunicationManager {
         String query = "Select * from espetaculo, lugar where espetaculo.id = ? and lugar.espetaculo_id = ? and espetaculo.data_hora >= datetime('now','+24 hours')";
         Espetaculo espetaculo = null;
         ResultSet res;
-
+        PreparedStatement preparedStatement = null;
         try {
             synchronized (connection) {
-                PreparedStatement preparedStatement = connection.prepareStatement(query);
+                preparedStatement = connection.prepareStatement(query);
                 preparedStatement.setInt(1, id);
                 preparedStatement.setInt(2, id);
                 res = preparedStatement.executeQuery();
@@ -229,6 +248,8 @@ public class DBCommunicationManager {
 
         } catch (SQLException e) {
             return null;
+        }finally {
+            closeStatement(preparedStatement);
         }
         return espetaculo;
     }
@@ -239,9 +260,11 @@ public class DBCommunicationManager {
         String query2 = "SELECT * from reserva_lugar, reserva where reserva_lugar.id_lugar = ? " +
                 "and reserva_lugar.id_reserva = reserva.id";
         Espetaculo espetaculo = null;
+        PreparedStatement preparedStatement2 = null;
+        PreparedStatement preparedStatement = null;
         synchronized (connection) {
             try {
-                PreparedStatement preparedStatement = connection.prepareStatement(queryEspec);
+                preparedStatement = connection.prepareStatement(queryEspec);
                 preparedStatement.setInt(1, idEspetaculo);
                 ResultSet res = preparedStatement.executeQuery();
                 if (res.next()) {
@@ -254,7 +277,7 @@ public class DBCommunicationManager {
                 preparedStatement.setInt(2, idEspetaculo);
                 res = preparedStatement.executeQuery();
 
-                PreparedStatement preparedStatement2 = connection.prepareStatement(query2);
+                preparedStatement2 = connection.prepareStatement(query2);
                 Reserva reserva = null;
                 while (res.next()) {
                     Lugar lugar = Lugar.mapToEntity(res);
@@ -273,6 +296,9 @@ public class DBCommunicationManager {
 
             } catch (SQLException e) {
                 return null;
+            }finally {
+                closeStatement(preparedStatement);
+                closeStatement(preparedStatement2);
             }
         }
         return espetaculo;
@@ -283,9 +309,10 @@ public class DBCommunicationManager {
         String query = "Select * from espetaculo where espetaculo.data_hora > strftime('%Y/%m/%d %H:%M', 'now', '+24 hours')";
         ResultSet res;
         List<Espetaculo> espetaculos = new ArrayList<>();
+        Statement statement = null;
         try {
             synchronized (connection) {
-                Statement statement = connection.createStatement();
+                statement = connection.createStatement();
                 res = statement.executeQuery(query);
             }
             Espetaculo espetaculo = new Espetaculo();
@@ -297,6 +324,8 @@ public class DBCommunicationManager {
 
         } catch (SQLException e) {
             return null;
+        }finally {
+            closeStatement(statement);
         }
         return espetaculos;
     }
@@ -305,9 +334,10 @@ public class DBCommunicationManager {
         String query = "SELECT * from  reserva where reserva.id_utilizador =  ? and reserva.id_espetaculo = ? " +
                 "and reserva.pago = ?";
         ResultSet res;
+        PreparedStatement statement = null;
         try {
             synchronized (connection) {
-                PreparedStatement statement = connection.prepareStatement(query);
+                statement = connection.prepareStatement(query);
                 statement.setInt(1, idUser);
                 statement.setInt(2, idEspetaculo);
                 statement.setInt(3, Payment.NOT_PAYED.ordinal());
@@ -319,6 +349,8 @@ public class DBCommunicationManager {
 
         } catch (SQLException e) {
             return false;
+        }finally {
+            closeStatement(statement);
         }
         return false;
     }
@@ -339,9 +371,10 @@ public class DBCommunicationManager {
     public boolean canRemoveEspecatulo(int idEspetaculo){
         String query = "SELECT * FROM reserva WHERE id_espetaculo = " + idEspetaculo + " AND pago = " + 1;
         ResultSet res;
+        PreparedStatement statement = null;
         try {
             synchronized (connection) {
-                PreparedStatement statement = connection.prepareStatement(query);
+                statement = connection.prepareStatement(query);
                 res = statement.executeQuery();
             }
             if(res.next())
@@ -349,6 +382,8 @@ public class DBCommunicationManager {
 
         } catch (SQLException e) {
             return true;
+        }finally {
+            closeStatement(statement);
         }
         return true;
     }
@@ -375,7 +410,7 @@ public class DBCommunicationManager {
         return null;
     }
 
-    private void closeStatement(PreparedStatement statement) {
+    private void closeStatement(Statement statement) {
         if (statement != null){
             try {
                 statement.close();
@@ -417,9 +452,10 @@ public class DBCommunicationManager {
             }
         }
         List<Espetaculo> list = new ArrayList<>();
+        Statement statement = null;
         try {
             synchronized (connection) {
-                Statement statement = connection.createStatement();
+                statement = connection.createStatement();
                 res = statement.executeQuery(query);
             }
             Espetaculo espetaculo = new Espetaculo();
@@ -431,6 +467,8 @@ public class DBCommunicationManager {
         } catch (SQLException e) {
             System.out.println("[DBCOM] - getEspetaculoWithFilters " + e);
             return new ArrayList<>();
+        }finally {
+            closeStatement(statement);
         }
         return list;
     }
@@ -446,9 +484,10 @@ public class DBCommunicationManager {
 
     public boolean canCancelReservation(int idReserva) {
         String query = "SELECT * FROM reserva WHERE reserva.id= ? AND pago= ?"; ResultSet res;
+        PreparedStatement statement = null;
         try {
             synchronized (connection) {
-                PreparedStatement statement = connection.prepareStatement(query);
+                statement = connection.prepareStatement(query);
                 statement.setInt(1, idReserva);
                 statement.setInt(2, 1);
                 res = statement.executeQuery(query);
@@ -459,19 +498,22 @@ public class DBCommunicationManager {
 
         } catch (SQLException e) {
             return true;
+        }finally {
+            closeStatement(statement);
         }
         return true;
     }
 
     public boolean canSubmitReservations(ListPlaces list) {
         ResultSet res;
+        PreparedStatement statement = null;
         String query = "SELECT * FROM reserva_lugar WHERE id_reserva IN " +
                 "(SELECT reserva.id FROM reserva WHERE id_espetaculo= ?) " +
                 "AND id_lugar= ?";
             for(Lugar place : list.getPlaces()){
                 try {
                     synchronized (connection) {
-                        PreparedStatement statement = connection.prepareStatement(query);
+                        statement = connection.prepareStatement(query);
                         statement.setInt(1, place.getEspetaculo_id());
                         statement.setInt(2, place.getIdLugar());
                         res = statement.executeQuery(query);
@@ -480,6 +522,8 @@ public class DBCommunicationManager {
                         return false;
                     }
                 } catch (SQLException ignored) {
+                }finally {
+                    closeStatement(statement);
                 }
             }
         return true;
@@ -501,10 +545,11 @@ public class DBCommunicationManager {
 
     public int getLastId(String tableName) {
         String query = "SELECT max(id) FROM " + tableName; ResultSet result;
+        Statement statement = null;
         int id = -1;
         try {
             synchronized (connection) {
-                Statement statement = connection.createStatement();
+                statement = connection.createStatement();
                 result = statement.executeQuery(query);
             }
             if (result.next()){
@@ -512,6 +557,8 @@ public class DBCommunicationManager {
             }
         } catch (SQLException e) {
             return id;
+        }finally {
+            closeStatement(statement);
         }
         return id;
     }

@@ -29,10 +29,12 @@ public class DBVersionManager {
     }
 
     public int getLastVersion() throws SQLException {
-
-        Statement stm = connection.createStatement();
-        String query = "Select version from versions order by version desc";
-        ResultSet res = stm.executeQuery(query);
+        ResultSet res;
+        synchronized (connection) {
+            Statement stm = connection.createStatement();
+            String query = "Select version from versions order by version desc";
+            res = stm.executeQuery(query);
+        }
         if(res.next()){
             return res.getInt("version");
         }else{
@@ -82,7 +84,18 @@ public class DBVersionManager {
             pstm.setString(1, query.getQuery());
             pstm.setLong(2, query.getTimestamp());
             pstm.executeUpdate();
+            closeStatment(stm);
+            closeStatment(pstm);
+            
         }
+    }
+
+    private void closeStatment(Statement stm) {
+        try {
+            if (stm != null){
+                stm.close();
+            }
+        }catch (Exception e){}
     }
 
     public void checkIfHaveTableVersion() {
@@ -98,9 +111,12 @@ public class DBVersionManager {
     public List<Query> getAllVersionAfter(int numVersion) throws SQLException {
         List<Query> queries = new ArrayList<>();
         String query = "SELECT * from versions where version > ? order by version asc";
-        PreparedStatement preparedStatement = connection.prepareStatement(query);
-        preparedStatement.setInt(1, numVersion);
-        ResultSet res = preparedStatement.executeQuery();
+        ResultSet res;
+        synchronized (connection){
+            PreparedStatement preparedStatement = connection.prepareStatement(query);
+            preparedStatement.setInt(1, numVersion);
+            res = preparedStatement.executeQuery();
+        }
         while (res.next()){
             queries.add(mapToQuery(res));
         }
