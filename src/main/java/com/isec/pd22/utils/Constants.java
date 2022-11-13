@@ -15,7 +15,7 @@ public class Constants {
     public static final String NAME_DEFAULT_DB = "PD-2022-23-TP.db";
     public static final String FILES_DIR_PATH= "src/main/resources/files/";
     public static final long PAYMENT_TIMER = 30000; //miliseconds
-    public static final long INITIAL_TIMEOUT = 5000;
+    public static final long INITIAL_TIMEOUT = 30000;
 
     public static Date stringToDate(String date) throws ParseException {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");

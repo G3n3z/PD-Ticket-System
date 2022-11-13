@@ -125,12 +125,17 @@ public class AttendClientThread extends Thread implements Observer {
         }
     }
 
-    private void exitClient(ClientMSG msgClient) throws SQLException {
+    private void exitClient(ClientMSG msgClient) throws SQLException, IOException {
         System.out.println("Cliente saiu");
         keepGoing = false;
         if (msgClient.getUser() != null){
             Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
-            startUpdateRoutine(query, internalInfo);
+            if(startUpdateRoutine(query, internalInfo)){
+                dbVersionManager.insertQuery(query);
+                sendCommit();
+            }else {
+                sendAbort();
+            }
 
 
         }
@@ -168,15 +173,18 @@ public class AttendClientThread extends Thread implements Observer {
         }
     }
 
-    private ClientMSG payReservation(ClientMSG msgClient) throws SQLException {
+    private ClientMSG payReservation(ClientMSG msgClient) throws SQLException, IOException {
         RequestListReservas listReservas = (RequestListReservas) msgClient;
         Query query = dbComm.payReservations(listReservas);
         ClientMSG msg;
         if(query != null){
             if (startUpdateRoutine(query, internalInfo)) {
+                dbVersionManager.insertQuery(query);
+                sendCommit();
                 msg = new ClientMSG(ClientsPayloadType.ACTION_SUCCEDED);
 
             } else {
+                sendAbort();
                 msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
             }
         }else{
@@ -185,7 +193,7 @@ public class AttendClientThread extends Thread implements Observer {
         return msg;
     }
 
-    private ClientMSG editUser(ClientMSG msgClient) throws SQLException {
+    private ClientMSG editUser(ClientMSG msgClient) throws SQLException, IOException {
         ClientMSG msg;
         if (dbComm.canEditUser(msgClient.getUser().getNome(), msgClient.getUser().getUsername())) {
             EditUser editUser = (EditUser) msgClient;
@@ -196,8 +204,11 @@ public class AttendClientThread extends Thread implements Observer {
                     editUser.getPassword()
             );
             if (startUpdateRoutine(query, internalInfo)) {
+                dbVersionManager.insertQuery(query);
+                sendCommit();
                 msg = new ClientMSG(ClientsPayloadType.ACTION_SUCCEDED);
             } else {
+                sendAbort();
                 msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
             }
         }else{
@@ -319,7 +330,7 @@ public class AttendClientThread extends Thread implements Observer {
         return msg;
     }
 
-    private ClientMSG deleteSpectacle(ClientMSG msgClient, User user) throws SQLException {
+    private ClientMSG deleteSpectacle(ClientMSG msgClient, User user) throws SQLException, IOException {
         RequestDetailsEspetaculo msg;
         //TODO mudar isto para um espetaculo
         if(user.getRole() == Role.ADMIN){
@@ -327,10 +338,13 @@ public class AttendClientThread extends Thread implements Observer {
             if(dbComm.canRemoveEspecatulo(espetaculo.getEspetaculo().getIdEspetaculo())){
                 Query  query = dbComm.deleteSpectacle(espetaculo.getEspetaculo().getIdEspetaculo());
                 if (startUpdateRoutine(query, internalInfo)) {
+                    dbVersionManager.insertQuery(query);
+                    sendCommit();
                     msg = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
                     msg.setClientsPayloadType(ClientsPayloadType.DELETE_SPECTACLE);
                     msg.setEspetaculo(espetaculo.getEspetaculo());
                 } else {
+                    sendAbort();
                     msg = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
                     msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
                 }
@@ -359,12 +373,15 @@ public class AttendClientThread extends Thread implements Observer {
         return req;
     }
 
-    private ClientMSG logout(ClientMSG msgClient) throws SQLException {
+    private ClientMSG logout(ClientMSG msgClient) throws SQLException, IOException {
         ClientMSG msg;
         Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
         if (startUpdateRoutine(query, internalInfo)) {
+            dbVersionManager.insertQuery(query);
+            sendCommit();
             msg = new ClientMSG(ClientsPayloadType.LOGOUT);
         } else {
+            sendAbort();
             msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
             msg.setAction(ClientActions.LOGOUT);
         }
@@ -537,8 +554,11 @@ public class AttendClientThread extends Thread implements Observer {
         if (dbComm.existsUserByUsernameOrName(r.getNome(), r.getUserName())) {
             Query query = dbComm.getRegisterUserQuery(r.getUserName(), r.getNome(), r.getPassword());
             if (startUpdateRoutine(query, internalInfo)) {
+                dbVersionManager.insertQuery(query);
+                sendCommit();
                 msg = new ClientMSG(ClientsPayloadType.USER_REGISTER);
             } else {
+                sendAbort();
                 msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
             }
         } else {

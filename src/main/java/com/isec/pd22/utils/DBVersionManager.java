@@ -30,17 +30,21 @@ public class DBVersionManager {
 
     public int getLastVersion() throws SQLException {
         ResultSet res;
+        Statement stm;
         synchronized (connection) {
-            Statement stm = connection.createStatement();
+            stm = connection.createStatement();
             String query = "Select version from versions order by version desc";
             res = stm.executeQuery(query);
-        }
-        if(res.next()){
-            return res.getInt("version");
-        }else{
-            return 0;
-        }
 
+        }
+        Integer version;
+        if(res.next()){
+            version = res.getInt("version");
+        }else{
+            version = 0;
+        }
+        closeStatment(stm);
+        return version;
     }
 
     public void createTableVersions() {
@@ -52,7 +56,7 @@ public class DBVersionManager {
                             "timestamp numeric)";
 
             stm.executeUpdate(query);
-
+            stm.close();
 
             addNewVersion(query);
 
@@ -70,6 +74,7 @@ public class DBVersionManager {
         pstm.setString(1, sql);
         pstm.setLong(2, unixTime);
         pstm.executeUpdate();
+        pstm.close();
 
     }
 
