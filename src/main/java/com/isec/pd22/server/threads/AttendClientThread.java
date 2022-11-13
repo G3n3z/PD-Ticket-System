@@ -119,17 +119,23 @@ public class AttendClientThread extends Thread implements Observer {
 
         } catch (SQLException | IOException e) {
             ansMsg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
+            e.printStackTrace();
             System.out.println("[AttendClientThread] - failed to initialize DB communication: "+ e.getMessage());
             oos.writeUnshared(ansMsg);
         }
     }
 
-    private void exitClient(ClientMSG msgClient) throws SQLException {
+    private void exitClient(ClientMSG msgClient) throws SQLException, IOException {
         System.out.println("Cliente saiu");
         keepGoing = false;
         if (msgClient.getUser() != null){
             Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
-            startUpdateRoutine(query, internalInfo);
+            if(startUpdateRoutine(query, internalInfo)){
+                dbVersionManager.insertQuery(query);
+                sendCommit();
+            }else {
+                sendAbort();
+            }
 
 
         }
@@ -167,15 +173,18 @@ public class AttendClientThread extends Thread implements Observer {
         }
     }
 
-    private ClientMSG payReservation(ClientMSG msgClient) throws SQLException {
+    private ClientMSG payReservation(ClientMSG msgClient) throws SQLException, IOException {
         RequestListReservas listReservas = (RequestListReservas) msgClient;
         Query query = dbComm.payReservations(listReservas);
         ClientMSG msg;
         if(query != null){
             if (startUpdateRoutine(query, internalInfo)) {
+                dbVersionManager.insertQuery(query);
+                sendCommit();
                 msg = new ClientMSG(ClientsPayloadType.ACTION_SUCCEDED);
 
             } else {
+                sendAbort();
                 msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
             }
         }else{
@@ -184,7 +193,7 @@ public class AttendClientThread extends Thread implements Observer {
         return msg;
     }
 
-    private ClientMSG editUser(ClientMSG msgClient) throws SQLException {
+    private ClientMSG editUser(ClientMSG msgClient) throws SQLException, IOException {
         ClientMSG msg;
         if (dbComm.canEditUser(msgClient.getUser().getNome(), msgClient.getUser().getUsername())) {
             EditUser editUser = (EditUser) msgClient;
@@ -195,8 +204,11 @@ public class AttendClientThread extends Thread implements Observer {
                     editUser.getPassword()
             );
             if (startUpdateRoutine(query, internalInfo)) {
+                dbVersionManager.insertQuery(query);
+                sendCommit();
                 msg = new ClientMSG(ClientsPayloadType.ACTION_SUCCEDED);
             } else {
+                sendAbort();
                 msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
             }
         }else{
@@ -228,13 +240,14 @@ public class AttendClientThread extends Thread implements Observer {
         return new Espetaculos(ClientsPayloadType.CONSULT_SPECTACLE, list);
     }
 
-    private ClientMSG submitReservation(ClientMSG msgClient) throws SQLException {
+    private ClientMSG submitReservation(ClientMSG msgClient) throws SQLException, IOException {
         ClientMSG msg;
         ListPlaces list = (ListPlaces) msgClient;
         if(dbComm.canSubmitReservations(list)){
             Query query = dbComm.submitReservations(list);
             if (startUpdateRoutine(query, internalInfo)) {
-
+                dbVersionManager.insertQuery(query);
+                sendCommit();
 
                 //Obter id da reserva inserida e iniciar o timertask que contrala o pagamento
                 int lastId = dbComm.getLastId("reserva");
@@ -248,6 +261,7 @@ public class AttendClientThread extends Thread implements Observer {
             } else {
                 msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
                 msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
+                sendAbort();
             }
         }else {
             msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
@@ -303,7 +317,11 @@ public class AttendClientThread extends Thread implements Observer {
 
 
         if (startUpdateRoutine(query, internalInfo)) {
+            dbVersionManager.insertQuery(query);
+            sendCommit();
             return new ClientMSG(ClientsPayloadType.FILE_UPDATED);
+        }else {
+            sendAbort();
         }
 
         ClientMSG msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
@@ -312,7 +330,7 @@ public class AttendClientThread extends Thread implements Observer {
         return msg;
     }
 
-    private ClientMSG deleteSpectacle(ClientMSG msgClient, User user) throws SQLException {
+    private ClientMSG deleteSpectacle(ClientMSG msgClient, User user) throws SQLException, IOException {
         RequestDetailsEspetaculo msg;
         //TODO mudar isto para um espetaculo
         if(user.getRole() == Role.ADMIN){
@@ -320,10 +338,13 @@ public class AttendClientThread extends Thread implements Observer {
             if(dbComm.canRemoveEspecatulo(espetaculo.getEspetaculo().getIdEspetaculo())){
                 Query  query = dbComm.deleteSpectacle(espetaculo.getEspetaculo().getIdEspetaculo());
                 if (startUpdateRoutine(query, internalInfo)) {
+                    dbVersionManager.insertQuery(query);
+                    sendCommit();
                     msg = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
                     msg.setClientsPayloadType(ClientsPayloadType.DELETE_SPECTACLE);
                     msg.setEspetaculo(espetaculo.getEspetaculo());
                 } else {
+                    sendAbort();
                     msg = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
                     msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
                 }
@@ -352,12 +373,15 @@ public class AttendClientThread extends Thread implements Observer {
         return req;
     }
 
-    private ClientMSG logout(ClientMSG msgClient) throws SQLException {
+    private ClientMSG logout(ClientMSG msgClient) throws SQLException, IOException {
         ClientMSG msg;
         Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
         if (startUpdateRoutine(query, internalInfo)) {
+            dbVersionManager.insertQuery(query);
+            sendCommit();
             msg = new ClientMSG(ClientsPayloadType.LOGOUT);
         } else {
+            sendAbort();
             msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
             msg.setAction(ClientActions.LOGOUT);
         }
@@ -400,84 +424,78 @@ public class AttendClientThread extends Thread implements Observer {
         boolean repeat = true;
         int confirmationCounter = 1;
         Set<Prepare> confirmationList = new HashSet<>();
+        byte[] bytes = new byte[10000];
         //Mudar estado para UPDATE
         synchronized (internalInfo){
             internalInfo.setStatus(Status.UPDATING);
         }
         //Abrir socket UPD auto para confirmações
         try {
-            DatagramSocket confirmationSocket = new DatagramSocket(0);
-
-            //Enviar PREPARE por MC
-            byte[] bytes = new byte[10000];
             DatagramPacket dp = new DatagramPacket(bytes, bytes.length, InetAddress.getByName(Constants.MULTICAST_IP), Constants.MULTICAST_PORT);
-            while (repeat) {
-                Prepare prepareMsg = new Prepare(
-                        TypeOfMulticastMsg.PREPARE,
-                        query,
-                        query.getNumVersion(),
-                        internalInfo.getIp(),
-                        confirmationSocket.getLocalPort()
-                );
+            DatagramSocket confirmationSocket = new DatagramSocket(0);
+            sendPrepare(dp, query, confirmationList, confirmationSocket);
 
-                ObjectStream objectStream = new ObjectStream();
-                objectStream.writeObject(dp, prepareMsg);
-
-                //Se não estiverem todas, reenviar PREPARE por MC
-                internalInfo.getMulticastSocket().send(dp);
-                try {
-                    //Esperar confirmações com timeout 1 sec
-                    confirmationSocket.setSoTimeout(1000);
-                    while (true) {
-                        confirmationSocket.receive(dp);
-                        Prepare confirmation = objectStream.readObject(dp, Prepare.class);
-                        confirmationList.add(confirmation);
-                        if (confirmationList.size() == internalInfo.getHeatBeats().size() && verifyConfirmations(confirmationList) ){
-                            repeat = false;
-                            break;
-                        }
-                    }
-                } catch (SocketException | SocketTimeoutException e) {
-                    //Verificar confirmações com lista de servidores
-                    if(confirmationCounter == 0){
-                        break;
-                    }else if(verifyConfirmations(confirmationList))
-                        repeat = false;
-                    else {
-                        confirmationList.clear();
-                        confirmationCounter--;
-                    }
-                }
-            }
-
+            return verifyConfirmations(confirmationList);
             //Verificar confirmações com lista de servidores
-            if(verifyConfirmations(confirmationList)){
-                //Se estiverem todos enviar COMMIT
-                try {
-                    dbVersionManager.insertQuery(query);
-                    sendCommit(dp);
-                } catch (IOException e) {
-                    System.out.println("[AttendClientThread] - error on updateRoutine - could not send commit: "+ e.getMessage());
-                    return false;
-                }
-                //Executar alteração
-                return true;
-            }
-            //Se não estiverem todas enviar ABORT
-            sendAbort(dp);
-            //Cancelar a operação e informar utilizador
-
         }  catch (IOException e) {
             System.out.println("[AttendClientThread] - error on updateRoutine - could not send prepare: "+ e.getMessage());
+            return false;
         }
-        return verifyConfirmations(confirmationList);
     }
+
+
+    private void sendPrepare(DatagramPacket dp, Query query, Set<Prepare> confirmationList, DatagramSocket confirmationSocket) throws IOException {
+        //Enviar PREPARE por MC
+        boolean repeat = true;
+        int confirmationCounter = 1;
+
+
+        while (repeat) {
+            Prepare prepareMsg = new Prepare(
+                    TypeOfMulticastMsg.PREPARE,
+                    query,
+                    query.getNumVersion(),
+                    internalInfo.getIp(),
+                    confirmationSocket.getLocalPort()
+            );
+
+            ObjectStream objectStream = new ObjectStream();
+            objectStream.writeObject(dp, prepareMsg);
+
+            //Se não estiverem todas, reenviar PREPARE por MC
+            internalInfo.getMulticastSocket().send(dp);
+            try {
+                //Esperar confirmações com timeout 1 sec
+                confirmationSocket.setSoTimeout(1000);
+                while (true) {
+                    confirmationSocket.receive(dp);
+                    Prepare confirmation = objectStream.readObject(dp, Prepare.class);
+                    confirmationList.add(confirmation);
+                    if (confirmationList.size() == internalInfo.getHeatBeats().size() && verifyConfirmations(confirmationList) ){
+                        repeat = false;
+                        break;
+                    }
+                }
+            } catch (SocketException | SocketTimeoutException e) {
+                //Verificar confirmações com lista de servidores
+                if(confirmationCounter == 0){
+                    break;
+                }else if(verifyConfirmations(confirmationList))
+                    repeat = false;
+                else {
+                    confirmationList.clear();
+                    confirmationCounter--;
+                }
+            }
+        }
+    }
+
     /**
      * Method to send an Abort message through Multicast
-     * @param dp Datagrampacket created for multicast message transmition
      * @throws IOException when it fails sending the packet
      */
-    private void sendAbort(DatagramPacket dp) throws IOException {
+    private void sendAbort() throws IOException {
+        DatagramPacket dp = new DatagramPacket(new byte[1000], 1000, InetAddress.getByName(Constants.MULTICAST_IP), Constants.MULTICAST_PORT);
         Abort abortMsg = new Abort(TypeOfMulticastMsg.ABORT);
         ObjectStream objectStream = new ObjectStream();
         objectStream.writeObject(dp,abortMsg);
@@ -486,11 +504,10 @@ public class AttendClientThread extends Thread implements Observer {
 
     /**
      * Method to send a Commit message through Multicast
-     * @param dp Datagrampacket created for multicast message transmition
      * @throws IOException when it fails sending the packet
      */
-    private void sendCommit(DatagramPacket dp) throws IOException {
-        dp = new DatagramPacket(new byte[1000], 1000, InetAddress.getByName(Constants.MULTICAST_IP), Constants.MULTICAST_PORT);
+    private void sendCommit() throws IOException {
+        DatagramPacket dp = new DatagramPacket(new byte[1000], 1000, InetAddress.getByName(Constants.MULTICAST_IP), Constants.MULTICAST_PORT);
         Commit commitMsg = new Commit(TypeOfMulticastMsg.COMMIT, internalInfo.getIp(), internalInfo.getPortUdp());
         ObjectStream os = new ObjectStream();
         os.writeObject(dp,commitMsg);
@@ -537,8 +554,11 @@ public class AttendClientThread extends Thread implements Observer {
         if (dbComm.existsUserByUsernameOrName(r.getNome(), r.getUserName())) {
             Query query = dbComm.getRegisterUserQuery(r.getUserName(), r.getNome(), r.getPassword());
             if (startUpdateRoutine(query, internalInfo)) {
+                dbVersionManager.insertQuery(query);
+                sendCommit();
                 msg = new ClientMSG(ClientsPayloadType.USER_REGISTER);
             } else {
+                sendAbort();
                 msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
             }
         } else {
@@ -554,9 +574,12 @@ public class AttendClientThread extends Thread implements Observer {
         if (u != null && u.getPassword().equals(msgClient.getUser().getPassword())) {
             Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.AUTHENTICATED);
             if (startUpdateRoutine(query, internalInfo)) {
+                dbVersionManager.insertQuery(query);
+                sendCommit();
                 msg = new ClientMSG(ClientsPayloadType.LOGGED_IN);
                 msg.setUser(new User(u.getIdUser(),u.getRole(),u.getUsername(), u.getNome()));
             } else {
+                sendAbort();
                 msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
             }
         } else {
