@@ -158,6 +158,7 @@ public class AttendClientThread extends Thread implements Observer {
                     case CANCEL_RESERVATION -> msg = cancelReservation(msgClient);
                     case ADD_SPECTACLE -> msg = addSpectacule(msgClient, user);
                     case DELETE_SPECTACLE -> msg = deleteSpectacle(msgClient, user);
+                    case SWITCH_VISIBILITY -> msg = switchSpectacleVisibility(msgClient, user);
                     case CONSULT_SPECTACLE_DETAILS -> msg = consult_spectacle_details(msgClient);
                     case PAY_RESERVATION -> msg = payReservation(msgClient);
                     case LOGOUT -> msg = logout(msgClient);
@@ -251,7 +252,6 @@ public class AttendClientThread extends Thread implements Observer {
 
                 //Obter id da reserva inserida e iniciar o timertask que contrala o pagamento
                 int lastId = dbComm.getLastId("reserva");
-                System.out.println("[lastId reserva] = " + lastId);
                 timer = new Timer(true);
                 timer.schedule(new ControlPaymentTask(lastId,connection,internalInfo,timer),Constants.PAYMENT_TIMER);
                 list.getPlaces().forEach(lugar -> lugar.getReserva().setIdReserva(lastId));
@@ -360,6 +360,39 @@ public class AttendClientThread extends Thread implements Observer {
         return msg;
     }
 
+    private ClientMSG switchSpectacleVisibility(ClientMSG msgClient, User user) {
+        Espetaculos msg = new Espetaculos(ClientsPayloadType.CONSULT_SPECTACLE);
+        if (user.getRole() != Role.ADMIN) {
+            return new ClientMSG(ClientActions.CONSULT_SPECTACLE, ClientsPayloadType.BAD_REQUEST);
+        }
+        RequestDetailsEspetaculo espetaculo = (RequestDetailsEspetaculo) msgClient;
+        if(dbComm.canEditSpectacle(espetaculo.getEspetaculo().getIdEspetaculo())) {
+            Query query = dbComm.switchSpectacleVisibility(espetaculo.getEspetaculo());
+
+            if (startUpdateRoutine(query, internalInfo)) {
+                try {
+                    dbVersionManager.insertQuery(query);
+                    sendCommit();
+                } catch (SQLException e) {
+                    System.out.println("[AttendClientThread] - switchSpectacleVisibility - could not change visibility: " + e.getMessage());
+                } catch (IOException e) {
+                    System.out.println("[AttendClientThread] - switchSpectacleVisibility - could not send commit: " + e.getMessage());
+                }
+            } else {
+                try {
+                    sendAbort();
+                } catch (IOException e) {
+                    System.out.println("[AttendClientThread] - switchSpectacleVisibility - could not send abort: " + e.getMessage());
+                }
+                msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
+            }
+        }else {
+            msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
+            msg.setMessage("Impossível mudar visibilidade.\nEspetáculo contem reservas");
+        }
+        return msg;
+    }
+
     private ClientMSG consult_spectacle_details(ClientMSG msgClient) {
         RequestDetailsEspetaculo req = (RequestDetailsEspetaculo) msgClient;
         Espetaculo e = dbComm.getEspetaculoDetailsByIdWithLugares(req.getEspetaculo().getIdEspetaculo());
@@ -420,7 +453,7 @@ public class AttendClientThread extends Thread implements Observer {
      * @param internalInfo
      * @return true if client request can be made.
      */
-    private boolean startUpdateRoutine(Query query, InternalInfo internalInfo) throws SQLException {
+    private boolean startUpdateRoutine(Query query, InternalInfo internalInfo){
         boolean repeat = true;
         int confirmationCounter = 1;
         Set<Prepare> confirmationList = new HashSet<>();

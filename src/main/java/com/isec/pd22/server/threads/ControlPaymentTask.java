@@ -1,14 +1,11 @@
 package com.isec.pd22.server.threads;
 
-import com.isec.pd22.enums.ClientsPayloadType;
-import com.isec.pd22.enums.Payment;
 import com.isec.pd22.enums.Status;
 import com.isec.pd22.enums.TypeOfMulticastMsg;
 import com.isec.pd22.payload.Abort;
 import com.isec.pd22.payload.Commit;
 import com.isec.pd22.payload.HeartBeat;
 import com.isec.pd22.payload.Prepare;
-import com.isec.pd22.payload.tcp.Request.ListPlaces;
 import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.Query;
 import com.isec.pd22.utils.Constants;
@@ -17,7 +14,6 @@ import com.isec.pd22.utils.DBVersionManager;
 import com.isec.pd22.utils.ObjectStream;
 
 import java.io.IOException;
-import java.io.ObjectOutputStream;
 import java.net.*;
 import java.sql.Connection;
 import java.sql.SQLException;
@@ -47,7 +43,6 @@ public class ControlPaymentTask extends TimerTask {
         dbVM = new DBVersionManager(connection);
         dbComm = new DBCommunicationManager(internalInfo, connection);
         while (true) {
-            System.out.println(dbComm.canCancelReservation(reservationId));
             if (dbComm.canCancelReservation(reservationId)) {
                 Query query = dbComm.deleteReservaNotPayed(reservationId);
                 if (startUpdateRoutine(query, internalInfo)) {

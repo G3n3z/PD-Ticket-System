@@ -25,7 +25,7 @@ public class EditView extends BorderPane {
     VBox vBox;
     Label labelUsername, labelName, labelPassword;
     TextField tfUsername, tfName, tfPassword;
-    Button btnSubmit, btnBack;
+    Button btnSubmit;
 
     public EditView(ModelManager modelManager) {
         this.modelManager = modelManager;
@@ -66,12 +66,9 @@ public class EditView extends BorderPane {
         hbox.getChildren().addAll(vBox);
         hbox.setAlignment(Pos.CENTER);
         btnSubmit = new Button("Submeter");
-        btnBack = new Button("Voltar");
-        btnBack.setPrefWidth(100);
-        btnBack.setPrefHeight(40);
         btnSubmit.setPrefWidth(100);
         btnSubmit.setPrefHeight(40);
-        HBox hboxButtons = new HBox(btnBack, btnSubmit);
+        HBox hboxButtons = new HBox(btnSubmit);
         hboxButtons.setAlignment(Pos.CENTER);
         hboxButtons.setSpacing(20);
         vBox.getChildren().add(hboxButtons);
@@ -91,9 +88,6 @@ public class EditView extends BorderPane {
             user.setNome(modelManager.getUser().getNome());
             msg.setUser(user);
             modelManager.sendMessage(msg);
-        });
-        btnBack.setOnAction(actionEvent -> {
-            this.setVisible(false);
         });
     }
 

@@ -2,6 +2,8 @@ package com.isec.pd22.utils;
 
 import com.isec.pd22.enums.Authenticated;
 import com.isec.pd22.enums.Payment;
+import com.isec.pd22.enums.Role;
+import com.isec.pd22.enums.Visibility;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.tcp.Request.Espetaculos;
 import com.isec.pd22.payload.tcp.Request.ListPlaces;
@@ -357,7 +359,7 @@ public class DBCommunicationManager {
 
     public Query deleteReservaNotPayed(int idReserva){
         String query = "delete from reserva_lugar where reserva_lugar.id_reserva= "+ idReserva +
-                "; delete from reserva where id= " + idReserva + " and pago= " + 0 + ";";
+                "; delete from reserva where id= " + idReserva + " and pago= " + Payment.NOT_PAYED.ordinal() + ";";
         return new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
     }
 
@@ -369,7 +371,7 @@ public class DBCommunicationManager {
     }
 
     public boolean canRemoveEspecatulo(int idEspetaculo){
-        String query = "SELECT * FROM reserva WHERE id_espetaculo = " + idEspetaculo + " AND pago = " + 1;
+        String query = "SELECT * FROM reserva WHERE id_espetaculo = " + idEspetaculo + " AND pago = " + Payment.PAYED.ordinal();
         ResultSet res;
         PreparedStatement statement = null;
         try {
@@ -419,8 +421,6 @@ public class DBCommunicationManager {
     }
 
     public Query insertEspetaculo(Espetaculo espetaculo) {
-        
-
         String query = "insert into espetaculo(descricao, tipo, data_hora, duracao, local, localidade, pais, classificacao_etaria) " +
                 "values ( '" + espetaculo.getDescricao() + "', '" + espetaculo.getTipo() + "','" + Constants.dateToString(espetaculo.getData_hora()) +
                 "', " + espetaculo.getDuracao() + ", '" + espetaculo.getLocal() + "', '" + espetaculo.getLocalidade() + "', '" +
@@ -439,17 +439,23 @@ public class DBCommunicationManager {
 
     public List<Espetaculo> getEspetaculoWithFilters(Espetaculos espetaculos){
         Map<String,String> filtros = espetaculos.getFiltros();
-        String query = "Select * from espetaculo"; ResultSet res;
+        String query = "SELECT * FROM espetaculo"; ResultSet res;
         boolean first = true;
         if(!filtros.isEmpty()){
             for(Map.Entry<String, String> entry : filtros.entrySet()){
                 if(first){
-                    query += " where " + entry.getKey() + "= " + entry.getValue();
+                    query += " WHERE " + entry.getKey() + " like '%" + entry.getValue() + "%'";
                     first = false;
                 }else{
-                    query += " and " + entry.getKey() + "= " + entry.getValue();
+                    query += " AND " + entry.getKey() + " like '%" + entry.getValue() + "%'";
                 }
             }
+            if (espetaculos.getUser().getRole() == Role.USER){
+                query += " AND visivel= " + Visibility.VISIBLE.ordinal();
+            }
+        }
+        if (espetaculos.getUser().getRole() == Role.USER){
+            query += " WHERE visivel= " + Visibility.VISIBLE.ordinal();
         }
         List<Espetaculo> list = new ArrayList<>();
         Statement statement = null;
@@ -545,7 +551,8 @@ public class DBCommunicationManager {
     }
 
     public int getLastId(String tableName) {
-        String query = "SELECT max(id) FROM " + tableName; ResultSet result;
+        String query = "SELECT max(id) FROM " + tableName;
+        ResultSet result;
         Statement statement = null;
         int id = -1;
         try {
@@ -582,5 +589,35 @@ public class DBCommunicationManager {
         }
         sb.append(");");
         return  new Query(internalInfo.getNumDB()+1, sb.toString(), new Date().getTime());
+    }
+
+    public boolean canEditSpectacle(int idEspetaculo) {
+        String query = "SELECT * FROM reserva WHERE id_espetaculo= " + idEspetaculo;
+        Statement statement = null;
+        ResultSet result = null;
+        try {
+            synchronized (connection) {
+                statement = connection.createStatement();
+                result = statement.executeQuery(query);
+            }
+            if (result.next()){
+                return false;
+            }
+        } catch (SQLException igonred) {
+            return false;
+        }finally {
+            closeStatement(statement);
+        }
+        return true;
+    }
+
+    public Query switchSpectacleVisibility(Espetaculo espetaculo) {
+        String query = null;
+        if(espetaculo.getVisivel() == 0) {
+            query = "UPDATE espetaculo SET visivel= " + Visibility.VISIBLE.ordinal() + " WHERE id= " + espetaculo.getIdEspetaculo();
+        }else {
+            query = "UPDATE espetaculo SET visivel= " + Visibility.NOT_VISIBLE.ordinal() + " WHERE id= " + espetaculo.getIdEspetaculo();
+        }
+        return  new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
     }
 }

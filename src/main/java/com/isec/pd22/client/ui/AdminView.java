@@ -9,6 +9,7 @@ import com.isec.pd22.payload.tcp.Request.Espetaculos;
 import com.isec.pd22.payload.tcp.Request.RequestListReservas;
 import com.isec.pd22.server.models.Lugar;
 import com.isec.pd22.server.models.Reserva;
+import com.isec.pd22.utils.Constants;
 import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -108,7 +109,7 @@ public class AdminView extends BorderPane {
         btnInsertEspetaculo.setOnAction(actionEvent -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Abrir ficheiro...");
-            fileChooser.setInitialDirectory(new File("."));
+            fileChooser.setInitialDirectory(new File(Constants.PICK_FILES_DIR_PATH));
             fileChooser.getExtensionFilters().addAll(
                     new FileChooser.ExtensionFilter("Ficheiro de texto (*.txt)", "*.txt")
             );

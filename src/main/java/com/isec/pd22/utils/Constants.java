@@ -14,7 +14,8 @@ public class Constants {
 
     public static final String NAME_DEFAULT_DB = "PD-2022-23-TP.db";
     public static final String FILES_DIR_PATH= "src/main/resources/files/";
-    public static final long PAYMENT_TIMER = 30000; //miliseconds
+    public static final String PICK_FILES_DIR_PATH= "src/main/resources/";
+    public static final long PAYMENT_TIMER = 10000; //miliseconds
     public static final long INITIAL_TIMEOUT = 30000;
 
     public static Date stringToDate(String date) throws ParseException {
