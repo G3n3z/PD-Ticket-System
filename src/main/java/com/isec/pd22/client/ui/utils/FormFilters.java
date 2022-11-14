@@ -4,9 +4,7 @@ import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.payload.tcp.Request.Espetaculos;
 import javafx.geometry.Pos;
-import javafx.scene.Node;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -29,9 +27,8 @@ public class FormFilters extends VBox {
     }
 
     private void registerHandlers() {
-        Espetaculos espetaculos = new Espetaculos(ClientActions.CONSULT_SPECTACLE);
-
         submit.setOnAction(actionEvent -> {
+            Espetaculos espetaculos = new Espetaculos(ClientActions.CONSULT_SPECTACLE);
             espetaculos.setUser(modelManager.getUser());
             for (TextField textField : list) {
                 if(textField.getText() != null && !textField.getText().isEmpty()){
@@ -43,7 +40,6 @@ public class FormFilters extends VBox {
     }
 
     private void createViews() {
-        //Label label = new Label("Descricao");
         tfDesc = new TextField();
         tfDesc.setPromptText("Descricao");
         tfTipo = new TextField();

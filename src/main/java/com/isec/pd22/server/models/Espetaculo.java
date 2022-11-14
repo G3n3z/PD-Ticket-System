@@ -50,6 +50,7 @@ public class Espetaculo implements Serializable {
             espetaculo.data_hora = Constants.stringToDate(res.getString("data_hora"));
             espetaculo.duracao = res.getInt("duracao");
             espetaculo.local = res.getString("local");
+            espetaculo.localidade = res.getString("localidade");
             espetaculo.pais = res.getString("pais");
             espetaculo.classificacao_etaria = res.getString("classificacao_etaria");
             espetaculo.visivel = res.getInt("visivel");

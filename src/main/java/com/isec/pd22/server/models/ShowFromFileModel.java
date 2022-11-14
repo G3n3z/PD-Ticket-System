@@ -75,14 +75,14 @@ public class ShowFromFileModel {
                     show.setTipo(value);
             case FIELD_NAME_DATE -> {
                 showDate.setDate(Integer.parseInt(fields[1]));
-                showDate.setMonth(Integer.parseInt(fields[2]));
-                showDate.setYear(Integer.parseInt(fields[3]));
+                showDate.setMonth(Integer.parseInt(fields[2])-1);
+                showDate.setYear(Integer.parseInt(fields[3])-1900);
                 show.setData_hora(showDate);
             }
             case FIELD_NAME_HOUR -> {
-                showDate.setHours(Integer.parseInt(fields[1]));
-                showDate.setMinutes(Integer.parseInt(fields[2]));
-                show.setData_hora(showDate);
+                show.getData_hora().setHours(Integer.parseInt(fields[1]));
+                show.getData_hora().setMinutes(Integer.parseInt(fields[2]));
+                show.getData_hora().setSeconds(Integer.parseInt("00"));
             }
             case FIELD_NAME_DURATION ->
                     show.setDuracao(Integer.parseInt(value));

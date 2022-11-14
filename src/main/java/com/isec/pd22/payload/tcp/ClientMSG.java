@@ -45,6 +45,10 @@ public class ClientMSG implements Serializable {
     }
 
 
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
     public void setClientsPayloadType(ClientsPayloadType clientsPayloadType) {
         this.clientsPayloadType = clientsPayloadType;
     }

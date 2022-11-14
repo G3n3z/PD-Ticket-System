@@ -4,6 +4,7 @@ import com.isec.pd22.client.Client;
 import com.isec.pd22.client.threads.SendFile;
 import com.isec.pd22.client.ui.utils.AlertSingleton;
 import com.isec.pd22.client.ui.utils.ModalIndicator;
+import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.tcp.Request.Espetaculos;
@@ -39,6 +40,7 @@ public class ModelManager {
     public static final String EDIT_USER = "EDIT_USER";
     public static final String PROP_ESPETACULO_DETAILS_WAITING_PAYMENT = "PROP_ESPETACULO_DETAILS_WAITING_PAYMENT";
     public static final String PROP_CLOSE_ALERT = "PROP_CLOSE_ALERT";
+    public static final String PROP_DELETED_SPECPTACLE = "PROP_DELETED_SPECPTACLE";
     PropertyChangeSupport pcs;
     private StatusClient statusClient;
 
@@ -143,7 +145,11 @@ public class ModelManager {
 
     public void fireReservasAdmin(ClientMSG mensage) {
         RequestListReservas reservas = (RequestListReservas) mensage;
-        data.setReservas(reservas.getReservas());
+        if(mensage.getAction() == ClientActions.CONSULT_PAYED_RESERVATION){
+            data.setReservasPayed(reservas.getReservas());
+        }else{
+            data.setReservas(reservas.getReservas());
+        }
         pcs.firePropertyChange(PROP_RESERVAS, null, null);
     }
 
@@ -153,8 +159,14 @@ public class ModelManager {
 
     public void fireEspectaculo(ClientMSG mensage) {
         RequestDetailsEspetaculo r = (RequestDetailsEspetaculo) mensage;
-        data.espetaculo = r.getEspetaculo();
-        pcs.firePropertyChange(PROP_ESPETACULO_DETAILS, null, null);
+        if (r.getEspetaculo() != null) {
+            data.espetaculo = r.getEspetaculo();
+            pcs.firePropertyChange(PROP_ESPETACULO_DETAILS, null, null);
+        }
+        else{
+            pcs.firePropertyChange(PROP_DELETED_SPECPTACLE, null, null);
+        }
+
     }
 
     public void clearData() {
@@ -211,5 +223,12 @@ public class ModelManager {
 
     public ClientMSG getLastMessage() {
         return data.getMessage();
+    }
+
+    public void removeSpectacle(ClientMSG mensage) {
+        RequestDetailsEspetaculo espetaculo = (RequestDetailsEspetaculo) mensage;
+        data.getEspetaculos().removeIf(espetaculo1 -> espetaculo.getEspetaculo()!= null &&
+                espetaculo1.getIdEspetaculo() == espetaculo.getEspetaculo().getIdEspetaculo());
+        pcs.firePropertyChange(ALL_ESPETACULOS, null, null);
     }
 }

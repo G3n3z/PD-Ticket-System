@@ -1,6 +1,7 @@
 package com.isec.pd22.server.threads;
 
 import com.isec.pd22.enums.*;
+import com.isec.pd22.interfaces.Observer;
 import com.isec.pd22.payload.*;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.tcp.Request.*;
@@ -16,7 +17,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
 
-public class AttendClientThread extends Thread{
+public class AttendClientThread extends Thread implements Observer {
     private Socket clientSocket;
     private InternalInfo internalInfo;
     private DBCommunicationManager dbComm;
@@ -26,16 +27,18 @@ public class AttendClientThread extends Thread{
     ObjectInputStream ois = null;
     FileOutputStream fos;
     Connection connection;
+    ClientMSG lastMessageReceive;
+    Timer timer;
     boolean keepGoing = true;
     public AttendClientThread(Socket clientSocket, InternalInfo internalInfo, Connection connection) {
         this.clientSocket = clientSocket;
         this.internalInfo = internalInfo;
         this.connection = connection;
+        internalInfo.addObserver(this);
     }
 
     @Override
     public void run() {
-
 
         keepGoing = openStreams();
         dbVersionManager = new DBVersionManager(connection);
@@ -77,6 +80,8 @@ public class AttendClientThread extends Thread{
             clientSocket.close();
         } catch (IOException e) {
             System.out.println("[AttendClientThread] - error on closing client socket: "+ e.getMessage());
+        }finally {
+            internalInfo.removeObserver(this);
         }
         synchronized (internalInfo) {
             internalInfo.decrementNumClients();
@@ -95,11 +100,10 @@ public class AttendClientThread extends Thread{
         return true;
     }
 
-    private void handleClientRequest(ClientMSG msgClient){
+    private void handleClientRequest(ClientMSG msgClient) throws IOException {
         ClientMSG ansMsg = new ClientMSG();
         try {
-
-
+            updateLastMessage(msgClient);
             switch (msgClient.getAction()){
                 case REGISTER_USER -> {
                     doRegister(msgClient, dbComm);
@@ -115,18 +119,25 @@ public class AttendClientThread extends Thread{
 
         } catch (SQLException | IOException e) {
             ansMsg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
+            e.printStackTrace();
             System.out.println("[AttendClientThread] - failed to initialize DB communication: "+ e.getMessage());
+            oos.writeUnshared(ansMsg);
         }
     }
 
-    private void exitClient(ClientMSG msgClient) throws SQLException {
+    private void exitClient(ClientMSG msgClient) throws SQLException, IOException {
         System.out.println("Cliente saiu");
         keepGoing = false;
         if (msgClient.getUser() != null){
             Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
-            if (startUpdateRoutine(query, internalInfo)) {
+            if(startUpdateRoutine(query, internalInfo)){
                 dbVersionManager.insertQuery(query);
+                sendCommit();
+            }else {
+                sendAbort();
             }
+
+
         }
     }
 
@@ -147,7 +158,9 @@ public class AttendClientThread extends Thread{
                     case CANCEL_RESERVATION -> msg = cancelReservation(msgClient);
                     case ADD_SPECTACLE -> msg = addSpectacule(msgClient, user);
                     case DELETE_SPECTACLE -> msg = deleteSpectacle(msgClient, user);
+                    case SWITCH_VISIBILITY -> msg = switchSpectacleVisibility(msgClient, user);
                     case CONSULT_SPECTACLE_DETAILS -> msg = consult_spectacle_details(msgClient);
+                    case PAY_RESERVATION -> msg = payReservation(msgClient);
                     case LOGOUT -> msg = logout(msgClient);
                 }
             } else {
@@ -161,7 +174,27 @@ public class AttendClientThread extends Thread{
         }
     }
 
-    private ClientMSG editUser(ClientMSG msgClient) throws SQLException {
+    private ClientMSG payReservation(ClientMSG msgClient) throws SQLException, IOException {
+        RequestListReservas listReservas = (RequestListReservas) msgClient;
+        Query query = dbComm.payReservations(listReservas);
+        ClientMSG msg;
+        if(query != null){
+            if (startUpdateRoutine(query, internalInfo)) {
+                dbVersionManager.insertQuery(query);
+                sendCommit();
+                msg = new ClientMSG(ClientsPayloadType.ACTION_SUCCEDED);
+
+            } else {
+                sendAbort();
+                msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
+            }
+        }else{
+            msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
+        }
+        return msg;
+    }
+
+    private ClientMSG editUser(ClientMSG msgClient) throws SQLException, IOException {
         ClientMSG msg;
         if (dbComm.canEditUser(msgClient.getUser().getNome(), msgClient.getUser().getUsername())) {
             EditUser editUser = (EditUser) msgClient;
@@ -173,8 +206,10 @@ public class AttendClientThread extends Thread{
             );
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
+                sendCommit();
                 msg = new ClientMSG(ClientsPayloadType.ACTION_SUCCEDED);
             } else {
+                sendAbort();
                 msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
             }
         }else{
@@ -186,13 +221,13 @@ public class AttendClientThread extends Thread{
     private ClientMSG consultUnpayedReservation(ClientMSG msgClient) {
         List<Reserva> unpayedReservations;
         unpayedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.NOT_PAYED);
-        return new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE, unpayedReservations);
+        return new RequestListReservas(msgClient.getAction(),ClientsPayloadType.RESERVAS_RESPONSE, unpayedReservations);
     }
 
     private ClientMSG consultPayedReservation(ClientMSG msgClient) {
         List<Reserva> payedReservations;
         payedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.PAYED);
-        return new RequestListReservas(ClientsPayloadType.RESERVAS_RESPONSE, payedReservations);
+        return new RequestListReservas(msgClient.getAction(),ClientsPayloadType.RESERVAS_RESPONSE, payedReservations);
     }
 
     private ClientMSG choose_spectacle(ClientMSG msgClient) {
@@ -206,27 +241,27 @@ public class AttendClientThread extends Thread{
         return new Espetaculos(ClientsPayloadType.CONSULT_SPECTACLE, list);
     }
 
-    private ClientMSG submitReservation(ClientMSG msgClient) throws SQLException {
+    private ClientMSG submitReservation(ClientMSG msgClient) throws SQLException, IOException {
         ClientMSG msg;
         ListPlaces list = (ListPlaces) msgClient;
         if(dbComm.canSubmitReservations(list)){
             Query query = dbComm.submitReservations(list);
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
+                sendCommit();
 
                 //Obter id da reserva inserida e iniciar o timertask que contrala o pagamento
                 int lastId = dbComm.getLastId("reserva");
-                System.out.println("[lastId reserva] = " + lastId);
-                Timer timer = new Timer(true);
-                timer.schedule(new ControlPaymentTask(lastId,connection,internalInfo,timer, list,
-                        oos),Constants.PAYMENT_TIMER);
-
+                timer = new Timer(true);
+                timer.schedule(new ControlPaymentTask(lastId,connection,internalInfo,timer),Constants.PAYMENT_TIMER);
+                list.getPlaces().forEach(lugar -> lugar.getReserva().setIdReserva(lastId));
                 msg = new ListPlaces(ClientActions.SUBMIT_RESERVATION, ClientsPayloadType.SUBMIT_RESERVATION_NOT_PAYED,
                         list.getPlaces());
 
             } else {
                 msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
                 msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
+                sendAbort();
             }
         }else {
             msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
@@ -249,7 +284,6 @@ public class AttendClientThread extends Thread{
         if(dbComm.canCancelReservation(list.getReservas().get(0).getIdReserva())) {
             Query query = dbComm.deleteReservaNotPayed(list.getReservas().get(0).getIdReserva());
             if (startUpdateRoutine(query, internalInfo)) {
-                dbVersionManager.insertQuery(query);
                 msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
                 msg.setClientsPayloadType(ClientsPayloadType.ACTION_SUCCEDED);
             } else {
@@ -284,7 +318,10 @@ public class AttendClientThread extends Thread{
 
         if (startUpdateRoutine(query, internalInfo)) {
             dbVersionManager.insertQuery(query);
+            sendCommit();
             return new ClientMSG(ClientsPayloadType.FILE_UPDATED);
+        }else {
+            sendAbort();
         }
 
         ClientMSG msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
@@ -293,27 +330,65 @@ public class AttendClientThread extends Thread{
         return msg;
     }
 
-    private ClientMSG deleteSpectacle(ClientMSG msgClient, User user) throws SQLException {
-        Espetaculos msg;
+    private ClientMSG deleteSpectacle(ClientMSG msgClient, User user) throws SQLException, IOException {
+        RequestDetailsEspetaculo msg;
+        //TODO mudar isto para um espetaculo
         if(user.getRole() == Role.ADMIN){
-            Espetaculos list = (Espetaculos) msgClient;
-            if(dbComm.canRemoveEspecatulo(list.getEspetaculos().get(0).getIdEspetaculo())){
-                Query  query = dbComm.deleteSpectacle(list.getEspetaculos().get(0).getIdEspetaculo());
+            RequestDetailsEspetaculo espetaculo = (RequestDetailsEspetaculo) msgClient;
+            if(dbComm.canRemoveEspecatulo(espetaculo.getEspetaculo().getIdEspetaculo())){
+                Query  query = dbComm.deleteSpectacle(espetaculo.getEspetaculo().getIdEspetaculo());
                 if (startUpdateRoutine(query, internalInfo)) {
                     dbVersionManager.insertQuery(query);
-                    msg = new Espetaculos(ClientActions.DELETE_SPECTACLE);
-                    msg.setClientsPayloadType(ClientsPayloadType.CONSULT_SPECTACLE);
+                    sendCommit();
+                    msg = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
+                    msg.setClientsPayloadType(ClientsPayloadType.DELETE_SPECTACLE);
+                    msg.setEspetaculo(espetaculo.getEspetaculo());
                 } else {
-                    msg = new Espetaculos(ClientActions.DELETE_SPECTACLE);
+                    sendAbort();
+                    msg = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
                     msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
                 }
             }else {
-                msg = new Espetaculos(ClientActions.DELETE_SPECTACLE);
+                msg = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
                 msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
+                msg.setMessage("Não pode remover um espetaculo com reservas");
             }
         }else {
-            msg = new Espetaculos(ClientActions.DELETE_SPECTACLE);
+            msg = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
             msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
+        }
+        return msg;
+    }
+
+    private ClientMSG switchSpectacleVisibility(ClientMSG msgClient, User user) {
+        Espetaculos msg = new Espetaculos(ClientsPayloadType.CONSULT_SPECTACLE);
+        if (user.getRole() != Role.ADMIN) {
+            return new ClientMSG(ClientActions.CONSULT_SPECTACLE, ClientsPayloadType.BAD_REQUEST);
+        }
+        RequestDetailsEspetaculo espetaculo = (RequestDetailsEspetaculo) msgClient;
+        if(dbComm.canEditSpectacle(espetaculo.getEspetaculo().getIdEspetaculo())) {
+            Query query = dbComm.switchSpectacleVisibility(espetaculo.getEspetaculo());
+
+            if (startUpdateRoutine(query, internalInfo)) {
+                try {
+                    dbVersionManager.insertQuery(query);
+                    sendCommit();
+                } catch (SQLException e) {
+                    System.out.println("[AttendClientThread] - switchSpectacleVisibility - could not change visibility: " + e.getMessage());
+                } catch (IOException e) {
+                    System.out.println("[AttendClientThread] - switchSpectacleVisibility - could not send commit: " + e.getMessage());
+                }
+            } else {
+                try {
+                    sendAbort();
+                } catch (IOException e) {
+                    System.out.println("[AttendClientThread] - switchSpectacleVisibility - could not send abort: " + e.getMessage());
+                }
+                msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
+            }
+        }else {
+            msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
+            msg.setMessage("Impossível mudar visibilidade.\nEspetáculo contem reservas");
         }
         return msg;
     }
@@ -321,18 +396,25 @@ public class AttendClientThread extends Thread{
     private ClientMSG consult_spectacle_details(ClientMSG msgClient) {
         RequestDetailsEspetaculo req = (RequestDetailsEspetaculo) msgClient;
         Espetaculo e = dbComm.getEspetaculoDetailsByIdWithLugares(req.getEspetaculo().getIdEspetaculo());
-        req.setEspetaculo(e);
-        req.setClientsPayloadType(ClientsPayloadType.SPECTACLE_DETAILS);
+        if (e == null){
+            req.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
+            req.setMessage("Espetaculo indisponivel");
+        }else {
+            req.setEspetaculo(e);
+            req.setClientsPayloadType(ClientsPayloadType.SPECTACLE_DETAILS);
+        }
         return req;
     }
 
-    private ClientMSG logout(ClientMSG msgClient) throws SQLException {
+    private ClientMSG logout(ClientMSG msgClient) throws SQLException, IOException {
         ClientMSG msg;
         Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
         if (startUpdateRoutine(query, internalInfo)) {
             dbVersionManager.insertQuery(query);
+            sendCommit();
             msg = new ClientMSG(ClientsPayloadType.LOGOUT);
         } else {
+            sendAbort();
             msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
             msg.setAction(ClientActions.LOGOUT);
         }
@@ -371,83 +453,82 @@ public class AttendClientThread extends Thread{
      * @param internalInfo
      * @return true if client request can be made.
      */
-    private boolean startUpdateRoutine(Query query, InternalInfo internalInfo) {
+    private boolean startUpdateRoutine(Query query, InternalInfo internalInfo){
         boolean repeat = true;
         int confirmationCounter = 1;
         Set<Prepare> confirmationList = new HashSet<>();
+        byte[] bytes = new byte[10000];
         //Mudar estado para UPDATE
         synchronized (internalInfo){
             internalInfo.setStatus(Status.UPDATING);
         }
         //Abrir socket UPD auto para confirmações
         try {
-            DatagramSocket confirmationSocket = new DatagramSocket(0);
-
-            //Enviar PREPARE por MC
-            byte[] bytes = new byte[10000];
             DatagramPacket dp = new DatagramPacket(bytes, bytes.length, InetAddress.getByName(Constants.MULTICAST_IP), Constants.MULTICAST_PORT);
-            while (repeat) {
-                Prepare prepareMsg = new Prepare(
-                        TypeOfMulticastMsg.PREPARE,
-                        query,
-                        query.getNumVersion(),
-                        internalInfo.getIp(),
-                        confirmationSocket.getLocalPort()
-                );
+            DatagramSocket confirmationSocket = new DatagramSocket(0);
+            sendPrepare(dp, query, confirmationList, confirmationSocket);
 
-                ObjectStream objectStream = new ObjectStream();
-                objectStream.writeObject(dp, prepareMsg);
-
-                //Se não estiverem todas, reenviar PREPARE por MC
-                internalInfo.getMulticastSocket().send(dp);
-                try {
-                    //Esperar confirmações com timeout 1 sec
-                    confirmationSocket.setSoTimeout(1000);
-                    while (true) {
-                        confirmationSocket.receive(dp);
-                        Prepare confirmation = objectStream.readObject(dp, Prepare.class);
-                        confirmationList.add(confirmation);
-                    }
-                } catch (SocketException | SocketTimeoutException e) {
-                    //Verificar confirmações com lista de servidores
-                    if(confirmationCounter == 0){
-                        break;
-                    }else if(verifyConfirmations(confirmationList))
-                        repeat = false;
-                    else {
-                        confirmationList.clear();
-                        confirmationCounter--;
-                    }
-                }
-            }
-
+            return verifyConfirmations(confirmationList);
             //Verificar confirmações com lista de servidores
-            if(verifyConfirmations(confirmationList)){
-                //Se estiverem todos enviar COMMIT
-                try {
-                    sendCommit(dp);
-                } catch (IOException e) {
-                    System.out.println("[AttendClientThread] - error on updateRoutine - could not send commit: "+ e.getMessage());
-                    return false;
-                }
-                //Executar alteração
-                return true;
-            }
-            //Se não estiverem todas enviar ABORT
-            sendAbort(dp);
-            //Cancelar a operação e informar utilizador
-
         }  catch (IOException e) {
             System.out.println("[AttendClientThread] - error on updateRoutine - could not send prepare: "+ e.getMessage());
+            return false;
         }
-        return false;
     }
+
+
+    private void sendPrepare(DatagramPacket dp, Query query, Set<Prepare> confirmationList, DatagramSocket confirmationSocket) throws IOException {
+        //Enviar PREPARE por MC
+        boolean repeat = true;
+        int confirmationCounter = 1;
+
+
+        while (repeat) {
+            Prepare prepareMsg = new Prepare(
+                    TypeOfMulticastMsg.PREPARE,
+                    query,
+                    query.getNumVersion(),
+                    internalInfo.getIp(),
+                    confirmationSocket.getLocalPort()
+            );
+
+            ObjectStream objectStream = new ObjectStream();
+            objectStream.writeObject(dp, prepareMsg);
+
+            //Se não estiverem todas, reenviar PREPARE por MC
+            internalInfo.getMulticastSocket().send(dp);
+            try {
+                //Esperar confirmações com timeout 1 sec
+                confirmationSocket.setSoTimeout(1000);
+                while (true) {
+                    confirmationSocket.receive(dp);
+                    Prepare confirmation = objectStream.readObject(dp, Prepare.class);
+                    confirmationList.add(confirmation);
+                    if (confirmationList.size() == internalInfo.getHeatBeats().size() && verifyConfirmations(confirmationList) ){
+                        repeat = false;
+                        break;
+                    }
+                }
+            } catch (SocketException | SocketTimeoutException e) {
+                //Verificar confirmações com lista de servidores
+                if(confirmationCounter == 0){
+                    break;
+                }else if(verifyConfirmations(confirmationList))
+                    repeat = false;
+                else {
+                    confirmationList.clear();
+                    confirmationCounter--;
+                }
+            }
+        }
+    }
+
     /**
      * Method to send an Abort message through Multicast
-     * @param dp Datagrampacket created for multicast message transmition
      * @throws IOException when it fails sending the packet
      */
-    private void sendAbort(DatagramPacket dp) throws IOException {
+    private void sendAbort() throws IOException {
+        DatagramPacket dp = new DatagramPacket(new byte[1000], 1000, InetAddress.getByName(Constants.MULTICAST_IP), Constants.MULTICAST_PORT);
         Abort abortMsg = new Abort(TypeOfMulticastMsg.ABORT);
         ObjectStream objectStream = new ObjectStream();
         objectStream.writeObject(dp,abortMsg);
@@ -456,10 +537,10 @@ public class AttendClientThread extends Thread{
 
     /**
      * Method to send a Commit message through Multicast
-     * @param dp Datagrampacket created for multicast message transmition
      * @throws IOException when it fails sending the packet
      */
-    private void sendCommit(DatagramPacket dp) throws IOException {
+    private void sendCommit() throws IOException {
+        DatagramPacket dp = new DatagramPacket(new byte[1000], 1000, InetAddress.getByName(Constants.MULTICAST_IP), Constants.MULTICAST_PORT);
         Commit commitMsg = new Commit(TypeOfMulticastMsg.COMMIT, internalInfo.getIp(), internalInfo.getPortUdp());
         ObjectStream os = new ObjectStream();
         os.writeObject(dp,commitMsg);
@@ -467,17 +548,19 @@ public class AttendClientThread extends Thread{
     }
 
     private boolean verifyConfirmations(Set<Prepare> confirmationList) {
-        if(confirmationList.size() == internalInfo.getHeatBeats().size()) {
-            int count = 0;
-            for (Prepare p : confirmationList) {
-                for (HeartBeat hb : internalInfo.getHeatBeats())
-                    if (p.getIp().equals(hb.getIp()) && p.getPortUdpClients() == hb.getPortUdp()) {
-                        count++;
-                        break;
-                    }
+        synchronized (internalInfo.getHeatBeats()){
+            if(confirmationList.size() == internalInfo.getHeatBeats().size()) {
+                int count = 0;
+                for (Prepare p : confirmationList) {
+                    for (HeartBeat hb : internalInfo.getHeatBeats())
+                        if (p.getIp().equals(hb.getIp()) && p.getPortUdpClients() == hb.getPortUdp()) {
+                            count++;
+                            break;
+                        }
+                }
+                if (count == internalInfo.getHeatBeats().size())
+                    return true;
             }
-            if (count == internalInfo.getHeatBeats().size())
-                return true;
         }
         return false;
     }
@@ -490,7 +573,7 @@ public class AttendClientThread extends Thread{
             list.addAll(internalInfo.getHeatBeats());
             list.remove(new HeartBeat(internalInfo.getIp(),internalInfo.getPortUdp()));
             ansMsg.setServerList(list);
-            oos.writeObject(ansMsg);
+            oos.writeUnshared(ansMsg);
         } catch (IOException e) {
             System.out.println("[AttendClientThread] - failed to send server list" + e.getMessage());
         }
@@ -505,15 +588,17 @@ public class AttendClientThread extends Thread{
             Query query = dbComm.getRegisterUserQuery(r.getUserName(), r.getNome(), r.getPassword());
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
+                sendCommit();
                 msg = new ClientMSG(ClientsPayloadType.USER_REGISTER);
             } else {
+                sendAbort();
                 msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
             }
         } else {
             msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
 
         }
-        oos.writeObject(msg);
+        oos.writeUnshared(msg);
     }
 
     private void doLogin(ClientMSG msgClient, DBCommunicationManager dbComm) throws SQLException, IOException {
@@ -523,16 +608,18 @@ public class AttendClientThread extends Thread{
             Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.AUTHENTICATED);
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
+                sendCommit();
                 msg = new ClientMSG(ClientsPayloadType.LOGGED_IN);
                 msg.setUser(new User(u.getIdUser(),u.getRole(),u.getUsername(), u.getNome()));
             } else {
+                sendAbort();
                 msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
             }
         } else {
 
             msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
         }
-        oos.writeObject(msg);
+        oos.writeUnshared(msg);
     }
 
 
@@ -541,7 +628,25 @@ public class AttendClientThread extends Thread{
             System.out.println("Tentativa de envio de mengsane a null ");
             return;
         }
-        oos.writeObject(msg);
+        oos.writeUnshared(msg);
     }
 
+
+    public void updateLastMessage(ClientMSG msg){
+        lastMessageReceive =
+            switch (msg.getAction()){
+                case CONSULT_SPECTACLE, CONSULT_SPECTACLE_DETAILS, CHOOSE_SPECTACLE_24H,
+                        CONSULT_PAYED_RESERVATION, CONSULT_UNPAYED_RESERVATION, GET_RESERVS -> msg;
+                case EXIT, LOGOUT, LOGIN, EDIT_USER -> null;
+                default -> lastMessageReceive;
+            };
+
+    }
+    @Override
+    public void update() throws IOException {
+        if (lastMessageReceive != null) {
+            System.out.println("Vou enviar mensagem - " + lastMessageReceive.getAction());
+            handleClientRequest(lastMessageReceive);
+        }
+    }
 }

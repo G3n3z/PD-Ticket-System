@@ -5,6 +5,7 @@ import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.payload.tcp.Request.Espetaculos;
 import com.isec.pd22.payload.tcp.Request.RequestDetailsEspetaculo;
 import com.isec.pd22.server.models.Espetaculo;
+import com.isec.pd22.utils.Constants;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -20,7 +21,8 @@ public class TableEspetaculo extends TableView<Espetaculo> {
     VBox vBox;
     Label title;
     ScrollPane scrollPane;
-    TableColumn<Espetaculo, Button> colRemove;
+    TableColumn<Espetaculo, Button> colRemove, colShow, colSwitchVisible;
+    TableColumn<Espetaculo, String> columnVisivel;
     public TableEspetaculo(ModelManager modelManager) {
         this.modelManager = modelManager;
         createTable();
@@ -39,17 +41,23 @@ public class TableEspetaculo extends TableView<Espetaculo> {
         colDescricao.setCellValueFactory(new PropertyValueFactory<>("descricao"));
         TableColumn<Espetaculo, String> columnTipo = new TableColumn<>("Tipo");
         columnTipo.setCellValueFactory(new PropertyValueFactory<>("tipo"));
-        TableColumn<Espetaculo, Date> columnDate = new TableColumn<>("Data");
-        columnDate.setCellValueFactory(new PropertyValueFactory<>("data_hora"));
+        TableColumn<Espetaculo, String> columnDate = new TableColumn<>("Data");
+        columnDate.setCellValueFactory(espectaculoButtonCellDataFeatures ->
+                new ReadOnlyObjectWrapper<>(Constants.dateToString(espectaculoButtonCellDataFeatures.getValue()
+                        .getData_hora())));
         TableColumn<Espetaculo, Integer> columnDuracao = new TableColumn<>("Duração");
         columnDuracao.setCellValueFactory(new PropertyValueFactory<>("duracao"));
         TableColumn<Espetaculo, String> columnLocal = new TableColumn<>("Local");
         columnLocal.setCellValueFactory(new PropertyValueFactory<>("local"));
+        TableColumn<Espetaculo, String> columnLocalidade = new TableColumn<>("Localidade");
+        columnLocalidade.setCellValueFactory(new PropertyValueFactory<>("localidade"));
+        TableColumn<Espetaculo, String> columnPais = new TableColumn<>("País");
+        columnPais.setCellValueFactory(new PropertyValueFactory<>("pais"));
         TableColumn<Espetaculo, String> columnClassificacao = new TableColumn<>("Classifição");
         columnClassificacao.setCellValueFactory(new PropertyValueFactory<>("classificacao_etaria"));
-        TableColumn<Espetaculo, Integer> columnVisivel = new TableColumn<>("visivel");
+        columnVisivel = new TableColumn<>("visivel");
         columnVisivel.setCellValueFactory(new PropertyValueFactory<>("visivel"));
-        TableColumn<Espetaculo, Button> colShow = new TableColumn<>("Ver");
+        colShow = new TableColumn<>("Ver");
         colShow.setCellValueFactory(espectaculoButtonCellDataFeatures -> {
             Button button = new Button("Ver Detalhes");
             button.setOnAction(actionEvent -> {
@@ -66,16 +74,32 @@ public class TableEspetaculo extends TableView<Espetaculo> {
         colRemove.setCellValueFactory(espetaculoButtonCellDataFeatures ->  {
             Button button = new Button("Remover");
             button.setOnAction(actionEvent -> {
-                Espetaculos espetaculos = new Espetaculos(ClientActions.DELETE_SPECTACLE);
-                espetaculos.setEspetaculos(new ArrayList<>( List.of(espetaculoButtonCellDataFeatures.getValue())));
-                espetaculos.setUser(modelManager.getUser());
-                modelManager.sendMessage(espetaculos);
+                RequestDetailsEspetaculo espetaculo = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
+                espetaculo.setEspetaculo(espetaculoButtonCellDataFeatures.getValue());
+                espetaculo.setUser(modelManager.getUser());
+                modelManager.sendMessage(espetaculo);
             });
             return new ReadOnlyObjectWrapper<>(button);
         });
-        setFixedCellSize(50);
-        getColumns().addAll(colDescricao, columnTipo, columnDate, columnDuracao, columnLocal, columnClassificacao, columnVisivel,
-                colShow);
+        colSwitchVisible = new TableColumn<>("Visibilidade");
+        colSwitchVisible.setCellValueFactory(espetaculoButtonCellDataFeatures ->  {
+            Button button = new Button("Mudar Vis");
+            button.setOnAction(actionEvent -> {
+                RequestDetailsEspetaculo espetaculo = new RequestDetailsEspetaculo(ClientActions.SWITCH_VISIBILITY);
+                espetaculo.setEspetaculo(espetaculoButtonCellDataFeatures.getValue());
+                espetaculo.setUser(modelManager.getUser());
+                modelManager.sendMessage(espetaculo);
+            });
+            return new ReadOnlyObjectWrapper<>(button);
+        });
+        setFixedCellSize(40);
+        getColumns().addAll(colDescricao, columnTipo, columnDate, columnDuracao, columnLocal, columnLocalidade, columnPais, columnClassificacao);
+        colDescricao.setPrefWidth(200);
+        columnDate.setPrefWidth(150);
+        colShow.setPrefWidth(90);
+        colRemove.setPrefWidth(90);
+        columnLocal.setPrefWidth(200);
+
         setPrefHeight(400);
         setPrefWidth(1000);
     }
@@ -83,6 +107,9 @@ public class TableEspetaculo extends TableView<Espetaculo> {
 
     public void addButtonRemove(){
         if (!getColumns().contains(colRemove)){
+            getColumns().add(columnVisivel);
+            getColumns().add(colShow);
+            getColumns().add(colSwitchVisible);
             getColumns().add(colRemove);
         }
 
@@ -90,9 +117,12 @@ public class TableEspetaculo extends TableView<Espetaculo> {
 
     public void removeButtonRemove(){
         if (getColumns().contains(colRemove)){
+            getColumns().remove(columnVisivel);
+            getColumns().remove(colShow);
+            getColumns().remove(colSwitchVisible);
             getColumns().remove(colRemove);
         }
-
+        getColumns().add(colShow);
     }
 
 }

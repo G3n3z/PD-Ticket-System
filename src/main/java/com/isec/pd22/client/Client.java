@@ -98,6 +98,9 @@ public class Client {
             case TRY_LATER -> modelManager.tryLater();
             case SUBMIT_RESERVATION_NOT_PAYED -> modelManager.reservationWaitingPay(mensage);
             case SUBMIT_RESERVATION_COMPLETE -> modelManager.reservationComplete(mensage);
+            case DELETE_SPECTACLE -> {
+                modelManager.removeSpectacle(mensage);
+            }
         }
 
     }

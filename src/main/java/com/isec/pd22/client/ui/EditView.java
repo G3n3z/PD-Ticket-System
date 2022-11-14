@@ -25,12 +25,13 @@ public class EditView extends BorderPane {
     VBox vBox;
     Label labelUsername, labelName, labelPassword;
     TextField tfUsername, tfName, tfPassword;
-    Button btnSubmit, btnBack;
+    Button btnSubmit;
 
     public EditView(ModelManager modelManager) {
         this.modelManager = modelManager;
         createViews();
         registerHandlers();
+        updateView();
     }
 
 
@@ -65,12 +66,9 @@ public class EditView extends BorderPane {
         hbox.getChildren().addAll(vBox);
         hbox.setAlignment(Pos.CENTER);
         btnSubmit = new Button("Submeter");
-        btnBack = new Button("Voltar");
-        btnBack.setPrefWidth(100);
-        btnBack.setPrefHeight(40);
         btnSubmit.setPrefWidth(100);
         btnSubmit.setPrefHeight(40);
-        HBox hboxButtons = new HBox(btnBack, btnSubmit);
+        HBox hboxButtons = new HBox(btnSubmit);
         hboxButtons.setAlignment(Pos.CENTER);
         hboxButtons.setSpacing(20);
         vBox.getChildren().add(hboxButtons);
@@ -78,7 +76,6 @@ public class EditView extends BorderPane {
         setCenter(hbox);
     }
     private void registerHandlers() {
-        modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, (event) -> updateView() );
         modelManager.addPropertyChangeListener(ModelManager.EDIT_USER, (event) -> updateView());
         btnSubmit.setOnAction(actionEvent -> {
             String username = (tfUsername.getText().isBlank() ? modelManager.getUser().getUsername() : tfUsername.getText());
@@ -92,13 +89,9 @@ public class EditView extends BorderPane {
             msg.setUser(user);
             modelManager.sendMessage(msg);
         });
-        btnBack.setOnAction(actionEvent -> {
-            this.setVisible(false);
-        });
     }
 
     private void updateView() {
-        this.setVisible(true);
         tfUsername.setText(modelManager.getUser().getUsername());
         tfName.setText(modelManager.getUser().getNome());
     }

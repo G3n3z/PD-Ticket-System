@@ -1,15 +1,14 @@
 package com.isec.pd22.server.models;
 
 import com.isec.pd22.enums.Status;
+import com.isec.pd22.interfaces.Observer;
 import com.isec.pd22.payload.HeartBeat;
 import com.isec.pd22.utils.Constants;
+import javafx.scene.SubScene;
 
 import java.net.Socket;
-import java.util.ArrayList;
+import java.util.*;
 import java.net.MulticastSocket;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 
@@ -38,6 +37,8 @@ public class InternalInfo {
 
     public Condition condition;
 
+    Set<Observer> observers;
+
     public InternalInfo() {
     }
 
@@ -47,7 +48,13 @@ public class InternalInfo {
         this.url_db = Constants.BASE_URL_DB + url_db;
         this.url = Constants.BASE_URL + url_db;
         this.allClientSockets = new ArrayList<>();
+        this.observers = new HashSet<>();
     }
+
+    public Set<Observer> getObservers() {
+        return observers;
+    }
+
 
     public String getIp() {
         return ip;
@@ -177,6 +184,33 @@ public class InternalInfo {
         long now = new Date().getTime();
         synchronized (this.heartBeats){
             heartBeats.removeIf( heartBeat -> (now - heartBeat.getUnixTimeSinceLastHeartBeat()) >= 35000);
+        }
+    }
+
+    public void addObserver(Observer observer) {
+        synchronized (observers){
+            observers.add(observer);
+        }
+    }
+
+    public void removeObserver(Observer observer){
+        synchronized (observers){
+            observers.remove(observer);
+        }
+    }
+
+    public void notifyAllObservers(){
+        System.out.println("Vou notificar");
+        synchronized (observers){
+            Iterator<Observer> it =  observers.iterator();
+            while (it.hasNext()){
+                Observer observer = it.next();
+                try {
+                    observer.update();
+                }catch (Exception e){
+                    it.remove();
+                }
+            }
         }
     }
 }

@@ -5,6 +5,7 @@ import com.isec.pd22.client.ui.utils.AlertSingleton;
 import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
+import com.isec.pd22.payload.tcp.Request.RequestDetailsEspetaculo;
 import javafx.application.Platform;
 import javafx.scene.Node;
 import javafx.scene.layout.BorderPane;
@@ -114,7 +115,7 @@ public class RootPane extends BorderPane {
     private void badRequest() {
         ClientMSG lastMessage = modelManager.getLastMessage();
 
-        if (lastMessage == null) {
+        if (lastMessage == null || lastMessage.getAction() == null ) {
             AlertSingleton.getInstanceWarning().setAlertText("Erro de Mensagem", "", "Não foi possivel fazer o pedido ao servidor")
                     .showAndWait();
             return;
@@ -124,6 +125,7 @@ public class RootPane extends BorderPane {
 
         switch (lastMessage.getAction()) {
             // TODO tratar as diferentes mensagens
+            case CONSULT_SPECTACLE_DETAILS -> {modelManager.fireEspectaculo(new RequestDetailsEspetaculo(ClientActions.CONSULT_SPECTACLE_DETAILS));}
             default -> {}
         }
 

@@ -17,6 +17,7 @@ public class RequestListReservas extends ClientMSG {
         this.reservas = reservas;
     }
 
+
     public RequestListReservas(ClientsPayloadType clientsPayloadType) {
         super(clientsPayloadType);
     }
@@ -28,6 +29,11 @@ public class RequestListReservas extends ClientMSG {
 
     public RequestListReservas(ClientActions action) {
         super(action);
+    }
+
+    public RequestListReservas(ClientActions action, ClientsPayloadType clientsPayloadType, List<Reserva> reservas) {
+        super(action, clientsPayloadType);
+        this.reservas = reservas;
     }
 
     public List<Reserva> getReservas() {
