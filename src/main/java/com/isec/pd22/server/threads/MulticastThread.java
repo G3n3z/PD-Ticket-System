@@ -8,6 +8,7 @@ import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.Query;
 import com.isec.pd22.server.tasks.SaveHeartBeatTask;
 import com.isec.pd22.server.tasks.UpdateDBTask;
+import com.isec.pd22.utils.Constants;
 import com.isec.pd22.utils.DBVersionManager;
 import com.isec.pd22.utils.ObjectStream;
 
@@ -69,9 +70,9 @@ public class MulticastThread extends Thread{
                 }
                 System.out.println("MSG RECEBIDA: " + msg.getTypeMsg() + " from " + packet.getPort());
                 switch (internalInfo.getStatus()){
-                    case AVAILABLE -> responseToMsgAvailable(msg, packet);
-                    case UPDATING -> {responseToMsgUpdating(msg, packet);}
-                    case UNAVAILABLE -> {responseToMsgUnavailable(msg, packet);}
+                    case AVAILABLE -> responseToMsgAvailable(msg, dp);
+                    case UPDATING -> {responseToMsgUpdating(msg, dp);}
+                    case UNAVAILABLE -> {responseToMsgUnavailable(msg, dp);}
                 }
 
             }catch (SocketTimeoutException e){
@@ -83,16 +84,24 @@ public class MulticastThread extends Thread{
             }
             catch (IOException e) {
                 System.out.println("[MulticastThread] - erro na rececao: "+ e.getMessage());
-                // e.printStackTrace();
+                e.printStackTrace();
+                if (!internalInfo.isFinish())
+                    sendExitMessage(internalInfo, multicastSocket);
+                //                System.out.println(e);
                 break;
             } catch (ClassNotFoundException e) {
                 System.out.println("[MulticastThread] - erro no cast da class: "+ e.getMessage());
-                // e.printStackTrace();
+                e.printStackTrace();
+                if (!internalInfo.isFinish())
+                    sendExitMessage(internalInfo, multicastSocket);
             }
 
         }
         System.out.println("A sair da thread multicast");
     }
+
+
+
     private void responseToMsgAvailable(MulticastMSG msg, DatagramPacket packet) {
         System.out.println("[Multicast Available] " + msg.getTypeMsg());
         switch (msg.getTypeMsg()){
@@ -122,6 +131,10 @@ public class MulticastThread extends Thread{
             }
             case PREPARE -> {
                 responseToPrepare(msg);
+            }
+            case EXIT -> {
+                Exit e = (Exit) msg;
+                internalInfo.removeHeatBeat(e.getHeartBeat());
             }
         }
     }
@@ -163,6 +176,9 @@ public class MulticastThread extends Thread{
                 internalInfo.condition.signalAll();
                 internalInfo.lock.unlock();
 
+            }case EXIT -> {
+                Exit e = (Exit) msg;
+                internalInfo.removeHeatBeat(e.getHeartBeat());
             }
         }
     }
@@ -174,6 +190,9 @@ public class MulticastThread extends Thread{
                 HeartBeat heartBeat = (HeartBeat) msg;
                 new SaveHeartBeatTask(internalInfo, heartBeat).start();
                 heartBeatToPackage.put(heartBeat, packet);
+            }case EXIT -> {
+                Exit e = (Exit) msg;
+                internalInfo.removeHeatBeat(e.getHeartBeat());
             }
 
         }
@@ -224,8 +243,10 @@ public class MulticastThread extends Thread{
             objectStream.writeObject(datagramPacket, updateDB);
             multicastSocket.send(datagramPacket);
 
-            serverSocket.setSoTimeout(3000);
+            serverSocket.setSoTimeout(7000);
             Socket socket = serverSocket.accept();
+            System.out.println("arualizaDB - aceitou conecao");
+            socket.setSoTimeout(10000);
             ObjectOutputStream oos = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             oos.writeUnshared(internalInfo.getNumDB());
@@ -251,6 +272,17 @@ public class MulticastThread extends Thread{
             if(dbVersionManager != null)
                 dbVersionManager.closeConnection();
 
+        }
+    }
+
+    public static void sendExitMessage(InternalInfo internalInfo, MulticastSocket multicastSocket) {
+        Exit exit = new Exit(new HeartBeat(internalInfo.getIp(), internalInfo.getPortUdp()));
+        try {
+            DatagramPacket packet = new DatagramPacket(new byte[20000], 20000, InetAddress.getByName(Constants.MULTICAST_IP), Constants.MULTICAST_PORT);
+            new ObjectStream().writeObject(packet, exit);
+            multicastSocket.send(packet);
+        } catch (IOException e) {
+            System.out.println("[MULTICASTHREAD] - Nao foi possivel mandar mensagem exit " + e);
         }
     }
 }

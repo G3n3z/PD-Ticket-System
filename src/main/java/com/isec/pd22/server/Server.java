@@ -1,6 +1,8 @@
 package com.isec.pd22.server;
 
+
 import com.isec.pd22.server.models.InternalInfo;
+import com.isec.pd22.server.threads.MulticastThread;
 import com.isec.pd22.server.threads.StartServices;
 import com.isec.pd22.utils.Constants;
 
@@ -42,7 +44,6 @@ public class Server {
 
         StartServices startServices = new StartServices(info);
         startServices.start();
-
         while (!isFinish){
             imprimeMenu();
             input = scanner.nextInt();
@@ -50,10 +51,7 @@ public class Server {
             switch (input){
                 case 1 -> {
                     isFinish = true;
-                    synchronized (info){
-                        info.setFinish(true);
-                        startServices.close();
-                    }
+                    finish(info);
                 }
                 case 2 -> {
                     synchronized (info.getHeatBeats()){
@@ -66,10 +64,27 @@ public class Server {
 
         }
 
-
+        startServices.finishTimer();
+        try {
+            startServices.join();
+        } catch (InterruptedException ignored) {
+        }
         //TODO:  Esperar pelas threads terminem, gravar estados
         System.out.println("Adeus e obrigado");
 
+    }
+
+    private static void finish(InternalInfo info) {
+        int count = 0;
+        synchronized (info){
+            info.setFinish(true);
+        }
+        synchronized (info.getHeatBeats()){
+            count = info.getHeatBeats().size();
+        }
+        if(count > 1)
+            MulticastThread.sendExitMessage(info, info.getMulticastSocket());
+        startServices.close();
     }
 
     private static void imprimeMenu() {
@@ -95,4 +110,5 @@ public class Server {
         socket.joinGroup(sa, nif);
         return socket;
     }
+
 }

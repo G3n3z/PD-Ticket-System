@@ -4,7 +4,6 @@ import com.isec.pd22.enums.Status;
 import com.isec.pd22.interfaces.Observer;
 import com.isec.pd22.payload.HeartBeat;
 import com.isec.pd22.utils.Constants;
-import javafx.scene.SubScene;
 
 import java.net.Socket;
 import java.util.*;
@@ -219,6 +218,12 @@ public class InternalInfo {
                     it.remove();
                 }
             }
+        }
+    }
+
+    public void removeHeatBeat(HeartBeat heartBeat) {
+        synchronized (heartBeats){
+            heartBeats.remove(heartBeat);
         }
     }
 }

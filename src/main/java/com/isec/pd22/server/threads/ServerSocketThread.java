@@ -100,7 +100,6 @@ public class ServerSocketThread extends Thread
             HeartBeat heartBeat;
             synchronized (internalInfo) {
                 heartBeat = new HeartBeat(
-                        TypeOfMulticastMsg.HEARTBEAT,
                         internalInfo.getIp(),
                         internalInfo.getPortTcp(),
                         internalInfo.getNumClients(),
