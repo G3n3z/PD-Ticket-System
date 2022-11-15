@@ -23,7 +23,7 @@ public class RootPane extends BorderPane {
     String [] args;
 
     StackPane stack;
-
+    Node node;
 
     public RootPane(ModelManager modelManager, Stage stage, String [] args) {
         this.modelManager = modelManager;
@@ -43,16 +43,11 @@ public class RootPane extends BorderPane {
 
     private void createViews() {
         stack = new StackPane();
-//        LogInView logInView = new LogInView(modelManager);
-//        RegisterView registerView = new RegisterView(modelManager);
-//        AdminView adminView = new AdminView(modelManager);
-//        stack.getChildren().addAll(logInView, adminView, registerView);
         setCenter(stack);
         changeView();
 
     }
     public void changeView(){
-        Node node;
         switch (modelManager.getStatusClient()){
             case NOT_LOGGED -> node = new LogInView(modelManager);
             case REGISTER -> node = new RegisterView(modelManager);
@@ -126,6 +121,11 @@ public class RootPane extends BorderPane {
         switch (lastMessage.getAction()) {
             // TODO tratar as diferentes mensagens
             case CONSULT_SPECTACLE_DETAILS -> {modelManager.fireEspectaculo(new RequestDetailsEspetaculo(ClientActions.CONSULT_SPECTACLE_DETAILS));}
+            case CONSULT_SPECTACLE -> {
+                if(node instanceof AdminView adminView){
+                    adminView.goToSpectacles();
+                }
+            }
             default -> {}
         }
 

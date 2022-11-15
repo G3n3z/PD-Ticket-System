@@ -2,7 +2,6 @@ package com.isec.pd22.payload;
 
 import com.isec.pd22.enums.Status;
 import com.isec.pd22.enums.TypeOfMulticastMsg;
-import com.isec.pd22.server.models.ServerHeartBeat;
 
 import java.util.Date;
 
@@ -16,9 +15,9 @@ public class HeartBeat extends MulticastMSG implements Comparable<HeartBeat>{
 
     long unixTimeSinceLastHeartBeat;
 
-    public HeartBeat(TypeOfMulticastMsg typeMsg, String ip, int portTcpClients,
+    public HeartBeat(String ip, int portTcpClients,
                      int numOfClients, Status statusServer, int numVersionDB, int portUdp) {
-        super(typeMsg);
+        super(TypeOfMulticastMsg.HEARTBEAT);
         this.ip = ip;
         this.portTcpClients = portTcpClients;
         this.numOfClients = numOfClients;

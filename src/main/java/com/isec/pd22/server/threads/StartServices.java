@@ -32,6 +32,9 @@ public class StartServices extends Thread {
 
     DBVersionManager dbVersionManager;
 
+    Timer timer = null;
+    HeartBeatTask heartBeatTask = null;
+
     Map<HeartBeat, DatagramPacket> heartBeatsPackage = new HashMap<>();
 
     ObjectStream os = new ObjectStream();
@@ -161,8 +164,8 @@ public class StartServices extends Thread {
         ServersRequestThread serversRequestThread = new ServersRequestThread(serversRequestSocket, internalInfo);
         serversRequestThread.start();
 
-        Timer timer = new Timer(true);
-        HeartBeatTask heartBeatTask = new HeartBeatTask(internalInfo);
+        timer = new Timer(true);
+        heartBeatTask = new HeartBeatTask(internalInfo);
         timer.scheduleAtFixedRate(heartBeatTask, 0, 10000);
         MulticastThread multicastThread = new MulticastThread(internalInfo, timer);
         multicastThread.start();
@@ -170,15 +173,23 @@ public class StartServices extends Thread {
         try {
             serverSocketThread.join();
             multicastThread.join();
+            socket.close();
         } catch (InterruptedException ignored) {
-        } finally {
+        }
+
+        System.out.println("A sair da thread Start Services");
+    }
+
+    public void finishTimer(){
+        if (heartBeatTask != null){
             heartBeatTask.onlyOnceTime = true;
             heartBeatTask.cancel();
+        }
+        if (timer != null){
             timer.cancel();
             timer.purge();
         }
 
-        System.out.println("A sair da thread Start Services");
     }
 
     private void startCondition() {
