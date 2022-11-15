@@ -88,7 +88,7 @@ public class MulticastThread extends Thread{
                 if (!internalInfo.isFinish())
                     sendExitMessage(internalInfo, multicastSocket);
                 //                System.out.println(e);
-//                break;
+                break;
             } catch (ClassNotFoundException e) {
                 System.out.println("[MulticastThread] - erro no cast da class: "+ e.getMessage());
                 e.printStackTrace();

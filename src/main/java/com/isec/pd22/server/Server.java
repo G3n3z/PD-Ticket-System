@@ -84,7 +84,7 @@ public class Server {
         }
         if(count > 1)
             MulticastThread.sendExitMessage(info, info.getMulticastSocket());
-        info.getMulticastSocket().close();
+        startServices.close();
     }
 
     private static void imprimeMenu() {

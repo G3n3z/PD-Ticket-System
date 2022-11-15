@@ -4,8 +4,8 @@ import com.isec.pd22.enums.ClientsPayloadType;
 import com.isec.pd22.enums.Status;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 public class ServersRequestPayload implements Serializable {
@@ -15,7 +15,7 @@ public class ServersRequestPayload implements Serializable {
 
     private final ClientsPayloadType clientsPayloadType;
 
-    public ServersRequestPayload(Set<HeartBeat> serversList, ClientsPayloadType clientsPayloadType) {
+    public ServersRequestPayload(ArrayList<HeartBeat> serversList, ClientsPayloadType clientsPayloadType) {
         this.clientsPayloadType = clientsPayloadType;
         this.serversListCollection = serversList.stream().filter(heartBeat -> heartBeat.statusServer != Status.UNAVAILABLE).collect(Collectors.<HeartBeat>toList());
     }

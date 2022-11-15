@@ -83,6 +83,14 @@ public class InternalInfo {
         return heartBeats;
     }
 
+    public ArrayList<HeartBeat> getOrderedHeatBeats() {
+        ArrayList<HeartBeat> servers = new ArrayList<>(heartBeats);
+
+        Collections.sort(servers);
+
+        return servers;
+    }
+
     public void setHeartBeats(Set<HeartBeat> heartBeats) {
         this.heartBeats = heartBeats;
     }
