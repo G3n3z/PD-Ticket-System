@@ -10,6 +10,7 @@ import com.isec.pd22.utils.Constants;
 import com.isec.pd22.utils.DBCommunicationManager;
 import com.isec.pd22.utils.DBVersionManager;
 import com.isec.pd22.utils.ObjectStream;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 
 import java.io.*;
 import java.net.*;
@@ -586,7 +587,10 @@ public class AttendClientThread extends Thread implements Observer {
         Register r = (Register) msgClient;
         ClientMSG msg;
         if (dbComm.existsUserByUsernameOrName(r.getNome(), r.getUserName())) {
-            Query query = dbComm.getRegisterUserQuery(r.getUserName(), r.getNome(), r.getPassword());
+            String encryptedPassword = BCrypt.hashpw(r.getPassword(), BCrypt.gensalt());
+
+            Query query = dbComm.getRegisterUserQuery(r.getUserName(), r.getNome(), encryptedPassword);
+
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
                 sendCommit();
@@ -605,7 +609,8 @@ public class AttendClientThread extends Thread implements Observer {
     private void doLogin(ClientMSG msgClient, DBCommunicationManager dbComm) throws SQLException, IOException {
         ClientMSG msg;
         User u = dbComm.getUser(msgClient.getUser().getUsername());
-        if (u != null && u.getPassword().equals(msgClient.getUser().getPassword())) {
+
+        if (u != null && BCrypt.checkpw(msgClient.getUser().getPassword(), u.getPassword())) {
             Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.AUTHENTICATED);
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
