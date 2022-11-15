@@ -64,8 +64,8 @@ public class Client {
         switch (mensage.getClientsPayloadType()) {
             case CONNECTION_LOST -> {
                 if (!isClosingConnection) {
-                    System.out.println("Restablished");
                     reestablishNewServerConnection();
+                    System.out.println("Restablished");
                     break;
                 }
 

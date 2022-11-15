@@ -83,12 +83,11 @@ public class MulticastThread extends Thread{
             }
             catch (IOException e) {
                 System.out.println("[MulticastThread] - erro na rececao: "+ e.getMessage());
-                e.printStackTrace();
-                //                System.out.println(e);
-//                break;
+                // e.printStackTrace();
+                break;
             } catch (ClassNotFoundException e) {
                 System.out.println("[MulticastThread] - erro no cast da class: "+ e.getMessage());
-                e.printStackTrace();
+                // e.printStackTrace();
             }
 
         }

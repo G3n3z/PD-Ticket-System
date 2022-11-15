@@ -17,6 +17,8 @@ public class ServersRequestThread extends Thread{
     private final DatagramSocket socket;
     private final InternalInfo internalInfo;
 
+    private boolean toClose = false;
+
     public ServersRequestThread(DatagramSocket socket, InternalInfo internalInfo) {
         this.socket = socket;
         this.internalInfo = internalInfo;
@@ -29,12 +31,12 @@ public class ServersRequestThread extends Thread{
         this.messagesReaderRoutine();
     }
 
-    public void sendMessage(PackageModel packagedMessageModel) {
+    private void sendMessage(PackageModel packagedMessageModel) throws IOException {
         try {
             UdpUtils.sendObject(socket, packagedMessageModel.getPacket(), packagedMessageModel.getPayload());
         } catch (IOException e) {
             System.err.println(e.getMessage());
-            System.exit(1);
+            throw e;
         }
     }
 
@@ -61,8 +63,11 @@ public class ServersRequestThread extends Thread{
                 System.out.println("ERRO: waitMessage não consegui converter o objeto para o tipo certo.");
             }
             catch (IOException e) {
-                System.err.println(e.getMessage());
-                System.exit(1);
+                System.out.println(e.getMessage());
+
+                toClose = true;
+                semaphoreQueue.release(1);
+                break;
             }
         }
     }
@@ -72,19 +77,23 @@ public class ServersRequestThread extends Thread{
             try {
                 semaphoreQueue.acquire(1);
 
+                if (toClose){
+                    break;
+                }
+
                 PackageModel packedMessage = messagesQueue.pop();
 
                 this.onMessageProcessed(packedMessage);
 
-            } catch (InterruptedException e) {
-                System.err.println(e.getMessage());
-                System.exit(1);
+            } catch (InterruptedException | IOException e) {
+                System.out.println(e.getMessage());
+                break;
             }
         }
     }
 
-    private void onMessageProcessed(PackageModel packedMessage) {
-        ServersRequestPayload payload = new ServersRequestPayload(internalInfo.getHeatBeats(), ClientsPayloadType.REQUEST_SERVERS_SUCCESS);
+    private void onMessageProcessed(PackageModel packedMessage) throws IOException {
+        ServersRequestPayload payload = new ServersRequestPayload(internalInfo.getOrderedHeatBeats(), ClientsPayloadType.REQUEST_SERVERS_SUCCESS);
 
         sendMessage(new PackageModel(payload, packedMessage.getPacket()));
     }

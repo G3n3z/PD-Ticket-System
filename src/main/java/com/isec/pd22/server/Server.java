@@ -52,7 +52,7 @@ public class Server {
                     isFinish = true;
                     synchronized (info){
                         info.setFinish(true);
-                        info.getMulticastSocket().close();
+                        startServices.close();
                     }
                 }
                 case 2 -> {

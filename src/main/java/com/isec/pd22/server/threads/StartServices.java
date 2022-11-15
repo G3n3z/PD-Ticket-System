@@ -28,6 +28,8 @@ public class StartServices extends Thread {
     InternalInfo internalInfo;
     MulticastSocket socket;
 
+    DatagramSocket serversRequestSocket;
+
     Connection connection;
 
     DBVersionManager dbVersionManager;
@@ -90,6 +92,16 @@ public class StartServices extends Thread {
         startThreads();
     }
 
+    public void close() {
+        if (serversRequestSocket != null) {
+            serversRequestSocket.close();
+        }
+
+        if (socket != null) {
+            socket.close();
+        }
+    }
+
     private void receivedHeartBeat() throws SQLException, IOException, ClassNotFoundException {
 
         HeartBeat serverWithMaxDBVersion = internalInfo.getHeatBeats().stream().min(Comparator.comparingInt(HeartBeat::getNumVersionDB)).get();
@@ -141,7 +153,6 @@ public class StartServices extends Thread {
 
     private void startThreads() {
         ServerSocket serverSocket = null;
-        DatagramSocket serversRequestSocket = null;
         startCondition();
         try {
             // inicia serversocket thread
