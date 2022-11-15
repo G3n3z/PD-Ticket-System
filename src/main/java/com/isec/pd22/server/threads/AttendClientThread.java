@@ -114,6 +114,7 @@ public class AttendClientThread extends Thread implements Observer {
                 case EXIT -> {
                    exitClient(msgClient);
                 }
+                case LOGOUT ->logout(msgClient);
                 default -> actionsLogged(msgClient, dbComm);
             }
 
@@ -161,7 +162,6 @@ public class AttendClientThread extends Thread implements Observer {
                     case SWITCH_VISIBILITY -> msg = switchSpectacleVisibility(msgClient, user);
                     case CONSULT_SPECTACLE_DETAILS -> msg = consult_spectacle_details(msgClient);
                     case PAY_RESERVATION -> msg = payReservation(msgClient);
-                    case LOGOUT -> msg = logout(msgClient);
                 }
             } else {
                msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
@@ -378,6 +378,7 @@ public class AttendClientThread extends Thread implements Observer {
                 } catch (IOException e) {
                     System.out.println("[AttendClientThread] - switchSpectacleVisibility - could not send commit: " + e.getMessage());
                 }
+                return null;
             } else {
                 try {
                     sendAbort();
@@ -406,7 +407,7 @@ public class AttendClientThread extends Thread implements Observer {
         return req;
     }
 
-    private ClientMSG logout(ClientMSG msgClient) throws SQLException, IOException {
+    private void logout(ClientMSG msgClient) throws SQLException, IOException {
         ClientMSG msg;
         Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
         if (startUpdateRoutine(query, internalInfo)) {
@@ -418,7 +419,7 @@ public class AttendClientThread extends Thread implements Observer {
             msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
             msg.setAction(ClientActions.LOGOUT);
         }
-        return msg;
+        sendMessage(msg);
     }
 
     private boolean readFile(ClientMSG msgClient) throws IOException {

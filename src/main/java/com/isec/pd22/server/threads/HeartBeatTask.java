@@ -44,7 +44,7 @@ public class HeartBeatTask  extends TimerTask {
 
     @Override
     public void run() {
-        HeartBeat heartBeat = new HeartBeat(TypeOfMulticastMsg.HEARTBEAT, internalInfo.getIp(), internalInfo.getPortTcp(),
+        HeartBeat heartBeat = new HeartBeat( internalInfo.getIp(), internalInfo.getPortTcp(),
                 internalInfo.getNumClients(), internalInfo.getStatus(), internalInfo.getNumDB(), internalInfo.getPortUdp());
         byte bytes [] = new byte[1000];
         DatagramPacket packet = null;
