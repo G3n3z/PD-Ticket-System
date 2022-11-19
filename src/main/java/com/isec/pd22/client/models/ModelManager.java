@@ -1,6 +1,7 @@
 package com.isec.pd22.client.models;
 
 import com.isec.pd22.client.Client;
+import com.isec.pd22.client.View;
 import com.isec.pd22.client.threads.SendFile;
 import com.isec.pd22.client.ui.utils.AlertSingleton;
 import com.isec.pd22.client.ui.utils.ModalIndicator;
@@ -15,6 +16,7 @@ import com.isec.pd22.payload.tcp.Request.RequestListReservas;
 import com.isec.pd22.server.models.Espetaculo;
 import com.isec.pd22.server.models.Reserva;
 import com.isec.pd22.server.models.User;
+import javafx.scene.Node;
 import javafx.stage.Stage;
 
 import java.beans.PropertyChangeEvent;
@@ -56,16 +58,20 @@ public class ModelManager {
         data = new Data();
     }
 
+
     public void addPropertyChangeListener(String property, PropertyChangeListener listener){
         pcs.addPropertyChangeListener(property, listener);
     }
-
+    public void removePropertyChangeListener(String property, PropertyChangeListener listener){
+        pcs.removePropertyChangeListener(property, listener);
+    }
 
     public StatusClient getStatusClient() {
         return statusClient;
     }
 
     public void setStatusClient(StatusClient statusClient) {
+
         this.statusClient = statusClient;
         pcs.firePropertyChange(PROP_STATUS, null,null);
     }
