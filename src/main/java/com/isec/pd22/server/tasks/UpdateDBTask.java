@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
+import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -19,9 +20,11 @@ public class UpdateDBTask extends Thread{
 
     UpdateDB updateDB;
 
+    Connection connection;
     public UpdateDBTask(InternalInfo internalInfo, UpdateDB updateDB) {
         this.internalInfo = internalInfo;
         this.updateDB = updateDB;
+        connection = internalInfo.getConnection();
     }
 
     @Override
@@ -33,9 +36,9 @@ public class UpdateDBTask extends Thread{
             ObjectInputStream ois = new ObjectInputStream(socket.getInputStream());
             socket.setSoTimeout(10000);
             int numVersion = (int)ois.readObject();
-            DBVersionManager dbVersionManager = new DBVersionManager(internalInfo.getUrl_db());
+            DBVersionManager dbVersionManager = new DBVersionManager(connection);
             List<Query> queries = dbVersionManager.getAllVersionAfter(numVersion);
-            dbVersionManager.closeConnection();
+
             for (Query query : queries) {
                 oos.writeUnshared(query);
             }

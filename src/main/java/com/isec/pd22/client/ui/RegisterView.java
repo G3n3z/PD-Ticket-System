@@ -43,8 +43,9 @@ public class RegisterView extends BorderPane {
         HBox.setMargin(label1, new Insets(0,0,50,0));
         //setTop(hBoxTitle);
         labelName = new Label("Nome");
+        labelName.setFont(new Font(20));
         tfName = new TextField();
-        label = new Label("Email");
+        label = new Label("Username");
         label.setFont(new Font(20));
         tfEmail = new TextField();
         tfEmail.setPrefHeight(30);
@@ -92,9 +93,11 @@ public class RegisterView extends BorderPane {
     }
 
     public void registerComplete(){
-        AlertSingleton.getInstanceOK().setAlertText("Acção Bem Sucedida", "Utilizador registado", "Faça login por favor")
-                .showAndWait().ifPresent( buttonType -> {
-            modelManager.setStatusClient(StatusClient.NOT_LOGGED);
-        });
+        if (modelManager.getStatusClient() == StatusClient.REGISTER) {
+            AlertSingleton.getInstanceOK().setAlertText("Acção Bem Sucedida", "Utilizador registado", "Faça login por favor")
+                    .showAndWait().ifPresent(buttonType -> {
+                        modelManager.setStatusClient(StatusClient.NOT_LOGGED);
+                    });
+        }
     }
 }

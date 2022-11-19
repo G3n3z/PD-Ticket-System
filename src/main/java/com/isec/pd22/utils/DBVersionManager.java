@@ -1,7 +1,12 @@
 package com.isec.pd22.utils;
 
+import com.isec.pd22.enums.Authenticated;
+import com.isec.pd22.enums.Role;
+import com.isec.pd22.enums.Status;
 import com.isec.pd22.exception.ServerException;
+import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.Query;
+import org.springframework.security.crypto.bcrypt.BCrypt;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -109,6 +114,7 @@ public class DBVersionManager {
             getLastVersion();
         } catch (SQLException e) {
             createTableVersions();
+            createAdmin();
         }
 
     }
@@ -143,5 +149,32 @@ public class DBVersionManager {
             }
         } catch (SQLException ignored) {
         }
+    }
+
+    public void createAdmin() {
+        Statement stm = null;
+        try {
+            stm = connection.createStatement();
+            String password = BCrypt.hashpw("admin", BCrypt.gensalt());
+            String query = "insert into utilizador values(NULL, 'admin', 'admin', '"+ password + "' ," + Role.ADMIN.ordinal() + ", "+ Authenticated.NOT_AUTHENTICATED.ordinal() + ")";
+            stm.executeUpdate(query);
+            stm.close();
+
+            addNewVersion(query);
+
+        }catch (SQLException e) {
+            throw new ServerException("Erro ao criar a tabela de versoes " + e.getMessage() );
+        }finally {
+            closeStatment(stm);
+        }
+    }
+
+    public void deleteDB(InternalInfo internalInfo) {
+
+        synchronized (internalInfo){
+            internalInfo.setStatus(Status.UNAVAILABLE);
+        }
+        System.out.println("Base de dados inconsistente - Vamos eliminar a nossa e pedir novos dados");
+
     }
 }

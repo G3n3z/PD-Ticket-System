@@ -11,14 +11,13 @@ import com.isec.pd22.server.tasks.UpdateDBTask;
 import com.isec.pd22.utils.Constants;
 import com.isec.pd22.utils.DBVersionManager;
 import com.isec.pd22.utils.ObjectStream;
+import com.isec.pd22.utils.UdpUtils;
 
 import java.io.*;
 import java.net.*;
+import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Timer;
+import java.util.*;
 
 public class MulticastThread extends Thread{
 
@@ -38,7 +37,8 @@ public class MulticastThread extends Thread{
 
     long unixStartTimeoutTime;
 
-    Map<HeartBeat, DatagramPacket> heartBeatToPackage;
+    Set<HeartBeat> heartBeatToPackage;
+    DBVersionManager dbVersionManager;
 
     public MulticastThread(InternalInfo internalInfo, Timer timer) {
         this.internalInfo = internalInfo;
@@ -47,6 +47,7 @@ public class MulticastThread extends Thread{
         objectStream = new ObjectStream();
         bytes = new byte[20000];
         packet = new DatagramPacket(bytes, bytes.length);
+        dbVersionManager = new DBVersionManager(internalInfo.getConnection());
     }
 
     @Override
@@ -77,12 +78,12 @@ public class MulticastThread extends Thread{
 
             }catch (SocketTimeoutException e){
                 if(internalInfo.getStatus() == Status.UNAVAILABLE){
-                    atualizaDB();
+                    //atualizaDB();
                 }
                 System.out.println("[MulticastThread] - socket timeout: "+ e.getMessage());
                 //e.printStackTrace();
             }
-            catch (IOException e) {
+            catch (IOException | SQLException e) {
                 System.out.println("[MulticastThread] - erro na rececao: "+ e.getMessage());
                 e.printStackTrace();
                 if (!internalInfo.isFinish())
@@ -110,8 +111,8 @@ public class MulticastThread extends Thread{
                 new SaveHeartBeatTask(internalInfo, heartBeat).start();
                 // Se a versao recebida é maior que o nosso
                 if(heartBeat.getNumVersionDB() > internalInfo.getNumDB()) {
-                    heartBeatToPackage = new HashMap<>();
-                    heartBeatToPackage.put(heartBeat, packet);
+                    heartBeatToPackage = new HashSet<>();
+                    heartBeatToPackage.add(heartBeat);
                     unixStartTimeoutTime = new Date().getTime();
                     synchronized (internalInfo){
                         internalInfo.setStatus(Status.UNAVAILABLE);
@@ -127,7 +128,9 @@ public class MulticastThread extends Thread{
             }
             case UPDATE_DB -> {
                 UpdateDB msgUpdate = (UpdateDB) msg;
-                new UpdateDBTask(internalInfo, msgUpdate).start();
+                if (msgUpdate.getIpDest().equals(internalInfo.getIp()) && msgUpdate.getPortUdpDest() == internalInfo.getPortUdp()) {
+                    new UpdateDBTask(internalInfo, msgUpdate).start();
+                }
             }
             case PREPARE -> {
                 responseToPrepare(msg);
@@ -138,6 +141,7 @@ public class MulticastThread extends Thread{
             }
         }
     }
+
 
     private void responseToMsgUpdating(MulticastMSG msg, DatagramPacket packet) {
         System.out.println("[Multicast Updating] " + msg.getTypeMsg());
@@ -160,11 +164,17 @@ public class MulticastThread extends Thread{
                 Commit commit = (Commit) msg;
                 if (!(commit.getIp().equalsIgnoreCase(internalInfo.getIp()) && commit.getPortUdp() == internalInfo.getPortUdp())){
                     try {
-                        DBVersionManager dbVersionManager = new DBVersionManager(internalInfo.getUrl_db());
+
                         dbVersionManager.insertQuery(query);
-                        dbVersionManager.closeConnection();
+                        synchronized (internalInfo){
+                            internalInfo.setNumDB(internalInfo.getNumDB()+1);
+                        }
                     }catch (SQLException e) {
-                        throw new RuntimeException(e);
+                        synchronized (internalInfo){
+                            internalInfo.setStatus(Status.UNAVAILABLE);
+                        }
+                        e.printStackTrace();
+                        return;
                     }
                 }
 
@@ -183,13 +193,13 @@ public class MulticastThread extends Thread{
         }
     }
 
-    private void responseToMsgUnavailable(MulticastMSG msg, DatagramPacket packet) {
+    private void responseToMsgUnavailable(MulticastMSG msg, DatagramPacket packet) throws SQLException, IOException, ClassNotFoundException {
         System.out.println("[Multicast Unavailable] " + msg.getTypeMsg());
         switch (msg.getTypeMsg()){
             case HEARTBEAT -> {
                 HeartBeat heartBeat = (HeartBeat) msg;
                 new SaveHeartBeatTask(internalInfo, heartBeat).start();
-                heartBeatToPackage.put(heartBeat, packet);
+                heartBeatToPackage.add(heartBeat);
             }case EXIT -> {
                 Exit e = (Exit) msg;
                 internalInfo.removeHeatBeat(e.getHeartBeat());
@@ -197,7 +207,24 @@ public class MulticastThread extends Thread{
 
         }
         if((new Date().getTime() - unixStartTimeoutTime) >= 10000){
-            atualizaDB();
+            HeartBeat server = heartBeatToPackage.stream().filter(heart -> heart.getStatusServer() == Status.AVAILABLE)
+                    .min(HeartBeat::compareTo).orElseThrow(() -> new ServerException("Problemas a encontrar o heatbeat"));
+
+            System.out.println("Tentativa de atualização 1");
+            try {
+                UdpUtils.updateDB(server, multicastSocket, internalInfo, dbVersionManager);
+
+
+            }catch (Exception e){
+                System.out.println("Tentativa de atualização 2");
+                internalInfo.setConnection(UdpUtils.restartDB(server, multicastSocket, internalInfo, dbVersionManager));
+            }
+            synchronized (internalInfo){
+                internalInfo.setStatus(Status.AVAILABLE);
+            }
+
+
+
         }
 
     }
@@ -230,11 +257,11 @@ public class MulticastThread extends Thread{
 
     private void atualizaDB() {
         HeartBeat heartBeat;
-        synchronized (internalInfo){
-            heartBeat = heartBeatToPackage.keySet().stream().filter(heart -> heart.getStatusServer() == Status.AVAILABLE)
-                    .min(HeartBeat::compareTo).orElseThrow(() -> new ServerException("Problemas a encontrar o heatbeat"));
-        }
-        DatagramPacket datagramPacket = heartBeatToPackage.get(heartBeat);
+//        synchronized (internalInfo){
+//            heartBeat = heartBeatToPackage.keySet().stream().filter(heart -> heart.getStatusServer() == Status.AVAILABLE)
+//                    .min(HeartBeat::compareTo).orElseThrow(() -> new ServerException("Problemas a encontrar o heatbeat"));
+//        }
+        DatagramPacket datagramPacket = null;//heartBeatToPackage.get(heartBeat);
         DBVersionManager dbVersionManager = null;
         try {
             ServerSocket serverSocket = new ServerSocket(0);

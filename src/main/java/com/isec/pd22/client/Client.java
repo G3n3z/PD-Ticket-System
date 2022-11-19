@@ -55,7 +55,7 @@ public class Client {
     }
 
 
-    // TODO interpretar as mensagens recebidas do servidor aqui!
+
     private void onMessageReceived(ClientMSG mensage, ServerConnectionThread service) {
         System.out.println("Mensagem recebida " + mensage.getClientsPayloadType());
 

@@ -6,6 +6,7 @@ import com.isec.pd22.payload.HeartBeat;
 import com.isec.pd22.utils.Constants;
 
 import java.net.Socket;
+import java.sql.Connection;
 import java.util.*;
 import java.net.MulticastSocket;
 import java.util.concurrent.locks.Condition;
@@ -37,6 +38,8 @@ public class InternalInfo {
     public Condition condition;
 
     Set<Observer> observers;
+
+    Connection connection;
 
     public InternalInfo() {
     }
@@ -226,4 +229,14 @@ public class InternalInfo {
             heartBeats.remove(heartBeat);
         }
     }
+
+    public void setConnection(Connection connection) {
+        this.connection = connection;
+    }
+
+    public Connection getConnection() {
+        return connection;
+    }
+
+
 }
