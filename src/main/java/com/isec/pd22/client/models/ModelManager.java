@@ -6,6 +6,7 @@ import com.isec.pd22.client.ui.utils.AlertSingleton;
 import com.isec.pd22.client.ui.utils.ModalIndicator;
 import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.ClientsPayloadType;
+import com.isec.pd22.enums.Role;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.tcp.Request.Espetaculos;
@@ -161,7 +162,7 @@ public class ModelManager {
     public void fireEspectaculo(ClientMSG mensage) {
         RequestDetailsEspetaculo r = (RequestDetailsEspetaculo) mensage;
         if (r.getEspetaculo() != null) {
-            if (r.getEspetaculo().getVisivel() == 0){
+            if (r.getEspetaculo().getVisivel() == 0 && getUser().getRole() == Role.USER){
                 setLastMessage(new ClientMSG(ClientActions.CONSULT_SPECTACLE, ClientsPayloadType.BAD_REQUEST, "Espetaculo deixou de ser visivel"));
                 pcs.firePropertyChange(BAD_REQUEST, null, null);
                 return;

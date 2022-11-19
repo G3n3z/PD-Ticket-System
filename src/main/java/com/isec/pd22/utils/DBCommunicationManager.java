@@ -78,7 +78,9 @@ public class DBCommunicationManager {
     }
 
 
-    public boolean existsUserByUsernameOrName(String nome, String userName){
+    public boolean existsUserByUsernameOrName(String nome, String userName, String password){
+        if(password.isBlank())
+            return false;
         String query = "SELECT * from utilizador where nome = ? or username = ?";
         PreparedStatement preparedStatement = null;
         synchronized (connection) {
@@ -619,5 +621,25 @@ public class DBCommunicationManager {
             query = "UPDATE espetaculo SET visivel= " + Visibility.NOT_VISIBLE.ordinal() + " WHERE id= " + espetaculo.getIdEspetaculo();
         }
         return  new Query(internalInfo.getNumDB()+1, query, new Date().getTime());
+    }
+
+    public boolean isSpectacleVisible(ListPlaces list) {
+        Lugar dummy = list.getPlaces().get(0);
+        String query = "SELECT * FROM espetaculo WHERE id = " + dummy.getEspetaculo_id() +
+                " AND visivel = " + Visibility.VISIBLE.ordinal();
+        Statement statement = null;
+        ResultSet resultSet = null;
+        try {
+            synchronized (connection)
+            {
+                statement = connection.createStatement();
+            }
+            resultSet = statement.executeQuery(query);
+            return resultSet.next();
+        } catch (SQLException e) {
+            return false;
+        }finally {
+            closeStatement(statement);
+        }
     }
 }
