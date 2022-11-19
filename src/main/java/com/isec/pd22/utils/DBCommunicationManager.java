@@ -443,21 +443,19 @@ public class DBCommunicationManager {
         Map<String,String> filtros = espetaculos.getFiltros();
         String query = "SELECT * FROM espetaculo"; ResultSet res;
         boolean first = true;
+        if (espetaculos.getUser().getRole() == Role.USER){
+            query += " WHERE data_hora > strftime('%Y/%m/%d %H:%M', 'now', '+24 hours') AND visivel= " + Visibility.VISIBLE.ordinal();
+            first = false;
+        }
         if(!filtros.isEmpty()){
             for(Map.Entry<String, String> entry : filtros.entrySet()){
                 if(first){
-                    query += " WHERE " + entry.getKey() + " like '%" + entry.getValue() + "%'";
+                    query += " WHERE " + buildFilters(entry.getKey(),entry.getValue());
                     first = false;
                 }else{
-                    query += " AND " + entry.getKey() + " like '%" + entry.getValue() + "%'";
+                    query += " AND " + buildFilters(entry.getKey(),entry.getValue());
                 }
             }
-            if (espetaculos.getUser().getRole() == Role.USER){
-                query += " AND visivel= " + Visibility.VISIBLE.ordinal();
-            }
-        }
-        if (espetaculos.getUser().getRole() == Role.USER){
-            query += " WHERE visivel= " + Visibility.VISIBLE.ordinal();
         }
         List<Espetaculo> list = new ArrayList<>();
         Statement statement = null;
@@ -479,6 +477,15 @@ public class DBCommunicationManager {
             closeStatement(statement);
         }
         return list;
+    }
+
+    private String buildFilters(String key, String value) {
+        switch (key)
+        {
+            case "descricao", "tipo", "data_hora", "local", "localidade", "pais" -> { return key + " like '%" + value + "%'"; }
+            case "duracao", "classificacao_etaria" -> {return key + " = '" + value + "'";}
+        }
+        return null;
     }
 
     public Query deleteSpectacle(int idEspetaculo) {

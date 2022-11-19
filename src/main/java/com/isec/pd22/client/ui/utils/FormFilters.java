@@ -55,7 +55,7 @@ public class FormFilters extends VBox {
         tfPais = new TextField();
         tfPais.setPromptText("Pais");
         tfClassificao = new TextField();
-        tfClassificao.setPromptText("Classificacao");
+        tfClassificao.setPromptText("Classificacao_etaria");
 
         hBox1 = new HBox(tfDesc,tfTipo );
         hBox1.setSpacing(40);
