@@ -58,7 +58,7 @@ public class EditView extends BorderPane {
         tfPassword = new TextField();
         tfPassword.setPrefHeight(30);
         tfPassword.setPrefWidth(200);
-        vBox.getChildren().addAll(hBoxTitle, labelUsername, tfUsername, labelName, tfName, labelPassword, tfPassword);
+        vBox.getChildren().addAll(hBoxTitle, labelName, tfName, labelUsername, tfUsername, labelPassword, tfPassword);
         vBox.setAlignment(Pos.CENTER);
         vBox.setSpacing(20);
         vBox.setMinWidth(500);
