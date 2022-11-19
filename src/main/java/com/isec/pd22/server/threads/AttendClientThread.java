@@ -122,7 +122,7 @@ public class AttendClientThread extends Thread implements Observer {
         } catch (SQLException | IOException e) {
             ansMsg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
             e.printStackTrace();
-            System.out.println("[AttendClientThread] - failed to initialize DB communication: "+ e.getMessage());
+            System.out.println("[AttendClientThread] - communication: "+ e.getMessage());
             oos.writeUnshared(ansMsg);
         }
     }
@@ -147,7 +147,7 @@ public class AttendClientThread extends Thread implements Observer {
     }
 
 
-    private void actionsLogged(ClientMSG msgClient, DBCommunicationManager dbComm) {
+    private void actionsLogged(ClientMSG msgClient, DBCommunicationManager dbComm) throws IOException {
         try {
             ClientMSG msg = null;
             User user = dbComm.getUser(msgClient.getUser().getUsername());
@@ -168,13 +168,14 @@ public class AttendClientThread extends Thread implements Observer {
                     case PAY_RESERVATION -> msg = payReservation(msgClient);
                 }
             } else {
-               msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
+               msg = new ClientMSG(ClientsPayloadType.NOT_AUTHENTICATED);
             }
             sendMessage(msg);
         } catch (SQLException e){
             System.out.println(Arrays.toString(e.getStackTrace()));
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            sendAbort();
+            e.printStackTrace();
         }
     }
 
@@ -292,15 +293,23 @@ public class AttendClientThread extends Thread implements Observer {
         return msg;
     }
 
-    private ClientMSG cancelReservation(ClientMSG msgClient) throws SQLException {
+    private ClientMSG cancelReservation(ClientMSG msgClient) throws SQLException, IOException {
         ClientMSG msg;
         RequestListReservas list = (RequestListReservas) msgClient;
         if(dbComm.canCancelReservation(list.getReservas().get(0).getIdReserva())) {
             Query query = dbComm.deleteReservaNotPayed(list.getReservas().get(0).getIdReserva());
             if (startUpdateRoutine(query, internalInfo)) {
+                dbVersionManager.insertQuery(query);
+                synchronized (internalInfo){
+                    internalInfo.setNumDB(internalInfo.getNumDB()+1);
+                }
+                sendCommit();
                 msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
                 msg.setClientsPayloadType(ClientsPayloadType.ACTION_SUCCEDED);
+                //TODO: TESTE
+                return null;
             } else {
+                sendAbort();
                 msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
                 msg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
             }
@@ -380,7 +389,7 @@ public class AttendClientThread extends Thread implements Observer {
         return msg;
     }
 
-    private ClientMSG switchSpectacleVisibility(ClientMSG msgClient, User user) {
+    private ClientMSG switchSpectacleVisibility(ClientMSG msgClient, User user) throws IOException {
         Espetaculos msg = new Espetaculos(ClientsPayloadType.CONSULT_SPECTACLE);
         if (user.getRole() != Role.ADMIN) {
             return new ClientMSG(ClientActions.CONSULT_SPECTACLE, ClientsPayloadType.BAD_REQUEST);
@@ -398,6 +407,7 @@ public class AttendClientThread extends Thread implements Observer {
                     sendCommit();
                 } catch (SQLException e) {
                     System.out.println("[AttendClientThread] - switchSpectacleVisibility - could not change visibility: " + e.getMessage());
+                    sendAbort();
                 } catch (IOException e) {
                     System.out.println("[AttendClientThread] - switchSpectacleVisibility - could not send commit: " + e.getMessage());
                 }
@@ -625,7 +635,7 @@ public class AttendClientThread extends Thread implements Observer {
                 msg = new ClientMSG(ClientsPayloadType.USER_REGISTER);
             } else {
                 sendAbort();
-                msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
+                msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
             }
         } else {
             msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
@@ -646,16 +656,14 @@ public class AttendClientThread extends Thread implements Observer {
                     internalInfo.setNumDB(internalInfo.getNumDB()+1);
                 }
                 sendCommit();
-                msg = new ClientMSG(ClientsPayloadType.LOGGED_IN);
+                msg = new ClientMSG(ClientActions.LOGIN, ClientsPayloadType.LOGGED_IN);
                 msg.setUser(new User(u.getIdUser(),u.getRole(),u.getUsername(), u.getNome()));
             } else {
                 sendAbort();
                 msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
             }
         } else {
-
-            msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
-            msg.setMessage("Username ou Password incorretos");
+            msg = new ClientMSG(ClientActions.LOGIN, ClientsPayloadType.BAD_REQUEST,"Username ou Password incorretos") ;
         }
         oos.writeUnshared(msg);
     }

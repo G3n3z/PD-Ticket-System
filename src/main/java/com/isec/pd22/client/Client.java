@@ -101,6 +101,7 @@ public class Client {
             case DELETE_SPECTACLE -> {
                 modelManager.removeSpectacle(mensage);
             }
+            case NOT_AUTHENTICATED -> modelManager.notAuhtenticated(mensage);
         }
 
     }
