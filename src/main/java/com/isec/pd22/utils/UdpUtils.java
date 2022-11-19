@@ -82,10 +82,6 @@ public class UdpUtils {
             return;
         } catch (IOException | ClassNotFoundException | SQLException e) {
             System.out.println("[Utils Update] - " + e);
-            if (oos != null)
-                oos.close();
-            if (ois != null)
-                ois.close();
             throw e;
 
         }finally {
@@ -101,9 +97,9 @@ public class UdpUtils {
     private static void createDatabaseV1(InternalInfo internalInfo) {
         File f = new File(UtilsFunctions.getPathToDirectory(internalInfo.getUrl()));
         int bytesReads = 0;
-        if (!f.mkdir()) {
-            throw new ServerException("Erro a criar a diretoria");
-        }
+//        if (!f.mkdir()) {
+//            throw new ServerException("Erro a criar a diretoria");
+//        }
 
         try {
 

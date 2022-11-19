@@ -119,6 +119,14 @@ public class RootPane extends BorderPane {
 
         String message = lastMessage.getMessage();
 
+        if (lastMessage.getClientsPayloadType() == ClientsPayloadType.NOT_AUTHENTICATED ){
+            AlertSingleton.getInstanceWarning().setAlertText("Erro de Mensagem", "","A sua sessão expirou")
+                    .showAndWait();
+            modelManager.setStatusClient(StatusClient.NOT_LOGGED);
+            modelManager.clearData();
+            return;
+        }
+
         switch (lastMessage.getAction()) {
             // TODO tratar as diferentes mensagens
             case CONSULT_SPECTACLE_DETAILS -> {modelManager.fireEspectaculo(new RequestDetailsEspetaculo(ClientActions.CONSULT_SPECTACLE_DETAILS));}
@@ -128,11 +136,7 @@ public class RootPane extends BorderPane {
                 }
             }
             case LOGIN -> {
-                if (lastMessage.getClientsPayloadType() == ClientsPayloadType.NOT_AUTHENTICATED){
-                    AlertSingleton.getInstanceWarning().setAlertText("Erro de Mensagem", "A sua sessão expirou", message)
-                            .showAndWait();
-                    modelManager.setStatusClient(StatusClient.NOT_LOGGED);
-                }
+
             }
             default -> {}
         }

@@ -239,4 +239,13 @@ public class InternalInfo {
     }
 
 
+    public void setMyStatus(Status status) {
+        synchronized (heartBeats){
+            heartBeats.forEach( heartBeat -> {
+                if(heartBeat.getIp().equals(ip) && heartBeat.getPortUdp() == portUdp){
+                    heartBeat.setStatusServer(status);
+                }
+            } );
+        }
+    }
 }

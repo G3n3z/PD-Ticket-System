@@ -38,7 +38,7 @@ public class StartServices extends Thread {
     Timer timer = null;
     HeartBeatTask heartBeatTask = null;
 
-
+    ServerSocket serverSocket;
     ObjectStream os = new ObjectStream();
     public StartServices(InternalInfo infoServer) {
         this.internalInfo = infoServer;
@@ -103,6 +103,18 @@ public class StartServices extends Thread {
         if (socket != null) {
             socket.close();
         }
+        if (serverSocket != null){
+            try {
+                serverSocket.close();
+            } catch (IOException ignored) {}
+        }
+        synchronized (internalInfo){
+            internalInfo.getAllClientSockets().forEach(socket1 -> {
+                try {
+                    socket1.close();
+                }catch (IOException ignored){}
+            });
+        }
     }
 
     private void receivedHeartBeat() throws SQLException, IOException, ClassNotFoundException {
@@ -157,7 +169,7 @@ public class StartServices extends Thread {
     }
 
     private void startThreads() {
-        ServerSocket serverSocket = null;
+        serverSocket = null;
         startCondition();
         try {
             // inicia serversocket thread

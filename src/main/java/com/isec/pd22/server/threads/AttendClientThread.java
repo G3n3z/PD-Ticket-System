@@ -17,6 +17,7 @@ import java.net.*;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class AttendClientThread extends Thread implements Observer {
     private Socket clientSocket;
@@ -168,7 +169,7 @@ public class AttendClientThread extends Thread implements Observer {
                     case PAY_RESERVATION -> msg = payReservation(msgClient);
                 }
             } else {
-               msg = new ClientMSG(ClientsPayloadType.NOT_AUTHENTICATED);
+               msg = new ClientMSG(msgClient.getAction(), ClientsPayloadType.NOT_AUTHENTICATED);
             }
             sendMessage(msg);
         } catch (SQLException e){
@@ -606,10 +607,13 @@ public class AttendClientThread extends Thread implements Observer {
         try {
             ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream());
             ClientMSG ansMsg = new ClientMSG();
-            Set<HeartBeat> list = new HashSet<>();
-            list.addAll(internalInfo.getHeatBeats());
+            List<HeartBeat> list = new ArrayList<>();
+            synchronized (internalInfo.getHeatBeats()){
+                list.addAll(internalInfo.getHeatBeats().stream().filter(heartBeat -> heartBeat.getStatusServer() == Status.AVAILABLE).toList());
+            }
             list.remove(new HeartBeat(internalInfo.getIp(),internalInfo.getPortUdp()));
-            ansMsg.setServerList(list);
+            Collections.sort(list);
+            ansMsg.setServerList(new HashSet<>(list));
             oos.writeUnshared(ansMsg);
         } catch (IOException e) {
             System.out.println("[AttendClientThread] - failed to send server list" + e.getMessage());

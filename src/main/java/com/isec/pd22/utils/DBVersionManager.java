@@ -169,12 +169,4 @@ public class DBVersionManager {
         }
     }
 
-    public void deleteDB(InternalInfo internalInfo) {
-
-        synchronized (internalInfo){
-            internalInfo.setStatus(Status.UNAVAILABLE);
-        }
-        System.out.println("Base de dados inconsistente - Vamos eliminar a nossa e pedir novos dados");
-
-    }
 }
