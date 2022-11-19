@@ -11,6 +11,7 @@ import com.isec.pd22.server.models.Query;
 import com.isec.pd22.utils.Constants;
 import com.isec.pd22.utils.DBVersionManager;
 import com.isec.pd22.utils.ObjectStream;
+import com.isec.pd22.utils.UdpUtils;
 
 import java.io.*;
 import java.net.*;
@@ -37,7 +38,6 @@ public class StartServices extends Thread {
     Timer timer = null;
     HeartBeatTask heartBeatTask = null;
 
-    Map<HeartBeat, DatagramPacket> heartBeatsPackage = new HashMap<>();
 
     ObjectStream os = new ObjectStream();
     public StartServices(InternalInfo infoServer) {
@@ -89,9 +89,9 @@ public class StartServices extends Thread {
             synchronized (internalInfo){
                 internalInfo.setFinish(true);
             }
+            closeConnection();
             return;
         }
-        closeConnection();
         startThreads();
     }
 
@@ -112,10 +112,13 @@ public class StartServices extends Thread {
         if(!haveConnectionDatabase(internalInfo.getUrl_db())) {
 
             createDatabaseV1();
-            updateDB(serverWithMaxDBVersion);
+            connection = createInitialData(internalInfo);
+            dbVersionManager = new DBVersionManager(connection);
+            UdpUtils.updateDB(serverWithMaxDBVersion, socket, internalInfo, dbVersionManager);
+            //updateDB(serverWithMaxDBVersion);
         } else {
             if (!verifyLocalDBVersion(serverWithMaxDBVersion)) {
-                updateDB(serverWithMaxDBVersion);
+                UdpUtils.updateDB(serverWithMaxDBVersion, socket, internalInfo, dbVersionManager);
             }
         }
     }
@@ -148,7 +151,6 @@ public class StartServices extends Thread {
 
             HeartBeat heartBeat = (HeartBeat) msg;
             heartBeat.setTimeMsg();
-            heartBeatsPackage.put(heartBeat, packet);
             internalInfo.addHeartBeat(heartBeat);
         }
 
@@ -169,6 +171,7 @@ public class StartServices extends Thread {
 
         System.out.println("Ready to start");
         internalInfo.setStatus(Status.AVAILABLE);
+        internalInfo.setConnection(connection);
         ServerSocketThread serverSocketThread = new ServerSocketThread(serverSocket, internalInfo);
         serverSocketThread.start();
 
@@ -220,15 +223,19 @@ public class StartServices extends Thread {
     private void updateDB(HeartBeat server) throws IOException, ClassNotFoundException, SQLException {
 
         //DBVersionManager dbVersionManager = new DBVersionManager(connection);
-
-        DatagramPacket datagramPacket = heartBeatsPackage.get(server);
+        DatagramPacket datagramPacket = new DatagramPacket(new byte[2000], 2000, InetAddress.getByName(Constants.MULTICAST_IP),
+                Constants.MULTICAST_PORT);
+        ObjectStream os = new ObjectStream();
         ObjectOutputStream oos = null; ObjectInputStream ois = null;
+
         try {
             ServerSocket serverSocket = new ServerSocket(0);
             serverSocket.setSoTimeout(10000);
 
-
             UpdateDB updateDB = new UpdateDB(TypeOfMulticastMsg.UPDATE_DB, internalInfo.getNumDB(),serverSocket.getInetAddress().getHostAddress() ,serverSocket.getLocalPort());
+            updateDB.setIpDest(server.getIp());
+            updateDB.setPortUdpDest(server.getPortUdp());
+
 
             os.writeObject(datagramPacket, updateDB);
             socket.send(datagramPacket);
@@ -262,6 +269,8 @@ public class StartServices extends Thread {
 
         if(!haveConnectionDatabase(internalInfo.getUrl_db())){
             createDatabaseV1();
+            connection = createInitialData(internalInfo);
+            dbVersionManager = new DBVersionManager(connection);
         }
     }
 
@@ -294,17 +303,22 @@ public class StartServices extends Thread {
         }
 
 
-        connection = getConnectionDatabaseByUrl(internalInfo.getUrl_db());
+    }
+
+    private Connection createInitialData( InternalInfo internalInfo){
+        Connection connection = getConnectionDatabaseByUrl(internalInfo.getUrl_db());
         if(connection == null){
 
             throw new ServerException("Erro na conexao a db depois de ser criada a copia");
         }
 
-        dbVersionManager = new DBVersionManager(connection);
+        DBVersionManager dbVersionManager = new DBVersionManager(connection);
         dbVersionManager.createTableVersions();
+        dbVersionManager.createAdmin();
 
-        internalInfo.setNumDB(1);
 
+        internalInfo.setNumDB(2);
+        return connection;
     }
 
     private String getPathToDirectory(String url) {

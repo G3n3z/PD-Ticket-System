@@ -115,7 +115,7 @@ public class AttendClientThread extends Thread implements Observer {
                 case EXIT -> {
                    exitClient(msgClient);
                 }
-                case LOGOUT ->logout(msgClient);
+                case LOGOUT -> logout(msgClient);
                 default -> actionsLogged(msgClient, dbComm);
             }
 
@@ -134,6 +134,9 @@ public class AttendClientThread extends Thread implements Observer {
             Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
             if(startUpdateRoutine(query, internalInfo)){
                 dbVersionManager.insertQuery(query);
+                synchronized (internalInfo){
+                    internalInfo.setNumDB(internalInfo.getNumDB()+1);
+                }
                 sendCommit();
             }else {
                 sendAbort();
@@ -182,6 +185,9 @@ public class AttendClientThread extends Thread implements Observer {
         if(query != null){
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
+                synchronized (internalInfo){
+                    internalInfo.setNumDB(internalInfo.getNumDB()+1);
+                }
                 sendCommit();
                 msg = new ClientMSG(ClientsPayloadType.ACTION_SUCCEDED);
 
@@ -207,6 +213,9 @@ public class AttendClientThread extends Thread implements Observer {
             );
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
+                synchronized (internalInfo){
+                    internalInfo.setNumDB(internalInfo.getNumDB()+1);
+                }
                 sendCommit();
                 msg = new ClientMSG(ClientsPayloadType.ACTION_SUCCEDED);
             } else {
@@ -249,6 +258,9 @@ public class AttendClientThread extends Thread implements Observer {
             Query query = dbComm.submitReservations(list);
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
+                synchronized (internalInfo){
+                    internalInfo.setNumDB(internalInfo.getNumDB()+1);
+                }
                 sendCommit();
 
                 //Obter id da reserva inserida e iniciar o timertask que contrala o pagamento
@@ -320,6 +332,9 @@ public class AttendClientThread extends Thread implements Observer {
 
         if (startUpdateRoutine(query, internalInfo)) {
             dbVersionManager.insertQuery(query);
+            synchronized (internalInfo){
+                internalInfo.setNumDB(internalInfo.getNumDB()+1);
+            }
             sendCommit();
             return new ClientMSG(ClientsPayloadType.FILE_UPDATED);
         }else {
@@ -341,6 +356,9 @@ public class AttendClientThread extends Thread implements Observer {
                 Query  query = dbComm.deleteSpectacle(espetaculo.getEspetaculo().getIdEspetaculo());
                 if (startUpdateRoutine(query, internalInfo)) {
                     dbVersionManager.insertQuery(query);
+                    synchronized (internalInfo){
+                        internalInfo.setNumDB(internalInfo.getNumDB()+1);
+                    }
                     sendCommit();
                     msg = new RequestDetailsEspetaculo(ClientActions.DELETE_SPECTACLE);
                     msg.setClientsPayloadType(ClientsPayloadType.DELETE_SPECTACLE);
@@ -374,6 +392,9 @@ public class AttendClientThread extends Thread implements Observer {
             if (startUpdateRoutine(query, internalInfo)) {
                 try {
                     dbVersionManager.insertQuery(query);
+                    synchronized (internalInfo){
+                        internalInfo.setNumDB(internalInfo.getNumDB()+1);
+                    }
                     sendCommit();
                 } catch (SQLException e) {
                     System.out.println("[AttendClientThread] - switchSpectacleVisibility - could not change visibility: " + e.getMessage());
@@ -414,6 +435,9 @@ public class AttendClientThread extends Thread implements Observer {
         Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
         if (startUpdateRoutine(query, internalInfo)) {
             dbVersionManager.insertQuery(query);
+            synchronized (internalInfo){
+                internalInfo.setNumDB(internalInfo.getNumDB()+1);
+            }
             sendCommit();
             msg = new ClientMSG(ClientsPayloadType.LOGOUT);
         } else {
@@ -594,6 +618,9 @@ public class AttendClientThread extends Thread implements Observer {
 
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
+                synchronized (internalInfo){
+                    internalInfo.setNumDB(internalInfo.getNumDB()+1);
+                }
                 sendCommit();
                 msg = new ClientMSG(ClientsPayloadType.USER_REGISTER);
             } else {
@@ -615,6 +642,9 @@ public class AttendClientThread extends Thread implements Observer {
             Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.AUTHENTICATED);
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
+                synchronized (internalInfo){
+                    internalInfo.setNumDB(internalInfo.getNumDB()+1);
+                }
                 sendCommit();
                 msg = new ClientMSG(ClientsPayloadType.LOGGED_IN);
                 msg.setUser(new User(u.getIdUser(),u.getRole(),u.getUsername(), u.getNome()));
@@ -625,6 +655,7 @@ public class AttendClientThread extends Thread implements Observer {
         } else {
 
             msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
+            msg.setMessage("Username ou Password incorretos");
         }
         oos.writeUnshared(msg);
     }

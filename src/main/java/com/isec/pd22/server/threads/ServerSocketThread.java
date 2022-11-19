@@ -37,12 +37,8 @@ public class ServerSocketThread extends Thread
 
     @Override
     public void run() {
-        Connection connection;
-        try {
-            connection = DriverManager.getConnection(internalInfo.getUrl_db());
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
-        }
+        Connection connection = internalInfo.getConnection();
+
         while(true)
         {
             //flag para sair do ciclo de atender clientes break;

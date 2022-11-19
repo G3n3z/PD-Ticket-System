@@ -52,6 +52,7 @@ public class Server {
                 case 1 -> {
                     isFinish = true;
                     finish(info);
+                    startServices.close();
                 }
                 case 2 -> {
                     synchronized (info.getHeatBeats()){
@@ -69,7 +70,6 @@ public class Server {
             startServices.join();
         } catch (InterruptedException ignored) {
         }
-        //TODO:  Esperar pelas threads terminem, gravar estados
         System.out.println("Adeus e obrigado");
 
     }
@@ -84,7 +84,7 @@ public class Server {
         }
         if(count > 1)
             MulticastThread.sendExitMessage(info, info.getMulticastSocket());
-        startServices.close();
+
     }
 
     private static void imprimeMenu() {

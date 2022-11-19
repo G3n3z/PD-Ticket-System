@@ -4,6 +4,10 @@ import com.isec.pd22.enums.TypeOfMulticastMsg;
 
 public class UpdateDB extends MulticastMSG{
     int numVersion;
+
+    String ipDest;
+
+    int portUdpDest;
     String ip;
     int portTCP;
 
@@ -36,5 +40,21 @@ public class UpdateDB extends MulticastMSG{
 
     public void setPortTCP(int portTCP) {
         this.portTCP = portTCP;
+    }
+
+    public String getIpDest() {
+        return ipDest;
+    }
+
+    public void setIpDest(String ipDest) {
+        this.ipDest = ipDest;
+    }
+
+    public int getPortUdpDest() {
+        return portUdpDest;
+    }
+
+    public void setPortUdpDest(int portUdpDest) {
+        this.portUdpDest = portUdpDest;
     }
 }
