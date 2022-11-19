@@ -1,5 +1,6 @@
 package com.isec.pd22.client.ui;
 
+import com.isec.pd22.client.View;
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.ui.utils.AlertSingleton;
 import com.isec.pd22.enums.ClientActions;
@@ -16,7 +17,13 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 
-public class RegisterView extends BorderPane {
+import java.beans.PropertyChangeListener;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+
+public class RegisterView extends BorderPane implements View {
 
     ModelManager modelManager;
     HBox hbox;
@@ -25,6 +32,7 @@ public class RegisterView extends BorderPane {
     TextField tfEmail, tfPassword, tfName;
     Button btnBack, btnRegister;
 
+    Map<String, PropertyChangeListener> callbacks = new TreeMap<>();
     public RegisterView(ModelManager modelManager) {
         this.modelManager = modelManager;
         createViews();
@@ -74,7 +82,8 @@ public class RegisterView extends BorderPane {
         setCenter(hbox);
     }
     private void registerHandlers() {
-        modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, (event) -> updateView() );
+        callbacks.put(ModelManager.PROP_STATUS, (event) -> updateView());
+        callbacks.put(ModelManager.ACTION_COMPLETE, evt -> Platform.runLater(this::registerComplete));
         btnRegister.setOnAction(actionEvent -> {
             String email = tfEmail.getText();
             String password = tfPassword.getText();
@@ -82,10 +91,10 @@ public class RegisterView extends BorderPane {
             Register register = new Register(ClientActions.REGISTER_USER, email, password, name);
             modelManager.sendMessage(register);
         });
-        modelManager.addPropertyChangeListener(ModelManager.ACTION_COMPLETE, evt -> Platform.runLater(this::registerComplete));
         btnBack.setOnAction(actionEvent -> {
             modelManager.setStatusClient(StatusClient.NOT_LOGGED);
         });
+        addListeners();
     }
 
     private void updateView() {
@@ -98,6 +107,19 @@ public class RegisterView extends BorderPane {
                     .showAndWait().ifPresent(buttonType -> {
                         modelManager.setStatusClient(StatusClient.NOT_LOGGED);
                     });
+        }
+    }
+
+    public void addListeners(){
+        for (Map.Entry<String, PropertyChangeListener> entry : callbacks.entrySet()){
+            modelManager.addPropertyChangeListener(entry.getKey(), entry.getValue());
+        }
+    }
+
+    @Override
+    public void removeListeners() {
+        for (Map.Entry<String, PropertyChangeListener> entry : callbacks.entrySet()){
+            modelManager.removePropertyChangeListener(entry.getKey(), entry.getValue());
         }
     }
 }

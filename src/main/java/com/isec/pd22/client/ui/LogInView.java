@@ -1,5 +1,6 @@
 package com.isec.pd22.client.ui;
 
+import com.isec.pd22.client.View;
 import com.isec.pd22.client.models.Data;
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.ui.utils.AlertSingleton;
@@ -16,7 +17,12 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 
-public class LogInView extends BorderPane {
+import java.beans.PropertyChangeListener;
+import java.util.ArrayList;
+import java.util.LinkedList;
+import java.util.List;
+
+public class LogInView extends BorderPane implements View {
 
     ModelManager modelManager;
     HBox hbox;
@@ -24,6 +30,9 @@ public class LogInView extends BorderPane {
     Label label, label2;
     TextField tfEmail, tfPassword;
     Button btnLogin, btnRegister;
+
+    PropertyChangeListener callback;
+
 
     public LogInView(ModelManager modelManager) {
         this.modelManager = modelManager;
@@ -71,7 +80,8 @@ public class LogInView extends BorderPane {
         setCenter(hbox);
     }
     private void registerHandlers() {
-        modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, (event) -> updateView() );
+        callback = (event) -> updateView();
+        modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, callback );
         btnLogin.setOnAction(actionEvent -> {
             String username = tfEmail.getText();
             String password = tfPassword.getText();
@@ -91,5 +101,10 @@ public class LogInView extends BorderPane {
         this.setVisible(modelManager != null && modelManager.getStatusClient() == StatusClient.NOT_LOGGED);
         if(modelManager != null && modelManager.getStatusClient() == StatusClient.NOT_LOGGED)
             modelManager.clearData();
+    }
+
+    @Override
+    public void removeListeners() {
+        modelManager.removePropertyChangeListener(ModelManager.PROP_STATUS, callback );
     }
 }

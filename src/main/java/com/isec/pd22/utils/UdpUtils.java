@@ -100,7 +100,7 @@ public class UdpUtils {
 //        if (!f.mkdir()) {
 //            throw new ServerException("Erro a criar a diretoria");
 //        }
-
+        //f.mkdir();
         try {
 
             FileOutputStream fos = new FileOutputStream( new File(internalInfo.getUrl()));
