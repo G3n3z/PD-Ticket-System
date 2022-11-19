@@ -3,6 +3,7 @@ package com.isec.pd22.client.ui;
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.ui.utils.AlertSingleton;
 import com.isec.pd22.enums.ClientActions;
+import com.isec.pd22.enums.ClientsPayloadType;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.tcp.Request.RequestDetailsEspetaculo;
@@ -124,6 +125,13 @@ public class RootPane extends BorderPane {
             case CONSULT_SPECTACLE -> {
                 if(node instanceof AdminView adminView){
                     adminView.goToSpectacles();
+                }
+            }
+            case LOGIN -> {
+                if (lastMessage.getClientsPayloadType() == ClientsPayloadType.NOT_AUTHENTICATED){
+                    AlertSingleton.getInstanceWarning().setAlertText("Erro de Mensagem", "A sua sessão expirou", message)
+                            .showAndWait();
+                    modelManager.setStatusClient(StatusClient.NOT_LOGGED);
                 }
             }
             default -> {}

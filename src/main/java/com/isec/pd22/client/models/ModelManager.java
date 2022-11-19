@@ -237,4 +237,8 @@ public class ModelManager {
                 espetaculo1.getIdEspetaculo() == espetaculo.getEspetaculo().getIdEspetaculo());
         pcs.firePropertyChange(ALL_ESPETACULOS, null, null);
     }
+
+    public void notAuhtenticated(ClientMSG mensage) {
+        pcs.firePropertyChange(BAD_REQUEST, null, null);
+    }
 }
