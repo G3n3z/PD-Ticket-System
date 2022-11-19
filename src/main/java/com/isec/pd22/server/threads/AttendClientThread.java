@@ -211,7 +211,7 @@ public class AttendClientThread extends Thread implements Observer {
                     editUser.getUser().getIdUser(),
                     editUser.getUsername(),
                     editUser.getNome(),
-                    editUser.getPassword()
+                    BCrypt.hashpw(editUser.getPassword(), BCrypt.gensalt())
             );
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
