@@ -3,6 +3,7 @@ package com.isec.pd22.server.models;
 import com.isec.pd22.enums.Payment;
 import com.isec.pd22.utils.Constants;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -10,7 +11,8 @@ import java.text.ParseException;
 import java.util.Date;
 
 public class Reserva implements Serializable {
-
+    @Serial
+    private static final long serialVersionUID = 1L;
     int idReserva;
     Date data_hora;
     Payment payment;

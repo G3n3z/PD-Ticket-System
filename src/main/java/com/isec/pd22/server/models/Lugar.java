@@ -1,11 +1,13 @@
 package com.isec.pd22.server.models;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class Lugar implements Serializable, Comparable<Lugar> {
-
+    @Serial
+    private static final long serialVersionUID = 1L;
     int idLugar;
     String fila;
     String assento;

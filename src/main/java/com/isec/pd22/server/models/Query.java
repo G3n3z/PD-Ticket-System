@@ -1,8 +1,11 @@
 package com.isec.pd22.server.models;
 
+import java.io.Serial;
 import java.io.Serializable;
 
 public class Query implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     int numVersion;
     String query;
     long timestamp;

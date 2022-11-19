@@ -3,11 +3,14 @@ package com.isec.pd22.server.models;
 import com.isec.pd22.enums.Authenticated;
 import com.isec.pd22.enums.Role;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class User implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     int idUser;
     Role role;
     String username;

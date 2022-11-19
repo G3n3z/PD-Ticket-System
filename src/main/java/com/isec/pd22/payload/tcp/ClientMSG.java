@@ -8,11 +8,14 @@ import com.isec.pd22.server.models.User;
 import com.isec.pd22.enums.ClientsPayloadType;
 import com.isec.pd22.server.models.ServerHeartBeat;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.HashSet;
 import java.util.Set;
 
 public class ClientMSG implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 1L;
     ClientActions action;
     User user;
     private Set<HeartBeat> serverList;

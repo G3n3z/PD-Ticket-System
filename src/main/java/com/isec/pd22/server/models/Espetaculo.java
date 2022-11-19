@@ -2,6 +2,7 @@ package com.isec.pd22.server.models;
 
 import com.isec.pd22.utils.Constants;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -11,7 +12,8 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class Espetaculo implements Serializable {
-
+    @Serial
+    private static final long serialVersionUID = 1L;
     int idEspetaculo;
     String descricao;
     String tipo;
