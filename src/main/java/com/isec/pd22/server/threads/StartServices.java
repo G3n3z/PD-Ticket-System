@@ -103,18 +103,8 @@ public class StartServices extends Thread {
         if (socket != null) {
             socket.close();
         }
-        if (serverSocket != null){
-            try {
-                serverSocket.close();
-            } catch (IOException ignored) {}
-        }
-        synchronized (internalInfo){
-            internalInfo.getAllClientSockets().forEach(socket1 -> {
-                try {
-                    socket1.close();
-                }catch (IOException ignored){}
-            });
-        }
+
+        internalInfo.closeInputStreams();
     }
 
     private void receivedHeartBeat() throws SQLException, IOException, ClassNotFoundException {

@@ -102,6 +102,7 @@ public class Client {
                 modelManager.removeSpectacle(mensage);
             }
             case NOT_AUTHENTICATED -> modelManager.notAuhtenticated(mensage);
+            case SHUTDOWN -> clientModel.setServersList(mensage.getServerList());
         }
 
     }

@@ -10,7 +10,9 @@ import com.isec.pd22.server.models.ServerHeartBeat;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 public class ClientMSG implements Serializable {
@@ -18,7 +20,7 @@ public class ClientMSG implements Serializable {
     private static final long serialVersionUID = 1L;
     ClientActions action;
     User user;
-    private Set<HeartBeat> serverList;
+    private List<HeartBeat> serverList;
     private ClientsPayloadType clientsPayloadType;
 
     private String message;
@@ -40,7 +42,7 @@ public class ClientMSG implements Serializable {
 
 
     public ClientMSG() {
-        this.serverList = new HashSet<>();
+        this.serverList = new ArrayList<>();
     }
 
     public ClientMSG(ClientsPayloadType clientsPayloadType) {
@@ -72,8 +74,11 @@ public class ClientMSG implements Serializable {
         return action;
     }
 
+    public List<HeartBeat> getServerList() {
+        return serverList;
+    }
 
-    public void setServerList(Set<HeartBeat> serverList) {
+    public void setServerList(List<HeartBeat> serverList) {
         this.serverList = serverList;
     }
 
