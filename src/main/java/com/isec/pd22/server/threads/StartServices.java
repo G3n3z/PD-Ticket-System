@@ -190,7 +190,8 @@ public class StartServices extends Thread {
             serverSocketThread.join();
             multicastThread.join();
             socket.close();
-        } catch (InterruptedException ignored) {
+            serverSocket.close();
+        } catch (InterruptedException | IOException ignored) {
         }
 
         System.out.println("A sair da thread Start Services");

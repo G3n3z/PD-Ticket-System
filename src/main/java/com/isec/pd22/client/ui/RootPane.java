@@ -1,5 +1,6 @@
 package com.isec.pd22.client.ui;
 
+import com.isec.pd22.client.View;
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.ui.utils.AlertSingleton;
 import com.isec.pd22.enums.ClientActions;
@@ -24,7 +25,7 @@ public class RootPane extends BorderPane {
     String [] args;
 
     StackPane stack;
-    Node node;
+    Node node = null;
 
     public RootPane(ModelManager modelManager, Stage stage, String [] args) {
         this.modelManager = modelManager;
@@ -49,6 +50,10 @@ public class RootPane extends BorderPane {
 
     }
     public void changeView(){
+        if(node != null && node instanceof View v){
+            v.removeListeners();
+            System.out.println("Remover listeners");
+        }
         switch (modelManager.getStatusClient()){
             case NOT_LOGGED -> node = new LogInView(modelManager);
             case REGISTER -> node = new RegisterView(modelManager);
@@ -134,9 +139,6 @@ public class RootPane extends BorderPane {
                 if(node instanceof AdminView adminView){
                     adminView.goToSpectacles();
                 }
-            }
-            case LOGIN -> {
-
             }
             default -> {}
         }
