@@ -107,6 +107,7 @@ public class TableEspetaculo extends TableView<Espetaculo> {
 
     public void addButtonRemove(){
         if (!getColumns().contains(colRemove)){
+            getColumns().remove(colShow);
             getColumns().add(columnVisivel);
             getColumns().add(colShow);
             getColumns().add(colSwitchVisible);

@@ -254,7 +254,7 @@ public class AttendClientThread extends Thread implements Observer {
     private ClientMSG submitReservation(ClientMSG msgClient) throws SQLException, IOException {
         ClientMSG msg;
         ListPlaces list = (ListPlaces) msgClient;
-        if(dbComm.canSubmitReservations(list)){
+        if(dbComm.canSubmitReservations(list) && dbComm.isSpectacleVisible(list)){
             Query query = dbComm.submitReservations(list);
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
@@ -279,6 +279,7 @@ public class AttendClientThread extends Thread implements Observer {
         }else {
             msg = new ClientMSG(ClientActions.SUBMIT_RESERVATION);
             msg.setClientsPayloadType(ClientsPayloadType.BAD_REQUEST);
+            msg.setMessage("Espetaculo não visível para reservas");
         }
         return msg;
     }
@@ -610,7 +611,7 @@ public class AttendClientThread extends Thread implements Observer {
     private void doRegister(ClientMSG msgClient, DBCommunicationManager dbComm) throws SQLException, IOException {
         Register r = (Register) msgClient;
         ClientMSG msg;
-        if (dbComm.existsUserByUsernameOrName(r.getNome(), r.getUserName())) {
+        if (dbComm.existsUserByUsernameOrName(r.getNome(), r.getUserName(), r.getPassword())) {
             String encryptedPassword = BCrypt.hashpw(r.getPassword(), BCrypt.gensalt());
 
             Query query = dbComm.getRegisterUserQuery(r.getUserName(), r.getNome(), encryptedPassword);
