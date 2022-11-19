@@ -65,10 +65,9 @@ public class TableReserva extends TableView<Reserva> {
         });
         setFixedCellSize(50);
         getColumns().addAll(colDataHora,columnTipo,colUser, colEspetaculo);
-        if (modelManager.getUser().getRole() == Role.ADMIN && !payed){
-            getColumns().add(colRemove);
-        }
+
         if (!payed){
+            getColumns().add(colRemove);
             getColumns().add(colPay);
         }
         colDataHora.setPrefWidth(150);

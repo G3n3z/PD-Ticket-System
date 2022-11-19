@@ -57,7 +57,7 @@ public class MulticastThread extends Thread{
                 break;
             }
             try {
-                multicastSocket.setSoTimeout(10000);
+                multicastSocket.setSoTimeout(20000);
                 DatagramPacket dp = new DatagramPacket(new byte[20000], 20000);
                 multicastSocket.receive(dp);
                 ByteArrayInputStream bais = new ByteArrayInputStream(dp.getData(),0, dp.getLength());
@@ -78,7 +78,10 @@ public class MulticastThread extends Thread{
 
             }catch (SocketTimeoutException e){
                 if(internalInfo.getStatus() == Status.UNAVAILABLE){
-                    //atualizaDB();
+                    synchronized (internalInfo){
+                        internalInfo.setFinish(true);
+                    }
+                    return;
                 }
                 System.out.println("[MulticastThread] - socket timeout: "+ e.getMessage());
                 //e.printStackTrace();
@@ -95,6 +98,12 @@ public class MulticastThread extends Thread{
                 e.printStackTrace();
                 if (!internalInfo.isFinish())
                     sendExitMessage(internalInfo, multicastSocket);
+            }catch (ServerException e){
+                System.out.println("[MulticastThread - Erro de atualizacao, vamos terminar] - " + e.getMessage());
+                sendExitMessage(internalInfo, multicastSocket);
+                synchronized (internalInfo){
+                    internalInfo.setFinish(true);
+                }
             }
 
         }
@@ -111,9 +120,6 @@ public class MulticastThread extends Thread{
                 new SaveHeartBeatTask(internalInfo, heartBeat).start();
                 // Se a versao recebida é maior que o nosso
                 if(heartBeat.getNumVersionDB() > internalInfo.getNumDB()) {
-                    heartBeatToPackage = new HashSet<>();
-                    heartBeatToPackage.add(heartBeat);
-                    unixStartTimeoutTime = new Date().getTime();
                     synchronized (internalInfo){
                         internalInfo.setStatus(Status.UNAVAILABLE);
                         internalInfo.getAllClientSockets().forEach( socket -> {
@@ -123,7 +129,9 @@ public class MulticastThread extends Thread{
                             }
                         });
                     }
+                    internalInfo.setMyStatus(Status.UNAVAILABLE);
                     sendHeartBeat();
+                    updateDB();
                 }
             }
             case UPDATE_DB -> {
@@ -140,6 +148,37 @@ public class MulticastThread extends Thread{
                 internalInfo.removeHeatBeat(e.getHeartBeat());
             }
         }
+    }
+
+    private void updateDB() {
+        Optional<HeartBeat> optional;
+        HeartBeat server;
+        synchronized (internalInfo.getHeatBeats()){
+            optional =  internalInfo.getHeatBeats().stream().filter(heart -> heart.getStatusServer() == Status.AVAILABLE)
+                    .min(HeartBeat::compareTo);
+        }
+        if (optional.isPresent()){
+            server = optional.get();
+        }else {
+            synchronized (internalInfo){
+                internalInfo.setStatus(Status.AVAILABLE);
+            }
+            return;
+        }
+
+        System.out.println("Tentativa de atualização 1");
+        try {
+            UdpUtils.updateDB(server, multicastSocket, internalInfo, dbVersionManager);
+
+
+        }catch (Exception e){
+            System.out.println("Tentativa de atualização 2");
+            internalInfo.setConnection(UdpUtils.restartDB(server, multicastSocket, internalInfo, dbVersionManager));
+        }
+        synchronized (internalInfo){
+            internalInfo.setStatus(Status.AVAILABLE);
+        }
+
     }
 
 
@@ -172,8 +211,16 @@ public class MulticastThread extends Thread{
                     }catch (SQLException e) {
                         synchronized (internalInfo){
                             internalInfo.setStatus(Status.UNAVAILABLE);
+                            internalInfo.getAllClientSockets().forEach( socket -> {
+                                try {
+                                    socket.getInputStream().close();
+                                } catch (IOException ignored) {
+                                }
+                            });
                         }
-                        e.printStackTrace();
+                        internalInfo.setMyStatus(Status.UNAVAILABLE);
+                        sendHeartBeat();
+                        updateDB();
                         return;
                     }
                 }
@@ -206,27 +253,7 @@ public class MulticastThread extends Thread{
             }
 
         }
-        if((new Date().getTime() - unixStartTimeoutTime) >= 10000){
-            HeartBeat server = heartBeatToPackage.stream().filter(heart -> heart.getStatusServer() == Status.AVAILABLE)
-                    .min(HeartBeat::compareTo).orElseThrow(() -> new ServerException("Problemas a encontrar o heatbeat"));
-
-            System.out.println("Tentativa de atualização 1");
-            try {
-                UdpUtils.updateDB(server, multicastSocket, internalInfo, dbVersionManager);
-
-
-            }catch (Exception e){
-                System.out.println("Tentativa de atualização 2");
-                internalInfo.setConnection(UdpUtils.restartDB(server, multicastSocket, internalInfo, dbVersionManager));
-            }
-            synchronized (internalInfo){
-                internalInfo.setStatus(Status.AVAILABLE);
-            }
-
-
-
-        }
-
+        updateDB();
     }
 
     void responseToPrepare(MulticastMSG msg){

@@ -105,8 +105,8 @@ public class Server {
         MulticastSocket socket = new MulticastSocket(Constants.MULTICAST_PORT);
         InetAddress group = InetAddress.getByName(Constants.MULTICAST_IP);
         SocketAddress sa = new InetSocketAddress(group, Constants.MULTICAST_PORT);
-        //NetworkInterface nif = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
-        NetworkInterface nif = NetworkInterface.getByName("en0");
+        NetworkInterface nif = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
+        //NetworkInterface nif = NetworkInterface.getByName("en0");
         socket.joinGroup(sa, nif);
         return socket;
     }

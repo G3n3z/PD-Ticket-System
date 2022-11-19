@@ -86,6 +86,9 @@ public class HeartBeat extends MulticastMSG implements Comparable<HeartBeat>{
 
     @Override
     public int compareTo(HeartBeat o) {
+        if(numVersionDB - o.numVersionDB != 0 ){
+            return o.numVersionDB - numVersionDB;
+        }
         return this.numOfClients - o.numOfClients;
     }
 
