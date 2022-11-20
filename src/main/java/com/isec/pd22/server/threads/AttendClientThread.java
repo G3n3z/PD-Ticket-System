@@ -87,7 +87,6 @@ public class AttendClientThread extends Thread implements Observer {
         synchronized (internalInfo) {
             internalInfo.decrementNumClients();
         }
-        internalInfo.removeClientThread(this);
         System.out.println("Sai da thread do cliente");
     }
 
@@ -256,6 +255,8 @@ public class AttendClientThread extends Thread implements Observer {
     private ClientMSG submitReservation(ClientMSG msgClient) throws SQLException, IOException {
         ClientMSG msg;
         ListPlaces list = (ListPlaces) msgClient;
+        if(list.getPlaces().size() == 0)
+            return new ClientMSG(ClientsPayloadType.BAD_REQUEST);
         if(dbComm.canSubmitReservations(list) && dbComm.isSpectacleVisible(list)){
             Query query = dbComm.submitReservations(list);
             if (startUpdateRoutine(query, internalInfo)) {

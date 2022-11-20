@@ -73,8 +73,13 @@ public class InternalInfo {
     }
 
     public void closeInputStreams(){
-        for(AttendClientThread t : clientThreads){
-            t.closeThread();
+        ListIterator<AttendClientThread> it = clientThreads.listIterator(clientThreads.size());
+        AttendClientThread temp;
+        while (it.hasPrevious())
+        {
+            temp = it.previous();
+            temp.closeThread();
+            it.remove();
         }
     }
 

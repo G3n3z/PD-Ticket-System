@@ -57,7 +57,7 @@ public class StartServices extends Thread {
                 System.out.println("Base de dados nao existente");
             }
             dbVersionManager = new DBVersionManager(connection);
-            packet = new DatagramPacket(new byte[6000], 6000);
+            packet = new DatagramPacket(new byte[20000], 20000);
             System.out.println("Aqui" + new Date());
             socket.setSoTimeout(5000);
             receiveMsg(packet);
