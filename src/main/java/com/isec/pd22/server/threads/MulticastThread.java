@@ -121,6 +121,9 @@ public class MulticastThread extends Thread{
                 // Se a versao recebida é maior que o nosso
                 if(heartBeat.getNumVersionDB() > internalInfo.getNumDB()) {
                     synchronized (internalInfo){
+                        System.out.println("Existe servidor com versao maior");
+                        System.out.println("Outro servidor " + heartBeat.getIp() + ":" + heartBeat.getPortUdp() + " db: " + heartBeat.getNumVersionDB());
+                        System.out.println("Meu servidor " + internalInfo.getIp() + ":" + internalInfo.getPortUdp() + " db: " + internalInfo.getNumDB());
                         internalInfo.setStatus(Status.UNAVAILABLE);
                         internalInfo.getAllClientSockets().forEach( socket -> {
                             try {
@@ -202,6 +205,8 @@ public class MulticastThread extends Thread{
             case COMMIT -> {
                 Commit commit = (Commit) msg;
                 if (!(commit.getIp().equalsIgnoreCase(internalInfo.getIp()) && commit.getPortUdp() == internalInfo.getPortUdp())){
+                    System.out.println("[MULTICASTHREAD] - Vou fazer insert query");
+                    System.out.println(query.getQuery());
                     try {
 
                         dbVersionManager.insertQuery(query);

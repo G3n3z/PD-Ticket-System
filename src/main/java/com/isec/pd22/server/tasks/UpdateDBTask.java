@@ -37,8 +37,9 @@ public class UpdateDBTask extends Thread{
             socket.setSoTimeout(10000);
             int numVersion = (int)ois.readObject();
             DBVersionManager dbVersionManager = new DBVersionManager(connection);
+            System.out.println("Pediram estas atualizações " + numVersion);
             List<Query> queries = dbVersionManager.getAllVersionAfter(numVersion);
-
+            queries.forEach(query ->  System.out.println(query.getNumVersion() + " - " + query.getQuery()));
             for (Query query : queries) {
                 oos.writeUnshared(query);
             }
