@@ -263,6 +263,7 @@ public class AttendClientThread extends Thread implements Observer {
                 dbVersionManager.insertQuery(query);
                 synchronized (internalInfo){
                     internalInfo.setNumDB(internalInfo.getNumDB()+1);
+                    System.out.println(internalInfo.getNumDB());
                 }
                 sendCommit();
 

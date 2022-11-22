@@ -48,6 +48,9 @@ public class ControlPaymentTask extends TimerTask {
                 if (startUpdateRoutine(query)) {
                     try {
                         dbVM.insertQuery(query);
+                        synchronized (internalInfo){
+                            internalInfo.setNumDB(internalInfo.getNumDB()+1);
+                        }
                         sendCommit();
                     } catch (SQLException e) {
                         System.out.println("[ControlPayment] - error on updateRoutine - could not insert query: " + e.getMessage());
