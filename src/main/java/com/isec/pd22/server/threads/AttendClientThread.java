@@ -175,7 +175,8 @@ public class AttendClientThread extends Thread implements Observer {
             System.out.println(Arrays.toString(e.getStackTrace()));
         } catch (IOException e) {
             sendAbort();
-            e.printStackTrace();
+            System.out.println("[AttendClientThread] - Nao foi possivel enviar mensagem de retorno");
+            //e.printStackTrace();
         }
     }
 
