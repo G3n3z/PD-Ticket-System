@@ -67,7 +67,6 @@ public class AttendClientThread extends Thread implements Observer {
                 synchronized (internalInfo) {
                     if (internalInfo.getStatus() == Status.UNAVAILABLE) {
                         System.out.println("[AttendClientThread] - server closed client connection: " + e.getMessage());
-                        closeClient();
                     }
                 }
                 keepGoing = false;
@@ -88,6 +87,7 @@ public class AttendClientThread extends Thread implements Observer {
         synchronized (internalInfo) {
             internalInfo.decrementNumClients();
         }
+        internalInfo.removeClientThread(this);
         System.out.println("Sai da thread do cliente");
     }
 
@@ -211,7 +211,7 @@ public class AttendClientThread extends Thread implements Observer {
                     editUser.getUser().getIdUser(),
                     editUser.getUsername(),
                     editUser.getNome(),
-                    BCrypt.hashpw(editUser.getPassword(), BCrypt.gensalt())
+                    editUser.getPassword() == null ? null : BCrypt.hashpw(editUser.getPassword(), BCrypt.gensalt())
             );
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
@@ -605,15 +605,11 @@ public class AttendClientThread extends Thread implements Observer {
 
     private void closeClient() {
         try {
-            ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream());
             ClientMSG ansMsg = new ClientMSG();
-            List<HeartBeat> list = new ArrayList<>();
-            synchronized (internalInfo.getHeatBeats()){
-                list.addAll(internalInfo.getHeatBeats().stream().filter(heartBeat -> heartBeat.getStatusServer() == Status.AVAILABLE).toList());
-            }
-            list.remove(new HeartBeat(internalInfo.getIp(),internalInfo.getPortUdp()));
-            Collections.sort(list);
-            ansMsg.setServerList(new HashSet<>(list));
+            List<HeartBeat> list = new ArrayList<>(internalInfo.getOrderedHeatBeats().stream().filter(heartBeat -> heartBeat.getStatusServer() != Status.UNAVAILABLE).toList());
+            list.removeIf(heartBeat -> heartBeat.getIp().equals(internalInfo.getIp()) && heartBeat.getPortUdp() == internalInfo.getPortUdp());
+            ansMsg.setServerList(list);
+            ansMsg.setClientsPayloadType(ClientsPayloadType.SHUTDOWN);
             oos.writeUnshared(ansMsg);
         } catch (IOException e) {
             System.out.println("[AttendClientThread] - failed to send server list" + e.getMessage());
@@ -697,6 +693,16 @@ public class AttendClientThread extends Thread implements Observer {
         if (lastMessageReceive != null) {
             System.out.println("Vou enviar mensagem - " + lastMessageReceive.getAction());
             handleClientRequest(lastMessageReceive);
+        }
+    }
+
+    public void closeThread() {
+        if(ois == null)
+            return;
+        closeClient();
+        try {
+            ois.close();
+        } catch (IOException ignored) {
         }
     }
 }

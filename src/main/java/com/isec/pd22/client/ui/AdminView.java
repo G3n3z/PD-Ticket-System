@@ -1,5 +1,6 @@
 package com.isec.pd22.client.ui;
 
+import com.isec.pd22.client.View;
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.ui.utils.*;
 import com.isec.pd22.enums.ClientActions;
@@ -19,10 +20,11 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
 
+import java.beans.PropertyChangeListener;
 import java.io.File;
 import java.util.*;
 
-public class AdminView extends BorderPane {
+public class AdminView extends BorderPane implements View {
 
     MenuVertical menuVertical;
     ButtonMenu btnConsultaReservas, btnConsultaReservasPayed, btnViewEspetaculos, btnInsertEspetaculo, btnLogout, btnEditUserInfo;
@@ -40,6 +42,8 @@ public class AdminView extends BorderPane {
     AlertSingleton alert = null;
 
     SpectaculeDetails spectaculeDetails;
+
+    Map<String, PropertyChangeListener> callbacks = new HashMap<>();
     public AdminView(ModelManager modelManager) {
         this.modelManager = modelManager;
         createViews();
@@ -91,8 +95,7 @@ public class AdminView extends BorderPane {
     }
 
     private void registerHandlers() {
-        modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, evt ->
-                Platform.runLater(this::updateView));
+        callbacks.put(ModelManager.PROP_STATUS, evt -> Platform.runLater(this::updateView));
 
         btnLogout.setOnAction( evt -> {
             ClientMSG msg = new ClientMSG(ClientActions.LOGOUT);
@@ -120,13 +123,14 @@ public class AdminView extends BorderPane {
             modelManager.sendFile(f);
         });
 
-        modelManager.addPropertyChangeListener(ModelManager.FILE_UPDATED, evt -> Platform.runLater(this::actionSucceded));
-        modelManager.addPropertyChangeListener(ModelManager.ALL_ESPETACULOS, evt -> Platform.runLater(this::updateTable));
-        modelManager.addPropertyChangeListener(ModelManager.PROP_RESERVAS, evt -> Platform.runLater(this::updateReservas));
-        modelManager.addPropertyChangeListener(ModelManager.PROP_ESPETACULO_DETAILS, evt -> Platform.runLater(this::updateDetails));
-        modelManager.addPropertyChangeListener(ModelManager.PROP_CLOSE_ALERT, evt -> Platform.runLater(this::closeAlert));
-        modelManager.addPropertyChangeListener(ModelManager.PROP_ESPETACULO_DETAILS_WAITING_PAYMENT,
+        callbacks.put(ModelManager.FILE_UPDATED, evt -> Platform.runLater(this::actionSucceded));
+        callbacks.put(ModelManager.ALL_ESPETACULOS, evt -> Platform.runLater(this::updateTable));
+        callbacks.put(ModelManager.PROP_RESERVAS, evt -> Platform.runLater(this::updateReservas));
+        callbacks.put(ModelManager.PROP_ESPETACULO_DETAILS, evt -> Platform.runLater(this::updateDetails));
+        callbacks.put(ModelManager.PROP_CLOSE_ALERT, evt -> Platform.runLater(this::closeAlert));
+        callbacks.put(ModelManager.PROP_ESPETACULO_DETAILS_WAITING_PAYMENT,
                 evt -> Platform.runLater(this::waitingPayment));
+        callbacks.put(ModelManager.PROP_DELETED_SPECPTACLE, evt -> Platform.runLater(this::deletedSpectacle));
 
         btnViewEspetaculos.setOnAction(actionEvent -> {
             goToSpectacles();
@@ -147,7 +151,8 @@ public class AdminView extends BorderPane {
             title.setText("Reservas Pagas");
             vBox.getChildren().addAll(title,reservaTableViewPayed);
         });
-        modelManager.addPropertyChangeListener(ModelManager.PROP_DELETED_SPECPTACLE, evt -> Platform.runLater(this::deletedSpectacle));
+
+        addListeners();
     }
 
     private void deletedSpectacle() {
@@ -260,4 +265,16 @@ public class AdminView extends BorderPane {
     }
 
 
+    @Override
+    public void removeListeners() {
+        for(Map.Entry<String, PropertyChangeListener> entry : callbacks.entrySet()){
+            modelManager.removePropertyChangeListener(entry.getKey(), entry.getValue());
+        }
+    }
+
+    public void addListeners() {
+        for(Map.Entry<String, PropertyChangeListener> entry : callbacks.entrySet()){
+            modelManager.addPropertyChangeListener(entry.getKey(), entry.getValue());
+        }
+    }
 }
