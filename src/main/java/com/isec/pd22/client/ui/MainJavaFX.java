@@ -8,9 +8,6 @@ import javafx.stage.Stage;
 import java.util.List;
 
 public class MainJavaFX extends Application {
-
-
-
     @Override
     public void start(Stage stage) throws Exception {
         ModelManager modelManager = new ModelManager();
@@ -26,5 +23,9 @@ public class MainJavaFX extends Application {
         stage.setTitle("APP do catano");
         stage.show();
         //rootPane.startServices();
+    }
+
+    public static void main(String[] args) {
+        launch(args);
     }
 }
