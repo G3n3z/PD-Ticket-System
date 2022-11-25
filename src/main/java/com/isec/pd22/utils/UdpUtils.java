@@ -94,13 +94,12 @@ public class UdpUtils {
             }
         }
     }
-    private static void createDatabaseV1(InternalInfo internalInfo) {
+    public static void createDatabaseV1(InternalInfo internalInfo) {
         File f = new File(UtilsFunctions.getPathToDirectory(internalInfo.getUrl()));
         int bytesReads = 0;
-//        if (!f.mkdir()) {
-//            throw new ServerException("Erro a criar a diretoria");
-//        }
-        //f.mkdir();
+
+        f.mkdir();
+
         try {
 
             FileOutputStream fos = new FileOutputStream( new File(internalInfo.getUrl()));

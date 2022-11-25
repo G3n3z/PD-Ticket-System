@@ -113,7 +113,7 @@ public class StartServices extends Thread {
         //Se nao tem ligacao à base de dados
         if(!haveConnectionDatabase(internalInfo.getUrl_db())) {
 
-            createDatabaseV1();
+            UdpUtils.createDatabaseV1(internalInfo);
             connection = createInitialData(internalInfo);
             dbVersionManager = new DBVersionManager(connection);
             UdpUtils.updateDB(serverWithMaxDBVersion, socket, internalInfo, dbVersionManager);
@@ -271,41 +271,10 @@ public class StartServices extends Thread {
     private void startFirstServer() throws SQLException {
 
         if(!haveConnectionDatabase(internalInfo.getUrl_db())){
-            createDatabaseV1();
+            UdpUtils.createDatabaseV1(internalInfo);
             connection = createInitialData(internalInfo);
             dbVersionManager = new DBVersionManager(connection);
         }
-    }
-
-    private void createDatabaseV1() {
-        File f = new File(getPathToDirectory(internalInfo.getUrl()));
-        int bytesReads = 0;
-        if (!f.mkdir()) {
-            throw new ServerException("Erro a criar a diretoria");
-        }
-
-        try {
-
-            FileOutputStream fos = new FileOutputStream( new File(internalInfo.getUrl()));
-
-            FileInputStream fis = new FileInputStream(Constants.INITIAL_DB_BASE_URL);
-            while (true) {
-                byte[] bytes = new byte[4000];
-                bytesReads = fis.read(bytes);
-                if (bytesReads < 0) {
-                    break;
-                }
-                fos.write(bytes, 0, bytesReads);
-            }
-            fos.close();
-            fis.close();
-        } catch (FileNotFoundException e) {
-            throw new ServerException("File not found");
-        } catch (IOException e) {
-            throw new ServerException("Erro na leitura/Escrita dos ficheiros");
-        }
-
-
     }
 
     private Connection createInitialData( InternalInfo internalInfo){
