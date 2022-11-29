@@ -57,15 +57,16 @@ public class StartServices extends Thread {
                 System.out.println("Base de dados nao existente");
             }
             dbVersionManager = new DBVersionManager(connection);
-            packet = new DatagramPacket(new byte[6000], 6000);
+            packet = new DatagramPacket(new byte[20000], 20000);
             System.out.println("Aqui" + new Date());
             socket.setSoTimeout(5000);
             receiveMsg(packet);
 
 
         }
-        catch (IOException | ServerException e){
+        catch (IOException | ServerException | ClassNotFoundException e){
             System.out.println(e);
+            e.printStackTrace();
             if(!internalInfo.isFinish())
                 System.out.println("Erro ao connectar ao socket multicast");
             synchronized (internalInfo){
@@ -134,7 +135,7 @@ public class StartServices extends Thread {
         }
     }
 
-    private void receiveMsg(DatagramPacket packet) throws IOException {
+    private void receiveMsg(DatagramPacket packet) throws IOException, ClassNotFoundException {
         MulticastMSG msg = null;
 
         long startTime = new Date().getTime();
@@ -145,8 +146,14 @@ public class StartServices extends Thread {
                 System.out.println("[START SERVICES] - Timeout socket multicast");
                 continue;
             }
-            msg = os.readObject(packet, MulticastMSG.class);
-            connection = getConnectionDatabaseByUrl(internalInfo.getUrl_db());
+
+            ByteArrayInputStream bais = new ByteArrayInputStream(packet.getData(),0, packet.getLength());
+            ObjectInputStream ois = new ObjectInputStream(bais);
+//            if(ois.available() <= 0 ){
+//                continue;
+//            };
+            msg = (MulticastMSG) ois.readObject();
+            //msg = os.readObject(packet, MulticastMSG.class);
             if(msg.getTypeMsg() != TypeOfMulticastMsg.HEARTBEAT){
                 continue;
             }
@@ -155,6 +162,7 @@ public class StartServices extends Thread {
             heartBeat.setTimeMsg();
             internalInfo.addHeartBeat(heartBeat);
         }
+        //connection = getConnectionDatabaseByUrl(internalInfo.getUrl_db());
 
     }
 
