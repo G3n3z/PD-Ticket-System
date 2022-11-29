@@ -51,6 +51,7 @@ public class ModelManager {
 
     Data data;
     ModalIndicator modalIndicator = null;
+    private ClientMSG lastSubscription;
 
     public ModelManager() {
         pcs = new PropertyChangeSupport(this);
@@ -246,5 +247,13 @@ public class ModelManager {
 
     public void notAuhtenticated(ClientMSG mensage) {
         pcs.firePropertyChange(BAD_REQUEST, null, null);
+    }
+
+    public void setLastSubscription(ClientMSG subscription) {
+        lastSubscription = subscription;
+    }
+
+    public ClientMSG getLastSubscription() {
+        return lastSubscription;
     }
 }

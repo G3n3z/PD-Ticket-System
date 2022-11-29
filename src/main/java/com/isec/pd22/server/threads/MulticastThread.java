@@ -88,14 +88,14 @@ public class MulticastThread extends Thread{
             }
             catch (IOException | SQLException e) {
                 System.out.println("[MulticastThread] - erro na rececao: "+ e.getMessage());
-                e.printStackTrace();
+               // e.printStackTrace();
                 if (!internalInfo.isFinish())
                     sendExitMessage(internalInfo, multicastSocket);
                 //                System.out.println(e);
                 break;
             } catch (ClassNotFoundException e) {
                 System.out.println("[MulticastThread] - erro no cast da class: "+ e.getMessage());
-                e.printStackTrace();
+                //e.printStackTrace();
                 if (!internalInfo.isFinish())
                     sendExitMessage(internalInfo, multicastSocket);
             }catch (ServerException e){

@@ -5,9 +5,7 @@ import com.isec.pd22.client.models.ConnectionModel;
 import com.isec.pd22.client.models.Data;
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.threads.ServerConnectionThread;
-import com.isec.pd22.enums.ClientsPayloadType;
-import com.isec.pd22.enums.Role;
-import com.isec.pd22.enums.StatusClient;
+import com.isec.pd22.enums.*;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.ServersRequestPayload;
 import com.isec.pd22.payload.HeartBeat;
@@ -102,7 +100,10 @@ public class Client {
                 modelManager.removeSpectacle(mensage);
             }
             case NOT_AUTHENTICATED -> modelManager.notAuhtenticated(mensage);
-            case SHUTDOWN -> clientModel.setServersList(mensage.getServerList());
+            case SHUTDOWN -> {
+                modelManager.setLastSubscription(mensage.getSubscription());
+                clientModel.setServersList(mensage.getServerList());
+            }
         }
 
     }
@@ -158,7 +159,13 @@ public class Client {
             Socket serverSocket = connectToServer();
 
             initServerThread(serverSocket);
-
+            if (modelManager.getStatusClient() == StatusClient.USER || modelManager.getStatusClient() == StatusClient.ADMIN){
+                if(modelManager.getLastSubscription() != null){
+                    ClientMSG msg = new ClientMSG(ClientActions.RECONNECT);
+                    msg.setSubscription(modelManager.getLastSubscription());
+                    sendMessage(msg);
+                }
+            }
         } catch (RuntimeException e) {
             System.err.println(e);
             modelManager.setErrorConnection();
