@@ -5,12 +5,11 @@ import com.isec.pd22.client.models.ConnectionModel;
 import com.isec.pd22.client.models.Data;
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.threads.ServerConnectionThread;
-import com.isec.pd22.enums.ClientsPayloadType;
-import com.isec.pd22.enums.Role;
-import com.isec.pd22.enums.StatusClient;
+import com.isec.pd22.enums.*;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.ServersRequestPayload;
 import com.isec.pd22.payload.HeartBeat;
+import com.isec.pd22.payload.tcp.Request.Reconnect;
 import com.isec.pd22.utils.UdpUtils;
 
 import java.io.IOException;
@@ -102,7 +101,11 @@ public class Client {
                 modelManager.removeSpectacle(mensage);
             }
             case NOT_AUTHENTICATED -> modelManager.notAuhtenticated(mensage);
-            case SHUTDOWN -> clientModel.setServersList(mensage.getServerList());
+            case SHUTDOWN -> {
+                Reconnect msg = (Reconnect) mensage;
+                modelManager.setLastSubscription(msg.getSubscription());
+                clientModel.setServersList(msg.getServerList());
+            }
         }
 
     }
@@ -158,10 +161,22 @@ public class Client {
             Socket serverSocket = connectToServer();
 
             initServerThread(serverSocket);
+            sendReconnectSubscription();
 
         } catch (RuntimeException e) {
             System.err.println(e);
             modelManager.setErrorConnection();
         } catch (IOException ignored) { }
+    }
+
+    private void sendReconnectSubscription() throws IOException {
+        if (modelManager.getStatusClient() == StatusClient.USER || modelManager.getStatusClient() == StatusClient.ADMIN){
+            if(modelManager.getLastSubscription() != null){
+                Reconnect msg = new Reconnect(ClientActions.RECONNECT);
+                msg.setSubscription(modelManager.getLastSubscription());
+                msg.setUser(modelManager.getUser());
+                sendMessage(msg);
+            }
+        }
     }
 }

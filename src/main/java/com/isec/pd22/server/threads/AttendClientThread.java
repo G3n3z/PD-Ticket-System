@@ -116,6 +116,7 @@ public class AttendClientThread extends Thread implements Observer {
                    exitClient(msgClient);
                 }
                 case LOGOUT -> logout(msgClient);
+                case RECONNECT -> reconnected(msgClient);
                 default -> actionsLogged(msgClient, dbComm);
             }
 
@@ -125,6 +126,22 @@ public class AttendClientThread extends Thread implements Observer {
             System.out.println("[AttendClientThread] - communication: "+ e.getMessage());
             oos.writeUnshared(ansMsg);
         }
+    }
+
+    private void reconnected(ClientMSG msgClient) {
+        try {
+            Reconnect msg  = (Reconnect) msgClient;
+            handleClientRequest(msg.getSubscription());
+            lastMessageReceive = msg.getSubscription();
+            if (msgClient.getUser() != null) {
+                RequestListReservas reservas = consultUnpayedReservation(msgClient);
+                for (Reserva reserva : reservas.getReservas()) {
+                    Timer timer1 = new Timer();
+                    timer1.schedule(new ControlPaymentTask(reserva.getIdReserva(), connection, internalInfo, timer1),
+                            Constants.PAYMENT_TIMER);
+                }
+            }
+        }catch (IOException e){}
     }
 
     private void exitClient(ClientMSG msgClient) throws SQLException, IOException {
@@ -230,7 +247,7 @@ public class AttendClientThread extends Thread implements Observer {
         return msg;
     }
 
-    private ClientMSG consultUnpayedReservation(ClientMSG msgClient) {
+    private RequestListReservas consultUnpayedReservation(ClientMSG msgClient) {
         List<Reserva> unpayedReservations;
         unpayedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.NOT_PAYED);
         return new RequestListReservas(msgClient.getAction(),ClientsPayloadType.RESERVAS_RESPONSE, unpayedReservations);
@@ -608,10 +625,11 @@ public class AttendClientThread extends Thread implements Observer {
 
     private void closeClient() {
         try {
-            ClientMSG ansMsg = new ClientMSG();
+            Reconnect ansMsg = new Reconnect();
             List<HeartBeat> list = new ArrayList<>(internalInfo.getOrderedHeatBeats().stream().filter(heartBeat -> heartBeat.getStatusServer() != Status.UNAVAILABLE).toList());
             list.removeIf(heartBeat -> heartBeat.getIp().equals(internalInfo.getIp()) && heartBeat.getPortUdp() == internalInfo.getPortUdp());
             ansMsg.setServerList(list);
+            ansMsg.setSubscription(lastMessageReceive);
             ansMsg.setClientsPayloadType(ClientsPayloadType.SHUTDOWN);
             oos.writeUnshared(ansMsg);
         } catch (IOException e) {

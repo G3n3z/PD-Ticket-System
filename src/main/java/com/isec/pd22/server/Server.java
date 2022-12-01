@@ -12,8 +12,8 @@ import java.util.Scanner;
 
 public class Server {
     public static void main(String[] args) {
-        if(args.length != 2){
-            System.out.println("Para arrancar o servidor deve passar o porto e a diretoria para uma base de dados");
+        if(args.length != 3){
+            System.out.println("Para arrancar o servidor deve passar o porto, a diretoria para uma base de dados e placa de rede");
             System.exit(-1);
         }
 
@@ -31,10 +31,11 @@ public class Server {
         Boolean isFinish = false;
         InternalInfo info = new InternalInfo(url_database, port, isFinish);
         try {
-            MulticastSocket multicastSocket =  connectMulticastGroup();
+            MulticastSocket multicastSocket =  connectMulticastGroup(args[2]);
             info.setMulticastSocket(multicastSocket);
-            info.setIp(InetAddress.getLocalHost().getHostAddress());
-            System.out.println(info.getIp());
+
+            info.setIp(args[2]);
+            System.out.println(args[2]);
             //info.setIp("10.65.132.195");
             //info.setIp("127.0.0.1");
         } catch (IOException e) {
@@ -94,19 +95,15 @@ public class Server {
         System.out.println("2 - Listar Servidores");
     }
 
-    private static void startServer() {
-        //Testar se existe base de dados
-        //30s espera por um heartbit
 
-    }
-
-    private static MulticastSocket connectMulticastGroup() throws IOException {
+    private static MulticastSocket connectMulticastGroup(String ip) throws IOException {
 
         MulticastSocket socket = new MulticastSocket(Constants.MULTICAST_PORT);
         InetAddress group = InetAddress.getByName(Constants.MULTICAST_IP);
         SocketAddress sa = new InetSocketAddress(group, Constants.MULTICAST_PORT);
-        NetworkInterface nif = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
-        //NetworkInterface nif = NetworkInterface.getByName("en0");
+        //NetworkInterface nif = NetworkInterface.getByInetAddress(InetAddress.getLocalHost());
+        NetworkInterface nif = NetworkInterface.getByInetAddress(InetAddress.getByName(ip));
+
         socket.joinGroup(sa, nif);
         return socket;
     }

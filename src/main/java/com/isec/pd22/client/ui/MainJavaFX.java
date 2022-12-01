@@ -20,7 +20,7 @@ public class MainJavaFX extends Application {
         RootPane rootPane = new RootPane(modelManager, stage, args);
         Scene scene = new Scene(rootPane, 1600,800);
         stage.setScene(scene);
-        stage.setTitle("APP do catano");
+        stage.setTitle("Ticket System");
         stage.show();
         //rootPane.startServices();
     }
