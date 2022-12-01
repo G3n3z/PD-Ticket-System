@@ -112,7 +112,7 @@ public class AdminView extends BorderPane implements View {
         btnInsertEspetaculo.setOnAction(actionEvent -> {
             FileChooser fileChooser = new FileChooser();
             fileChooser.setTitle("Abrir ficheiro...");
-            fileChooser.setInitialDirectory(new File(Constants.PICK_FILES_DIR_PATH));
+            fileChooser.setInitialDirectory(new File("."));
             fileChooser.getExtensionFilters().addAll(
                     new FileChooser.ExtensionFilter("Ficheiro de texto (*.txt)", "*.txt")
             );
