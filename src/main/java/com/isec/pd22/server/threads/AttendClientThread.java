@@ -124,7 +124,7 @@ public class AttendClientThread extends Thread implements Observer {
             ansMsg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
             e.printStackTrace();
             System.out.println("[AttendClientThread] - communication: "+ e.getMessage());
-            oos.writeUnshared(ansMsg);
+            sendMessage(ansMsg);
         }
     }
 
@@ -281,7 +281,6 @@ public class AttendClientThread extends Thread implements Observer {
                 dbVersionManager.insertQuery(query);
                 synchronized (internalInfo){
                     internalInfo.setNumDB(internalInfo.getNumDB()+1);
-                    System.out.println(internalInfo.getNumDB());
                 }
                 sendCommit();
 
@@ -327,7 +326,6 @@ public class AttendClientThread extends Thread implements Observer {
                 sendCommit();
                 msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
                 msg.setClientsPayloadType(ClientsPayloadType.ACTION_SUCCEDED);
-                //TODO: TESTE
                 return null;
             } else {
                 sendAbort();
@@ -379,7 +377,6 @@ public class AttendClientThread extends Thread implements Observer {
 
     private ClientMSG deleteSpectacle(ClientMSG msgClient, User user) throws SQLException, IOException {
         RequestDetailsEspetaculo msg;
-        //TODO mudar isto para um espetaculo
         if(user.getRole() == Role.ADMIN){
             RequestDetailsEspetaculo espetaculo = (RequestDetailsEspetaculo) msgClient;
             if(dbComm.canRemoveEspecatulo(espetaculo.getEspetaculo().getIdEspetaculo())){
@@ -631,7 +628,7 @@ public class AttendClientThread extends Thread implements Observer {
             ansMsg.setServerList(list);
             ansMsg.setSubscription(lastMessageReceive);
             ansMsg.setClientsPayloadType(ClientsPayloadType.SHUTDOWN);
-            oos.writeUnshared(ansMsg);
+            sendMessage(ansMsg);
         } catch (IOException e) {
             System.out.println("[AttendClientThread] - failed to send server list" + e.getMessage());
         }
@@ -662,7 +659,7 @@ public class AttendClientThread extends Thread implements Observer {
             msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
 
         }
-        oos.writeUnshared(msg);
+        sendMessage(msg);
     }
 
     private void doLogin(ClientMSG msgClient, DBCommunicationManager dbComm) throws SQLException, IOException {
@@ -686,7 +683,7 @@ public class AttendClientThread extends Thread implements Observer {
         } else {
             msg = new ClientMSG(ClientActions.LOGIN, ClientsPayloadType.BAD_REQUEST,"Username ou Password incorretos") ;
         }
-        oos.writeUnshared(msg);
+        sendMessage(msg);
     }
 
 
@@ -695,7 +692,9 @@ public class AttendClientThread extends Thread implements Observer {
             System.out.println("Tentativa de envio de mengsane a null ");
             return;
         }
-        oos.writeUnshared(msg);
+        synchronized (oos) {
+            oos.writeUnshared(msg);
+        }
     }
 
 
