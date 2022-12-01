@@ -49,7 +49,9 @@ public class StartServices extends Thread {
     public void run() {
         DatagramPacket packet = null;
         MulticastMSG msg = null;
-
+        if(!openSockets()){
+            return;
+        }
         try {
             try {
                 File f = new File(internalInfo.getUrl());
@@ -98,6 +100,19 @@ public class StartServices extends Thread {
             return;
         }
         startThreads();
+    }
+
+    private boolean openSockets() {
+        try {
+            // inicia serversocket thread
+            serverSocket = new ServerSocket(0);
+            serversRequestSocket = new DatagramSocket(internalInfo.getPortUdp());
+        }
+        catch (IOException e) {
+            System.out.println("Não foi possivel iniciar recursos");
+            return false;
+        }
+        return true;
     }
 
     public void close() {
@@ -171,17 +186,7 @@ public class StartServices extends Thread {
     }
 
     private void startThreads() {
-        serverSocket = null;
         startCondition();
-        try {
-            // inicia serversocket thread
-            serverSocket = new ServerSocket(0);
-            serversRequestSocket = new DatagramSocket(internalInfo.getPortUdp());
-        }
-        catch (IOException e) {
-            System.out.println("Não foi possivel iniciar recursos");
-            return;
-        }
 
         System.out.println("Ready to start");
         internalInfo.setStatus(Status.AVAILABLE);
