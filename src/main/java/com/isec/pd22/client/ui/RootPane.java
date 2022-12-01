@@ -132,7 +132,6 @@ public class RootPane extends BorderPane {
         }
 
         switch (lastMessage.getAction()) {
-            // TODO tratar as diferentes mensagens
             case CONSULT_SPECTACLE_DETAILS -> {modelManager.fireEspectaculo(new RequestDetailsEspetaculo(ClientActions.CONSULT_SPECTACLE_DETAILS));}
             case CONSULT_SPECTACLE -> {
                 if(node instanceof AdminView adminView){
