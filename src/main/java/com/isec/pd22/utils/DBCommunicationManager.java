@@ -225,7 +225,6 @@ public class DBCommunicationManager {
     }
 
     public Espetaculo getEspetaculoLess24HoursById(int id){
-        //TODO check this
         String query = "Select * from espetaculo, lugar where espetaculo.id = ? and lugar.espetaculo_id = ? and espetaculo.data_hora >= datetime('now','+24 hours')";
         Espetaculo espetaculo = null;
         ResultSet res;
