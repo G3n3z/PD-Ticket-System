@@ -9,6 +9,7 @@ import com.isec.pd22.enums.*;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.ServersRequestPayload;
 import com.isec.pd22.payload.HeartBeat;
+import com.isec.pd22.payload.tcp.Request.Reconnect;
 import com.isec.pd22.utils.UdpUtils;
 
 import java.io.IOException;
@@ -101,8 +102,9 @@ public class Client {
             }
             case NOT_AUTHENTICATED -> modelManager.notAuhtenticated(mensage);
             case SHUTDOWN -> {
-                modelManager.setLastSubscription(mensage.getSubscription());
-                clientModel.setServersList(mensage.getServerList());
+                Reconnect msg = (Reconnect) mensage;
+                modelManager.setLastSubscription(msg.getSubscription());
+                clientModel.setServersList(msg.getServerList());
             }
         }
 
@@ -159,16 +161,22 @@ public class Client {
             Socket serverSocket = connectToServer();
 
             initServerThread(serverSocket);
-            if (modelManager.getStatusClient() == StatusClient.USER || modelManager.getStatusClient() == StatusClient.ADMIN){
-                if(modelManager.getLastSubscription() != null){
-                    ClientMSG msg = new ClientMSG(ClientActions.RECONNECT);
-                    msg.setSubscription(modelManager.getLastSubscription());
-                    sendMessage(msg);
-                }
-            }
+            sendReconnectSubscription();
+
         } catch (RuntimeException e) {
             System.err.println(e);
             modelManager.setErrorConnection();
         } catch (IOException ignored) { }
+    }
+
+    private void sendReconnectSubscription() throws IOException {
+        if (modelManager.getStatusClient() == StatusClient.USER || modelManager.getStatusClient() == StatusClient.ADMIN){
+            if(modelManager.getLastSubscription() != null){
+                Reconnect msg = new Reconnect(ClientActions.RECONNECT);
+                msg.setSubscription(modelManager.getLastSubscription());
+                msg.setUser(modelManager.getUser());
+                sendMessage(msg);
+            }
+        }
     }
 }

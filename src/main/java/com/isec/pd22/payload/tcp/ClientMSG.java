@@ -22,7 +22,7 @@ public class ClientMSG implements Serializable {
     User user;
     private List<HeartBeat> serverList;
     private ClientsPayloadType clientsPayloadType;
-    private ClientMSG lastSubscription;
+
     private String message;
 
     public ClientMSG(ClientActions action, ClientsPayloadType clientsPayloadType) {
@@ -90,11 +90,5 @@ public class ClientMSG implements Serializable {
         return message;
     }
 
-    public ClientMSG getSubscription() {
-        return lastSubscription;
-    }
 
-    public void setSubscription(ClientMSG lastMessageReceive) {
-        lastSubscription = lastMessageReceive;
-    }
 }

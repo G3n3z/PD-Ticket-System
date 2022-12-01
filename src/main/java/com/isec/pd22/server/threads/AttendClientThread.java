@@ -130,8 +130,9 @@ public class AttendClientThread extends Thread implements Observer {
 
     private void reconnected(ClientMSG msgClient) {
         try {
-            handleClientRequest(msgClient.getSubscription());
-            lastMessageReceive = msgClient.getSubscription();
+            Reconnect msg  = (Reconnect) msgClient;
+            handleClientRequest(msg.getSubscription());
+            lastMessageReceive = msg.getSubscription();
             if (msgClient.getUser() != null) {
                 RequestListReservas reservas = consultUnpayedReservation(msgClient);
                 for (Reserva reserva : reservas.getReservas()) {
@@ -624,7 +625,7 @@ public class AttendClientThread extends Thread implements Observer {
 
     private void closeClient() {
         try {
-            ClientMSG ansMsg = new ClientMSG();
+            Reconnect ansMsg = new Reconnect();
             List<HeartBeat> list = new ArrayList<>(internalInfo.getOrderedHeatBeats().stream().filter(heartBeat -> heartBeat.getStatusServer() != Status.UNAVAILABLE).toList());
             list.removeIf(heartBeat -> heartBeat.getIp().equals(internalInfo.getIp()) && heartBeat.getPortUdp() == internalInfo.getPortUdp());
             ansMsg.setServerList(list);
