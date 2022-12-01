@@ -55,7 +55,7 @@ public class SpectaculeDetails extends ScrollPane {
                 manager.getEspectaculo().getIdEspetaculo()
         );
         buttons.forEach(buttonLugar -> {
-            if (buttonLugar.isSelected && !buttonLugar.isMarked){
+            if (buttonLugar.isSelected && !buttonLugar.isMarked && !buttonLugar.waitingPayment){
                 buttonLugar.lugar.setReserva(reserva);
                 lugarsToSubmit.add(buttonLugar.lugar);
             }

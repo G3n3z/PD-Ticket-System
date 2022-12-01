@@ -1,5 +1,6 @@
 package com.isec.pd22.server.threads;
 
+import com.isec.pd22.enums.Status;
 import com.isec.pd22.enums.TypeOfMulticastMsg;
 import com.isec.pd22.payload.HeartBeat;
 import com.isec.pd22.server.models.InternalInfo;
@@ -48,6 +49,9 @@ public class ServerSocketThread extends Thread
                 serverSocket.setSoTimeout(5000);
                 Socket clientSocket = serverSocket.accept();
 
+                if(internalInfo.isFinish())
+                    break;
+
                 internalInfo.getAllClientSockets().add(clientSocket);
 
                 AttendClientThread clientThread = new AttendClientThread(clientSocket, internalInfo, connection);
@@ -55,6 +59,7 @@ public class ServerSocketThread extends Thread
 
                 synchronized (internalInfo) {
                     internalInfo.incrementNumClients();
+                    internalInfo.addClientThread(clientThread);
                 }
 
                 allClientThreads.add(clientThread);

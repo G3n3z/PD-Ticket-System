@@ -45,21 +45,24 @@ public class ControlPaymentTask extends TimerTask {
         while (true) {
             if (dbComm.canCancelReservation(reservationId)) {
                 Query query = dbComm.deleteReservaNotPayed(reservationId);
-                if (startUpdateRoutine(query, internalInfo)) {
+                if (startUpdateRoutine(query)) {
                     try {
                         dbVM.insertQuery(query);
+                        synchronized (internalInfo){
+                            internalInfo.setNumDB(internalInfo.getNumDB()+1);
+                        }
                         sendCommit();
                     } catch (SQLException e) {
-                        System.out.println("[ControlPayment] - error on updateRoutine - could not send prepare: " + e.getMessage());
+                        System.out.println("[ControlPayment] - error on updateRoutine - could not insert query: " + e.getMessage());
                     } catch (IOException e) {
-                        System.out.println("[ControlPayment] - error on updateRoutine - could not send prepare: " + e.getMessage());
+                        System.out.println("[ControlPayment] - error on updateRoutine - could not send commit: " + e.getMessage());
                     }finally {
                         break;
                     }
                 } else {
                     try {
                         System.out.println("[ControlPaymentTask] - servers busy, trying again in a second...");
-                        Thread.sleep(1000);
+                        Thread.sleep(5000);
                     } catch (InterruptedException e) {
                         break;
                     }
@@ -72,7 +75,7 @@ public class ControlPaymentTask extends TimerTask {
         timer.cancel();
     }
 
-    private boolean startUpdateRoutine(Query query, InternalInfo internalInfo){
+    private boolean startUpdateRoutine(Query query){
         Set<Prepare> confirmationList = new HashSet<>();
         byte[] bytes = new byte[10000];
         //Mudar estado para UPDATE

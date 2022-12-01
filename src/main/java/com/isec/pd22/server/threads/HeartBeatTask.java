@@ -55,8 +55,7 @@ public class HeartBeatTask  extends TimerTask {
         } catch (UnknownHostException e) {
             System.out.println("Erro ao enviar sinal de vida");
         } catch (IOException e) {
-            System.out.println(e);
-            System.out.println("[heartbeat task]Nao conseguiu enviar o datagrampacket " + new Date());
+            //System.out.println("[heartbeat task]Nao conseguiu enviar o datagrampacket " + new Date());
         }
 
         //Se for para executar mais que uma vez

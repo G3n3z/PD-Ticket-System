@@ -49,23 +49,30 @@ public class StartServices extends Thread {
     public void run() {
         DatagramPacket packet = null;
         MulticastMSG msg = null;
-
+        if(!openSockets()){
+            return;
+        }
         try {
             try {
-                connection = DriverManager.getConnection(internalInfo.getUrl_db());
+                File f = new File(internalInfo.getUrl());
+                if (f.exists()){
+                    connection = DriverManager.getConnection(internalInfo.getUrl_db());
+                }
             }catch (SQLException e){
                 System.out.println("Base de dados nao existente");
+                connection = null;
             }
             dbVersionManager = new DBVersionManager(connection);
-            packet = new DatagramPacket(new byte[6000], 6000);
+            packet = new DatagramPacket(new byte[20000], 20000);
             System.out.println("Aqui" + new Date());
             socket.setSoTimeout(5000);
             receiveMsg(packet);
 
 
         }
-        catch (IOException | ServerException e){
+        catch (IOException | ServerException | ClassNotFoundException e){
             System.out.println(e);
+            e.printStackTrace();
             if(!internalInfo.isFinish())
                 System.out.println("Erro ao connectar ao socket multicast");
             synchronized (internalInfo){
@@ -95,6 +102,19 @@ public class StartServices extends Thread {
         startThreads();
     }
 
+    private boolean openSockets() {
+        try {
+            // inicia serversocket thread
+            serverSocket = new ServerSocket(0);
+            serversRequestSocket = new DatagramSocket(internalInfo.getPortUdp());
+        }
+        catch (IOException e) {
+            System.out.println("Não foi possivel iniciar recursos");
+            return false;
+        }
+        return true;
+    }
+
     public void close() {
         if (serversRequestSocket != null) {
             serversRequestSocket.close();
@@ -103,18 +123,8 @@ public class StartServices extends Thread {
         if (socket != null) {
             socket.close();
         }
-        if (serverSocket != null){
-            try {
-                serverSocket.close();
-            } catch (IOException ignored) {}
-        }
-        synchronized (internalInfo){
-            internalInfo.getAllClientSockets().forEach(socket1 -> {
-                try {
-                    socket1.close();
-                }catch (IOException ignored){}
-            });
-        }
+
+        internalInfo.closeInputStreams();
     }
 
     private void receivedHeartBeat() throws SQLException, IOException, ClassNotFoundException {
@@ -123,7 +133,7 @@ public class StartServices extends Thread {
         //Se nao tem ligacao à base de dados
         if(!haveConnectionDatabase(internalInfo.getUrl_db())) {
 
-            createDatabaseV1();
+            UdpUtils.createDatabaseV1(internalInfo);
             connection = createInitialData(internalInfo);
             dbVersionManager = new DBVersionManager(connection);
             UdpUtils.updateDB(serverWithMaxDBVersion, socket, internalInfo, dbVersionManager);
@@ -144,7 +154,7 @@ public class StartServices extends Thread {
         }
     }
 
-    private void receiveMsg(DatagramPacket packet) throws IOException {
+    private void receiveMsg(DatagramPacket packet) throws IOException, ClassNotFoundException {
         MulticastMSG msg = null;
 
         long startTime = new Date().getTime();
@@ -155,8 +165,14 @@ public class StartServices extends Thread {
                 System.out.println("[START SERVICES] - Timeout socket multicast");
                 continue;
             }
-            msg = os.readObject(packet, MulticastMSG.class);
-            connection = getConnectionDatabaseByUrl(internalInfo.getUrl_db());
+
+            ByteArrayInputStream bais = new ByteArrayInputStream(packet.getData(),0, packet.getLength());
+            ObjectInputStream ois = new ObjectInputStream(bais);
+//            if(ois.available() <= 0 ){
+//                continue;
+//            };
+            msg = (MulticastMSG) ois.readObject();
+            //msg = os.readObject(packet, MulticastMSG.class);
             if(msg.getTypeMsg() != TypeOfMulticastMsg.HEARTBEAT){
                 continue;
             }
@@ -165,21 +181,12 @@ public class StartServices extends Thread {
             heartBeat.setTimeMsg();
             internalInfo.addHeartBeat(heartBeat);
         }
+        //connection = getConnectionDatabaseByUrl(internalInfo.getUrl_db());
 
     }
 
     private void startThreads() {
-        serverSocket = null;
         startCondition();
-        try {
-            // inicia serversocket thread
-            serverSocket = new ServerSocket(0);
-            serversRequestSocket = new DatagramSocket(internalInfo.getPortUdp());
-        }
-        catch (IOException e) {
-            System.out.println("Não foi possivel iniciar recursos");
-            return;
-        }
 
         System.out.println("Ready to start");
         internalInfo.setStatus(Status.AVAILABLE);
@@ -200,7 +207,8 @@ public class StartServices extends Thread {
             serverSocketThread.join();
             multicastThread.join();
             socket.close();
-        } catch (InterruptedException ignored) {
+            serverSocket.close();
+        } catch (InterruptedException | IOException ignored) {
         }
 
         System.out.println("A sair da thread Start Services");
@@ -280,41 +288,10 @@ public class StartServices extends Thread {
     private void startFirstServer() throws SQLException {
 
         if(!haveConnectionDatabase(internalInfo.getUrl_db())){
-            createDatabaseV1();
+            UdpUtils.createDatabaseV1(internalInfo);
             connection = createInitialData(internalInfo);
             dbVersionManager = new DBVersionManager(connection);
         }
-    }
-
-    private void createDatabaseV1() {
-        File f = new File(getPathToDirectory(internalInfo.getUrl()));
-        int bytesReads = 0;
-        if (!f.mkdir()) {
-            throw new ServerException("Erro a criar a diretoria");
-        }
-
-        try {
-
-            FileOutputStream fos = new FileOutputStream( new File(internalInfo.getUrl()));
-
-            FileInputStream fis = new FileInputStream(Constants.INITIAL_DB_BASE_URL);
-            while (true) {
-                byte[] bytes = new byte[4000];
-                bytesReads = fis.read(bytes);
-                if (bytesReads < 0) {
-                    break;
-                }
-                fos.write(bytes, 0, bytesReads);
-            }
-            fos.close();
-            fis.close();
-        } catch (FileNotFoundException e) {
-            throw new ServerException("File not found");
-        } catch (IOException e) {
-            throw new ServerException("Erro na leitura/Escrita dos ficheiros");
-        }
-
-
     }
 
     private Connection createInitialData( InternalInfo internalInfo){

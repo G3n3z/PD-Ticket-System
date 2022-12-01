@@ -67,7 +67,6 @@ public class AttendClientThread extends Thread implements Observer {
                 synchronized (internalInfo) {
                     if (internalInfo.getStatus() == Status.UNAVAILABLE) {
                         System.out.println("[AttendClientThread] - server closed client connection: " + e.getMessage());
-                        closeClient();
                     }
                 }
                 keepGoing = false;
@@ -117,6 +116,7 @@ public class AttendClientThread extends Thread implements Observer {
                    exitClient(msgClient);
                 }
                 case LOGOUT -> logout(msgClient);
+                case RECONNECT -> reconnected(msgClient);
                 default -> actionsLogged(msgClient, dbComm);
             }
 
@@ -124,8 +124,24 @@ public class AttendClientThread extends Thread implements Observer {
             ansMsg.setClientsPayloadType(ClientsPayloadType.TRY_LATER);
             e.printStackTrace();
             System.out.println("[AttendClientThread] - communication: "+ e.getMessage());
-            oos.writeUnshared(ansMsg);
+            sendMessage(ansMsg);
         }
+    }
+
+    private void reconnected(ClientMSG msgClient) {
+        try {
+            Reconnect msg  = (Reconnect) msgClient;
+            handleClientRequest(msg.getSubscription());
+            lastMessageReceive = msg.getSubscription();
+            if (msgClient.getUser() != null) {
+                RequestListReservas reservas = consultUnpayedReservation(msgClient);
+                for (Reserva reserva : reservas.getReservas()) {
+                    Timer timer1 = new Timer();
+                    timer1.schedule(new ControlPaymentTask(reserva.getIdReserva(), connection, internalInfo, timer1),
+                            Constants.PAYMENT_TIMER);
+                }
+            }
+        }catch (IOException e){}
     }
 
     private void exitClient(ClientMSG msgClient) throws SQLException, IOException {
@@ -176,7 +192,8 @@ public class AttendClientThread extends Thread implements Observer {
             System.out.println(Arrays.toString(e.getStackTrace()));
         } catch (IOException e) {
             sendAbort();
-            e.printStackTrace();
+            System.out.println("[AttendClientThread] - Nao foi possivel enviar mensagem de retorno");
+            //e.printStackTrace();
         }
     }
 
@@ -211,7 +228,7 @@ public class AttendClientThread extends Thread implements Observer {
                     editUser.getUser().getIdUser(),
                     editUser.getUsername(),
                     editUser.getNome(),
-                    BCrypt.hashpw(editUser.getPassword(), BCrypt.gensalt())
+                    editUser.getPassword() == null ? null : BCrypt.hashpw(editUser.getPassword(), BCrypt.gensalt())
             );
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
@@ -230,7 +247,7 @@ public class AttendClientThread extends Thread implements Observer {
         return msg;
     }
 
-    private ClientMSG consultUnpayedReservation(ClientMSG msgClient) {
+    private RequestListReservas consultUnpayedReservation(ClientMSG msgClient) {
         List<Reserva> unpayedReservations;
         unpayedReservations = dbComm.consultasReservadasByUser(msgClient.getUser().getIdUser(), Payment.NOT_PAYED);
         return new RequestListReservas(msgClient.getAction(),ClientsPayloadType.RESERVAS_RESPONSE, unpayedReservations);
@@ -256,6 +273,8 @@ public class AttendClientThread extends Thread implements Observer {
     private ClientMSG submitReservation(ClientMSG msgClient) throws SQLException, IOException {
         ClientMSG msg;
         ListPlaces list = (ListPlaces) msgClient;
+        if(list.getPlaces().size() == 0)
+            return new ClientMSG(ClientsPayloadType.BAD_REQUEST);
         if(dbComm.canSubmitReservations(list) && dbComm.isSpectacleVisible(list)){
             Query query = dbComm.submitReservations(list);
             if (startUpdateRoutine(query, internalInfo)) {
@@ -307,7 +326,6 @@ public class AttendClientThread extends Thread implements Observer {
                 sendCommit();
                 msg = new ClientMSG(ClientActions.CANCEL_RESERVATION);
                 msg.setClientsPayloadType(ClientsPayloadType.ACTION_SUCCEDED);
-                //TODO: TESTE
                 return null;
             } else {
                 sendAbort();
@@ -359,7 +377,6 @@ public class AttendClientThread extends Thread implements Observer {
 
     private ClientMSG deleteSpectacle(ClientMSG msgClient, User user) throws SQLException, IOException {
         RequestDetailsEspetaculo msg;
-        //TODO mudar isto para um espetaculo
         if(user.getRole() == Role.ADMIN){
             RequestDetailsEspetaculo espetaculo = (RequestDetailsEspetaculo) msgClient;
             if(dbComm.canRemoveEspecatulo(espetaculo.getEspetaculo().getIdEspetaculo())){
@@ -605,16 +622,13 @@ public class AttendClientThread extends Thread implements Observer {
 
     private void closeClient() {
         try {
-            ObjectOutputStream oos = new ObjectOutputStream(clientSocket.getOutputStream());
-            ClientMSG ansMsg = new ClientMSG();
-            List<HeartBeat> list = new ArrayList<>();
-            synchronized (internalInfo.getHeatBeats()){
-                list.addAll(internalInfo.getHeatBeats().stream().filter(heartBeat -> heartBeat.getStatusServer() == Status.AVAILABLE).toList());
-            }
-            list.remove(new HeartBeat(internalInfo.getIp(),internalInfo.getPortUdp()));
-            Collections.sort(list);
-            ansMsg.setServerList(new HashSet<>(list));
-            oos.writeUnshared(ansMsg);
+            Reconnect ansMsg = new Reconnect();
+            List<HeartBeat> list = new ArrayList<>(internalInfo.getOrderedHeatBeats().stream().filter(heartBeat -> heartBeat.getStatusServer() != Status.UNAVAILABLE).toList());
+            list.removeIf(heartBeat -> heartBeat.getIp().equals(internalInfo.getIp()) && heartBeat.getPortUdp() == internalInfo.getPortUdp());
+            ansMsg.setServerList(list);
+            ansMsg.setSubscription(lastMessageReceive);
+            ansMsg.setClientsPayloadType(ClientsPayloadType.SHUTDOWN);
+            sendMessage(ansMsg);
         } catch (IOException e) {
             System.out.println("[AttendClientThread] - failed to send server list" + e.getMessage());
         }
@@ -645,7 +659,7 @@ public class AttendClientThread extends Thread implements Observer {
             msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
 
         }
-        oos.writeUnshared(msg);
+        sendMessage(msg);
     }
 
     private void doLogin(ClientMSG msgClient, DBCommunicationManager dbComm) throws SQLException, IOException {
@@ -669,7 +683,7 @@ public class AttendClientThread extends Thread implements Observer {
         } else {
             msg = new ClientMSG(ClientActions.LOGIN, ClientsPayloadType.BAD_REQUEST,"Username ou Password incorretos") ;
         }
-        oos.writeUnshared(msg);
+        sendMessage(msg);
     }
 
 
@@ -678,7 +692,9 @@ public class AttendClientThread extends Thread implements Observer {
             System.out.println("Tentativa de envio de mengsane a null ");
             return;
         }
-        oos.writeUnshared(msg);
+        synchronized (oos) {
+            oos.writeUnshared(msg);
+        }
     }
 
 
@@ -697,6 +713,16 @@ public class AttendClientThread extends Thread implements Observer {
         if (lastMessageReceive != null) {
             System.out.println("Vou enviar mensagem - " + lastMessageReceive.getAction());
             handleClientRequest(lastMessageReceive);
+        }
+    }
+
+    public void closeThread() {
+        if(ois == null)
+            return;
+        closeClient();
+        try {
+            ois.close();
+        } catch (IOException ignored) {
         }
     }
 }

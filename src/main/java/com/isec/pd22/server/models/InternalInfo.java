@@ -3,6 +3,7 @@ package com.isec.pd22.server.models;
 import com.isec.pd22.enums.Status;
 import com.isec.pd22.interfaces.Observer;
 import com.isec.pd22.payload.HeartBeat;
+import com.isec.pd22.server.threads.AttendClientThread;
 import com.isec.pd22.utils.Constants;
 
 import java.net.Socket;
@@ -32,6 +33,7 @@ public class InternalInfo {
     Set<HeartBeat> heartBeats = new HashSet<>();
 
     private ArrayList<Socket> allClientSockets;
+    private ArrayList<AttendClientThread> clientThreads;
 
     public Lock lock;
 
@@ -50,6 +52,7 @@ public class InternalInfo {
         this.url_db = Constants.BASE_URL_DB + url_db;
         this.url = Constants.BASE_URL + url_db;
         this.allClientSockets = new ArrayList<>();
+        this.clientThreads = new ArrayList<>();
         this.observers = new HashSet<>();
     }
 
@@ -57,6 +60,28 @@ public class InternalInfo {
         return observers;
     }
 
+    public void addClientThread(AttendClientThread thread){
+        synchronized (clientThreads){
+            clientThreads.add(thread);
+        }
+    }
+
+    public void removeClientThread(AttendClientThread thread){
+        synchronized (clientThreads){
+            clientThreads.remove(thread);
+        }
+    }
+
+    public void closeInputStreams(){
+        ListIterator<AttendClientThread> it = clientThreads.listIterator(clientThreads.size());
+        AttendClientThread temp;
+        while (it.hasPrevious())
+        {
+            temp = it.previous();
+            temp.closeThread();
+            it.remove();
+        }
+    }
 
     public String getIp() {
         return ip;

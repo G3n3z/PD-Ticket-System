@@ -1,5 +1,6 @@
 package com.isec.pd22.client.ui;
 
+import com.isec.pd22.client.View;
 import com.isec.pd22.client.models.ModelManager;
 import com.isec.pd22.client.ui.utils.AlertSingleton;
 import com.isec.pd22.enums.ClientActions;
@@ -18,7 +19,9 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 
-public class EditView extends BorderPane {
+import java.beans.PropertyChangeListener;
+
+public class EditView extends BorderPane implements View {
 
     ModelManager modelManager;
     HBox hbox;
@@ -26,6 +29,7 @@ public class EditView extends BorderPane {
     Label labelUsername, labelName, labelPassword;
     TextField tfUsername, tfName, tfPassword;
     Button btnSubmit;
+    PropertyChangeListener callback;
 
     public EditView(ModelManager modelManager) {
         this.modelManager = modelManager;
@@ -76,7 +80,8 @@ public class EditView extends BorderPane {
         setCenter(hbox);
     }
     private void registerHandlers() {
-        modelManager.addPropertyChangeListener(ModelManager.EDIT_USER, (event) -> updateView());
+        callback = (event) -> updateView();
+        modelManager.addPropertyChangeListener(ModelManager.EDIT_USER, callback);
         btnSubmit.setOnAction(actionEvent -> {
             String username = (tfUsername.getText().isBlank() ? modelManager.getUser().getUsername() : tfUsername.getText());
             String nome = (tfName.getText().isBlank() ? modelManager.getUser().getNome() : tfName.getText());
@@ -94,5 +99,10 @@ public class EditView extends BorderPane {
     private void updateView() {
         tfUsername.setText(modelManager.getUser().getUsername());
         tfName.setText(modelManager.getUser().getNome());
+    }
+
+    @Override
+    public void removeListeners() {
+        modelManager.removePropertyChangeListener(ModelManager.EDIT_USER, callback);
     }
 }
