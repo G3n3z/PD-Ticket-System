@@ -52,9 +52,13 @@ public class StartServices extends Thread {
 
         try {
             try {
-                connection = DriverManager.getConnection(internalInfo.getUrl_db());
+                File f = new File(internalInfo.getUrl());
+                if (f.exists()){
+                    connection = DriverManager.getConnection(internalInfo.getUrl_db());
+                }
             }catch (SQLException e){
                 System.out.println("Base de dados nao existente");
+                connection = null;
             }
             dbVersionManager = new DBVersionManager(connection);
             packet = new DatagramPacket(new byte[20000], 20000);

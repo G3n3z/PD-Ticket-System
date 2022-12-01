@@ -52,7 +52,6 @@ public class RootPane extends BorderPane {
     public void changeView(){
         if(node != null && node instanceof View v){
             v.removeListeners();
-            System.out.println("Remover listeners");
         }
         switch (modelManager.getStatusClient()){
             case NOT_LOGGED -> node = new LogInView(modelManager);

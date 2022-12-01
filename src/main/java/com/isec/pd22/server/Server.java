@@ -18,7 +18,7 @@ public class Server {
         }
 
         Scanner scanner = new Scanner(System.in);
-        int input;
+
         int port = 0;
         try{
              port = Integer.parseInt(args[0]);
@@ -45,17 +45,18 @@ public class Server {
 
         StartServices startServices = new StartServices(info);
         startServices.start();
+
         while (!isFinish){
             imprimeMenu();
-            input = scanner.nextInt();
-
+            String input = scanner.nextLine();
+            input = input.trim();
             switch (input){
-                case 1 -> {
+                case "1" -> {
                     isFinish = true;
                     finish(info);
                     startServices.close();
                 }
-                case 2 -> {
+                case "2" -> {
                     synchronized (info.getHeatBeats()){
                         info.getHeatBeats().forEach(System.out::println);
                     }

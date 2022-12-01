@@ -66,7 +66,6 @@ public class MulticastThread extends Thread{
                 MulticastMSG msg = (MulticastMSG) ois.readObject();
                 //MulticastMSG msg = objectStream.readObject(packet, MulticastMSG.class);
                 if(msg == null){
-                    System.out.println("Erro na rececao de mensagem");
                     continue;
                 }
                 System.out.println("MSG RECEBIDA: " + msg.getTypeMsg() + " from " + packet.getPort());
@@ -84,18 +83,14 @@ public class MulticastThread extends Thread{
                     return;
                 }
                 System.out.println("[MulticastThread] - socket timeout: "+ e.getMessage());
-                //e.printStackTrace();
             }
             catch (IOException | SQLException e) {
-                System.out.println("[MulticastThread] - erro na rececao: "+ e.getMessage());
-               // e.printStackTrace();
-                if (!internalInfo.isFinish())
+                if (!internalInfo.isFinish()) {
                     sendExitMessage(internalInfo, multicastSocket);
-                //                System.out.println(e);
+                }
                 break;
             } catch (ClassNotFoundException e) {
                 System.out.println("[MulticastThread] - erro no cast da class: "+ e.getMessage());
-                //e.printStackTrace();
                 if (!internalInfo.isFinish())
                     sendExitMessage(internalInfo, multicastSocket);
             }catch (ServerException e){
@@ -105,7 +100,6 @@ public class MulticastThread extends Thread{
                     internalInfo.setFinish(true);
                 }
             }
-
         }
         System.out.println("A sair da thread multicast");
     }
