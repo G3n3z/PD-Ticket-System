@@ -504,19 +504,18 @@ public class DBCommunicationManager {
             synchronized (connection) {
                 statement = connection.prepareStatement(query);
                 statement.setInt(1, idReserva);
-                statement.setInt(2, 1);
+                statement.setInt(2, 0);
                 res = statement.executeQuery();
             }
             if (res.next()){
-                return false;
+                return true;
             }
-
         } catch (SQLException e) {
             System.out.println("[DBCOM] - cancelReservation " + e);
         }finally {
             closeStatement(statement);
         }
-        return true;
+        return false;
     }
 
     public boolean canSubmitReservations(ListPlaces list) {
