@@ -18,10 +18,8 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
 
 import java.beans.PropertyChangeListener;
-import java.util.ArrayList;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.stream.Collectors;
 
 public class RegisterView extends BorderPane implements View {
 
@@ -29,7 +27,7 @@ public class RegisterView extends BorderPane implements View {
     HBox hbox;
     VBox vBox;
     Label label, label2, labelName;
-    TextField tfEmail, tfPassword, tfName;
+    TextField tfUsername, tfPassword, tfName;
     Button btnBack, btnRegister;
 
     Map<String, PropertyChangeListener> callbacks = new TreeMap<>();
@@ -55,19 +53,19 @@ public class RegisterView extends BorderPane implements View {
         tfName = new TextField();
         label = new Label("Username");
         label.setFont(new Font(20));
-        tfEmail = new TextField();
-        tfEmail.setPrefHeight(30);
-        tfEmail.setPrefWidth(200);
+        tfUsername = new TextField();
+        tfUsername.setPrefHeight(30);
+        tfUsername.setPrefWidth(200);
         label2 = new Label("Password");
         label2.setFont(new Font(20));
         tfPassword = new TextField();
         tfPassword.setPrefHeight(30);
         tfPassword.setPrefWidth(200);
-        vBox.getChildren().addAll(hBoxTitle,labelName,tfName,label, tfEmail, label2, tfPassword);
+        vBox.getChildren().addAll(hBoxTitle,labelName,tfName,label, tfUsername, label2, tfPassword);
         vBox.setAlignment(Pos.CENTER);
         vBox.setSpacing(20);
         vBox.setMinWidth(500);
-        VBox.setMargin(tfEmail, new Insets(5,0,30,0));
+        VBox.setMargin(tfUsername, new Insets(0,0,30,0));
         hbox.getChildren().addAll(vBox);
         hbox.setAlignment(Pos.CENTER);
         btnBack = new Button("Voltar");
@@ -85,10 +83,10 @@ public class RegisterView extends BorderPane implements View {
         callbacks.put(ModelManager.PROP_STATUS, (event) -> updateView());
         callbacks.put(ModelManager.ACTION_COMPLETE, evt -> Platform.runLater(this::registerComplete));
         btnRegister.setOnAction(actionEvent -> {
-            String email = tfEmail.getText();
+            String username = tfUsername.getText();
             String password = tfPassword.getText();
             String name = tfName.getText();
-            Register register = new Register(ClientActions.REGISTER_USER, email, password, name);
+            Register register = new Register(ClientActions.REGISTER_USER, name, password, username);
             modelManager.sendMessage(register);
         });
         btnBack.setOnAction(actionEvent -> {

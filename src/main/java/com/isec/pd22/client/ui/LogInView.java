@@ -1,14 +1,11 @@
 package com.isec.pd22.client.ui;
 
 import com.isec.pd22.client.View;
-import com.isec.pd22.client.models.Data;
 import com.isec.pd22.client.models.ModelManager;
-import com.isec.pd22.client.ui.utils.AlertSingleton;
 import com.isec.pd22.enums.ClientActions;
 import com.isec.pd22.enums.StatusClient;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.server.models.User;
-import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
@@ -18,9 +15,6 @@ import javafx.scene.layout.*;
 import javafx.scene.text.Font;
 
 import java.beans.PropertyChangeListener;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
 
 public class LogInView extends BorderPane implements View {
 
@@ -28,7 +22,7 @@ public class LogInView extends BorderPane implements View {
     HBox hbox;
     VBox vBox;
     Label label, label2;
-    TextField tfEmail, tfPassword;
+    TextField tfUsername, tfPassword;
     Button btnLogin, btnRegister;
 
     PropertyChangeListener callback;
@@ -51,21 +45,21 @@ public class LogInView extends BorderPane implements View {
         hBoxTitle.setAlignment(Pos.CENTER);
         HBox.setMargin(label1, new Insets(0,0,50,0));
         //setTop(hBoxTitle);
-        label = new Label("Email");
+        label = new Label("Username");
         label.setFont(new Font(20));
-        tfEmail = new TextField();
-        tfEmail.setPrefHeight(30);
-        tfEmail.setPrefWidth(200);
+        tfUsername = new TextField();
+        tfUsername.setPrefHeight(30);
+        tfUsername.setPrefWidth(200);
         label2 = new Label("Password");
         label2.setFont(new Font(20));
         tfPassword = new TextField();
         tfPassword.setPrefHeight(30);
         tfPassword.setPrefWidth(200);
-        vBox.getChildren().addAll(hBoxTitle,label, tfEmail, label2, tfPassword);
+        vBox.getChildren().addAll(hBoxTitle,label, tfUsername, label2, tfPassword);
         vBox.setAlignment(Pos.CENTER);
         vBox.setSpacing(20);
         vBox.setMinWidth(500);
-        VBox.setMargin(tfEmail, new Insets(5,0,30,0));
+        VBox.setMargin(tfUsername, new Insets(5,0,30,0));
         hbox.getChildren().addAll(vBox);
         hbox.setAlignment(Pos.CENTER);
         btnLogin = new Button("Login");
@@ -83,7 +77,7 @@ public class LogInView extends BorderPane implements View {
         callback = (event) -> updateView();
         modelManager.addPropertyChangeListener(ModelManager.PROP_STATUS, callback );
         btnLogin.setOnAction(actionEvent -> {
-            String username = tfEmail.getText();
+            String username = tfUsername.getText();
             String password = tfPassword.getText();
             ClientMSG msg = new ClientMSG(ClientActions.LOGIN);
             msg.setUser(new User(username, password));

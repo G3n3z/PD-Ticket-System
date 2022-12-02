@@ -639,25 +639,28 @@ public class AttendClientThread extends Thread implements Observer {
     private void doRegister(ClientMSG msgClient, DBCommunicationManager dbComm) throws SQLException, IOException {
         Register r = (Register) msgClient;
         ClientMSG msg;
-        if (dbComm.existsUserByUsernameOrName(r.getNome(), r.getUserName(), r.getPassword())) {
-            String encryptedPassword = BCrypt.hashpw(r.getPassword(), BCrypt.gensalt());
-
-            Query query = dbComm.getRegisterUserQuery(r.getUserName(), r.getNome(), encryptedPassword);
-
-            if (startUpdateRoutine(query, internalInfo)) {
-                dbVersionManager.insertQuery(query);
-                synchronized (internalInfo){
-                    internalInfo.setNumDB(internalInfo.getNumDB()+1);
-                }
-                sendCommit();
-                msg = new ClientMSG(ClientsPayloadType.USER_REGISTER);
-            } else {
-                sendAbort();
-                msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
-            }
-        } else {
+        if(r.getNome().isBlank() || r.getUserName().isBlank()) {
             msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
+        }else {
+            if (dbComm.existsUserByUsernameOrName(r.getNome(), r.getUserName(), r.getPassword())) {
+                String encryptedPassword = BCrypt.hashpw(r.getPassword(), BCrypt.gensalt());
 
+                Query query = dbComm.getRegisterUserQuery(r.getUserName(), r.getNome(), encryptedPassword);
+
+                if (startUpdateRoutine(query, internalInfo)) {
+                    dbVersionManager.insertQuery(query);
+                    synchronized (internalInfo) {
+                        internalInfo.setNumDB(internalInfo.getNumDB() + 1);
+                    }
+                    sendCommit();
+                    msg = new ClientMSG(ClientsPayloadType.USER_REGISTER);
+                } else {
+                    sendAbort();
+                    msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
+                }
+            } else {
+                msg = new ClientMSG(ClientsPayloadType.BAD_REQUEST);
+            }
         }
         sendMessage(msg);
     }
