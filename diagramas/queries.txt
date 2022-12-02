@@ -1,8 +1,0 @@
-Registo novo user: "INSERT INTO utilizador VALUES (NULL,'" + userName + "','" + nome+ "','" + pasword+ "','" + 0+ "','" + 0 + "')"
-Autenticação de utilizadores: "SELECT * FROM utilizador WHERE nome like '%" + userName + "%' AND password like '%" + password + "%'"
-Autenticação de um administrador: "SELECT * FROM utilizador WHERE nome like admin AND password like admin"
-Edição dos dados de registo utilizador: "UPDATE utilizador SET username='" + userName + "', " + " nome='" + name + "', " + " password='" + password + "' WHERE id=" + id
-Consulta de reservas que aguardam confirmação de pagamento: "SELECT * FROM reserva WHERE pago='" 0
-Consulta de reservas pagas: "SELECT * FROM reserva WHERE pago='" 1
-Consulta e pesquisa de espetáculos(filtros):"SELECT * FROM espetaculo WHERE
-Seleção de um espetáculo (24h depois): "SELECT * FROM espetaculo WHERE data_hora like '%" + data + "%'""
