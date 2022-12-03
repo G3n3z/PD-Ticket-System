@@ -68,7 +68,7 @@ public class MulticastThread extends Thread{
                 if(msg == null){
                     continue;
                 }
-                System.out.println("MSG RECEBIDA: " + msg.getTypeMsg() + " from " + packet.getPort());
+
                 switch (internalInfo.getStatus()){
                     case AVAILABLE -> responseToMsgAvailable(msg, dp);
                     case UPDATING -> {responseToMsgUpdating(msg, dp);}

@@ -136,11 +136,18 @@ public class StartServices extends Thread {
             UdpUtils.createDatabaseV1(internalInfo);
             connection = createInitialData(internalInfo);
             dbVersionManager = new DBVersionManager(connection);
-            UdpUtils.updateDB(serverWithMaxDBVersion, socket, internalInfo, dbVersionManager);
-            //updateDB(serverWithMaxDBVersion);
+            try {
+                UdpUtils.updateDB(serverWithMaxDBVersion, socket, internalInfo, dbVersionManager);
+            }catch (Exception e){
+                UdpUtils.restartDB(serverWithMaxDBVersion, socket, internalInfo, dbVersionManager);
+            }
         } else {
             if (!verifyLocalDBVersion(serverWithMaxDBVersion)) {
-                UdpUtils.updateDB(serverWithMaxDBVersion, socket, internalInfo, dbVersionManager);
+                try {
+                    UdpUtils.updateDB(serverWithMaxDBVersion, socket, internalInfo, dbVersionManager);
+                }catch (Exception e){
+                    UdpUtils.restartDB(serverWithMaxDBVersion, socket, internalInfo, dbVersionManager);
+                }
             }
         }
     }
