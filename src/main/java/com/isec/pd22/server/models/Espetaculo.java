@@ -25,6 +25,7 @@ public class Espetaculo implements Serializable {
     String pais;
     String classificacao_etaria;
     int visivel;
+
     Set<Lugar> lugares;
 
 
