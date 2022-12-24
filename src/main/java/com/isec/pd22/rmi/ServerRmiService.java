@@ -10,11 +10,13 @@ import java.util.*;
 public class ServerRmiService extends UnicastRemoteObject implements ServerRemoteInterface {
 
     Map<String, ClientRemoteInterface> observers;
-    //InternalInfo internalInfo;
+    String ip; int port;
     Set<HeartBeat> heartBeat;
     public ServerRmiService(InternalInfo internalInfo) throws RemoteException {
         this.heartBeat = internalInfo.getHeatBeats();
         observers = new HashMap<>();
+        this.ip = internalInfo.getIp();
+        this.port = internalInfo.getPortUdp();
     }
 
     @Override
@@ -33,9 +35,8 @@ public class ServerRmiService extends UnicastRemoteObject implements ServerRemot
     public RmiServerMessage getListOfServers() throws RemoteException{
         RmiServerMessage serverMessage = new RmiServerMessage();
         List<RmiServidor> list;
-//        Set<HeartBeat> heartBeatSet = internalInfo.getHeatBeats();
         synchronized (heartBeat){
-            list = heartBeat.stream().map(RmiServidor::mapToRmiObject).toList();
+            list = heartBeat.stream().map( h -> RmiServidor.mapToRmiObject(h, ip, port)).toList();
         }
         serverMessage.setServers(list);
         return serverMessage;

@@ -28,7 +28,7 @@ public class Monitor {
             System.exit(-1);
         }
         try{
-            Registry registry = LocateRegistry.getRegistry("127.0.0.1", Registry.REGISTRY_PORT);
+            Registry registry = LocateRegistry.getRegistry(args[0], Registry.REGISTRY_PORT);
             ServerRemoteInterface serverRemote = (ServerRemoteInterface)registry.lookup(Constants.SERVER_SERVICE_NAME+port);
             System.out.println("Connected to Remote Service");
             Scanner sc = new Scanner(System.in);
@@ -61,8 +61,7 @@ public class Monitor {
                     default -> System.out.println("Invalid Option");
                 }
             }
-
-
+            UnicastRemoteObject.unexportObject(clientRemote, true);
         }catch (NotBoundException e){
             System.out.println ("No light bulb service available!");
         }catch (RemoteException e){ System.out.println ("RMI Error - " + e);
@@ -71,7 +70,6 @@ public class Monitor {
             System.out.println ("Error - " + e);
             e.printStackTrace();
         }
-        //registry.unbind(Constants.SERVER_SERVICE_NAME+port);
 
         System.out.println("Vamos Terminar");
 

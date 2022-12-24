@@ -68,12 +68,16 @@ public class RmiServidor implements Serializable {
                 "}\n";
     }
 
-    public static RmiServidor mapToRmiObject(HeartBeat heartBeat) {
+    public static RmiServidor mapToRmiObject(HeartBeat heartBeat, String ip, int port) {
         RmiServidor server = new RmiServidor();
         server.ip = heartBeat.getIp();
         server.portTcp = heartBeat.getPortTcpClients();
         server.portUdp = heartBeat.getPortUdp();
-        server.timeAtLastHeartbeat = new Date().getTime() - heartBeat.getUnixTimeSinceLastHeartBeat()/1000;
+        if(server.ip.equals(ip) && server.portUdp == port){
+            server.timeAtLastHeartbeat = 0;
+        }else{
+            server.timeAtLastHeartbeat = (new Date().getTime() - heartBeat.getUnixTimeSinceLastHeartBeat())/1000;
+        }
         return server;
     }
 }

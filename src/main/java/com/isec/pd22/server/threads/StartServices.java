@@ -15,6 +15,7 @@ import com.isec.pd22.utils.ObjectStream;
 import com.isec.pd22.utils.UdpUtils;
 import java.io.*;
 import java.net.*;
+import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.rmi.registry.Registry;
@@ -199,15 +200,15 @@ public class StartServices extends Thread {
     private void startThreads() {
         startCondition();
         System.out.println("Ready to start");
-        Registry r1;
+        Registry r1 = null;
+        String registration = Constants.SERVER_SERVICE_NAME+internalInfo.getPortUdp();
         try {
             try {
                 r1 = LocateRegistry.createRegistry(Registry.REGISTRY_PORT);
             }catch (ExportException e){
-                r1 = LocateRegistry.getRegistry("192.168.1.65", Registry.REGISTRY_PORT);
+                r1 = LocateRegistry.getRegistry(internalInfo.getIp(), Registry.REGISTRY_PORT);
             }
 
-            String registration = Constants.SERVER_SERVICE_NAME+internalInfo.getPortUdp();
             serviceRmi = new ServerRmiService(internalInfo);
             r1.rebind(registration, serviceRmi);
         } catch (RemoteException e) {
@@ -234,7 +235,9 @@ public class StartServices extends Thread {
             socket.close();
             serverSocket.close();
             UnicastRemoteObject.unexportObject(serviceRmi, true);
-        } catch (InterruptedException | IOException ignored) {
+            if(r1 != null)
+                r1.unbind(registration);
+        } catch (InterruptedException | IOException | NotBoundException ignored) {
         }
 
         System.out.println("A sair da thread Start Services");
