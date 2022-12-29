@@ -2,6 +2,7 @@ package com.isec.pd22.server.threads;
 
 import com.isec.pd22.enums.ClientsPayloadType;
 import com.isec.pd22.payload.ServersRequestPayload;
+import com.isec.pd22.rmi.ServerRmiService;
 import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.PackageModel;
 import com.isec.pd22.utils.UdpUtils;
@@ -18,11 +19,11 @@ public class ServersRequestThread extends Thread{
     private final InternalInfo internalInfo;
 
     private boolean toClose = false;
-
-    public ServersRequestThread(DatagramSocket socket, InternalInfo internalInfo) {
+    ServerRmiService serviceRmi;
+    public ServersRequestThread(DatagramSocket socket, InternalInfo internalInfo, ServerRmiService serviceRmi) {
         this.socket = socket;
         this.internalInfo = internalInfo;
-
+        this.serviceRmi = serviceRmi;
         new Thread(this::messagesQueueThreadRoutine).start();
     }
 
@@ -47,7 +48,10 @@ public class ServersRequestThread extends Thread{
         );
 
         ServersRequestPayload payloadReceived = UdpUtils.receiveObject(socket, datagramPacketReceive);
-
+        String msg = String.format("Contacto cliente via udp: %s, %d", datagramPacketReceive.getAddress().getHostAddress(), datagramPacketReceive.getPort());
+        synchronized (serviceRmi){
+            serviceRmi.notifyAllObservers(msg);
+        }
         return new PackageModel(payloadReceived, datagramPacketReceive);
     }
 

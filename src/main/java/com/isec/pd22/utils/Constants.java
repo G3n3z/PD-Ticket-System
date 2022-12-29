@@ -16,7 +16,8 @@ public class Constants {
     public static final String FILES_DIR_PATH= "files/";
     public static final String PICK_FILES_DIR_PATH= FILES_DIR_PATH;
     public static final long PAYMENT_TIMER = 10000; //miliseconds
-    public static final long INITIAL_TIMEOUT = 30000;
+    public static final long INITIAL_TIMEOUT = 5000;
+    public static final String SERVER_SERVICE_NAME = "SHOW_SERVICE_";
 
     public static Date stringToDate(String date) throws ParseException {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");

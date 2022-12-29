@@ -6,22 +6,25 @@ import com.isec.pd22.exception.ServerException;
 import com.isec.pd22.payload.HeartBeat;
 import com.isec.pd22.payload.MulticastMSG;
 import com.isec.pd22.payload.UpdateDB;
+import com.isec.pd22.rmi.ServerRmiService;
 import com.isec.pd22.server.models.InternalInfo;
 import com.isec.pd22.server.models.Query;
 import com.isec.pd22.utils.Constants;
 import com.isec.pd22.utils.DBVersionManager;
 import com.isec.pd22.utils.ObjectStream;
 import com.isec.pd22.utils.UdpUtils;
-
 import java.io.*;
 import java.net.*;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
+import java.rmi.registry.LocateRegistry;
+import java.rmi.registry.Registry;
+import java.rmi.server.ExportException;
+import java.rmi.server.UnicastRemoteObject;
 import java.sql.*;
 import java.util.Comparator;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Timer;
-import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class StartServices extends Thread {
@@ -37,6 +40,8 @@ public class StartServices extends Thread {
 
     Timer timer = null;
     HeartBeatTask heartBeatTask = null;
+    ServerRmiService serviceRmi;
+
 
     ServerSocket serverSocket;
     ObjectStream os = new ObjectStream();
@@ -194,14 +199,29 @@ public class StartServices extends Thread {
 
     private void startThreads() {
         startCondition();
-
         System.out.println("Ready to start");
+        Registry r1 = null;
+        String registration = Constants.SERVER_SERVICE_NAME+internalInfo.getPortUdp();
+        try {
+            try {
+                r1 = LocateRegistry.createRegistry(Registry.REGISTRY_PORT);
+            }catch (ExportException e){
+                r1 = LocateRegistry.getRegistry(internalInfo.getIp(), Registry.REGISTRY_PORT);
+            }
+
+            serviceRmi = new ServerRmiService(internalInfo);
+            r1.rebind(registration, serviceRmi);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+
+
         internalInfo.setStatus(Status.AVAILABLE);
         internalInfo.setConnection(connection);
-        ServerSocketThread serverSocketThread = new ServerSocketThread(serverSocket, internalInfo);
+        ServerSocketThread serverSocketThread = new ServerSocketThread(serverSocket, internalInfo, serviceRmi);
         serverSocketThread.start();
 
-        ServersRequestThread serversRequestThread = new ServersRequestThread(serversRequestSocket, internalInfo);
+        ServersRequestThread serversRequestThread = new ServersRequestThread(serversRequestSocket, internalInfo,serviceRmi);
         serversRequestThread.start();
 
         timer = new Timer(true);
@@ -209,13 +229,15 @@ public class StartServices extends Thread {
         timer.scheduleAtFixedRate(heartBeatTask, 0, 10000);
         MulticastThread multicastThread = new MulticastThread(internalInfo, timer);
         multicastThread.start();
-
         try {
             serverSocketThread.join();
             multicastThread.join();
             socket.close();
             serverSocket.close();
-        } catch (InterruptedException | IOException ignored) {
+            UnicastRemoteObject.unexportObject(serviceRmi, true);
+            if(r1 != null)
+                r1.unbind(registration);
+        } catch (InterruptedException | IOException | NotBoundException ignored) {
         }
 
         System.out.println("A sair da thread Start Services");

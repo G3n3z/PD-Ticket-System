@@ -3,6 +3,7 @@ package com.isec.pd22.server.threads;
 import com.isec.pd22.enums.Status;
 import com.isec.pd22.enums.TypeOfMulticastMsg;
 import com.isec.pd22.payload.HeartBeat;
+import com.isec.pd22.rmi.ServerRmiService;
 import com.isec.pd22.server.models.InternalInfo;
 
 import java.io.ByteArrayOutputStream;
@@ -22,14 +23,15 @@ public class ServerSocketThread extends Thread
     private ServerSocket serverSocket;
     private InternalInfo internalInfo;
     private ArrayList<Thread> allClientThreads;
+    private ServerRmiService serviceRmi;
 
-
-    public ServerSocketThread(ServerSocket serverSocket, InternalInfo internalInfo)
+    public ServerSocketThread(ServerSocket serverSocket, InternalInfo internalInfo, ServerRmiService serviceRmi)
     {
         this.serverSocket = serverSocket;
         this.internalInfo = internalInfo;
         allClientThreads = new ArrayList<>();
         internalInfo.setPortTcp(serverSocket.getLocalPort());
+        this.serviceRmi = serviceRmi;
     }
 
     public ArrayList<Thread> getAllClientThreads() {
@@ -54,7 +56,12 @@ public class ServerSocketThread extends Thread
 
                 internalInfo.getAllClientSockets().add(clientSocket);
 
-                AttendClientThread clientThread = new AttendClientThread(clientSocket, internalInfo, connection);
+                String msg = String.format("Contacto cliente via tcp: %s, %d", clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort());
+                synchronized (serviceRmi){
+                    serviceRmi.notifyAllObservers(msg);
+                }
+
+                AttendClientThread clientThread = new AttendClientThread(clientSocket, internalInfo, connection, serviceRmi);
                 clientThread.start();
 
                 synchronized (internalInfo) {

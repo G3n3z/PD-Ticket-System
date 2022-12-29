@@ -5,6 +5,7 @@ import com.isec.pd22.interfaces.Observer;
 import com.isec.pd22.payload.*;
 import com.isec.pd22.payload.tcp.ClientMSG;
 import com.isec.pd22.payload.tcp.Request.*;
+import com.isec.pd22.rmi.ServerRmiService;
 import com.isec.pd22.server.models.*;
 import com.isec.pd22.utils.Constants;
 import com.isec.pd22.utils.DBCommunicationManager;
@@ -17,7 +18,6 @@ import java.net.*;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 public class AttendClientThread extends Thread implements Observer {
     private Socket clientSocket;
@@ -32,10 +32,14 @@ public class AttendClientThread extends Thread implements Observer {
     ClientMSG lastMessageReceive;
     Timer timer;
     boolean keepGoing = true;
-    public AttendClientThread(Socket clientSocket, InternalInfo internalInfo, Connection connection) {
+    ServerRmiService serviceRmi;
+    String name;
+
+    public AttendClientThread(Socket clientSocket, InternalInfo internalInfo, Connection connection, ServerRmiService serviceRmi) {
         this.clientSocket = clientSocket;
         this.internalInfo = internalInfo;
         this.connection = connection;
+        this.serviceRmi = serviceRmi;
         internalInfo.addObserver(this);
     }
 
@@ -65,13 +69,28 @@ public class AttendClientThread extends Thread implements Observer {
 
             } catch (EOFException e){
                 synchronized (internalInfo) {
+                    String msgRmi ="";
                     if (internalInfo.getStatus() == Status.UNAVAILABLE) {
                         System.out.println("[AttendClientThread] - server closed client connection: " + e.getMessage());
+                        msgRmi = String.format("Detetamos incoerencia na nossa base de dados e vamos encerrar a ligação com o cliente: %s:%d",
+                                clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort());
+                    }else {
+                        msgRmi = String.format("O socket foi fechado e vamos fechar a ligação com o cliente: %s:%d",
+                                clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort());
+                    }
+                    setNameOfUser(msgRmi);
+                    synchronized (serviceRmi){
+                        serviceRmi.notifyAllObservers(msgRmi);
                     }
                 }
                 keepGoing = false;
             } catch (IOException | ClassNotFoundException e) {
                 System.out.println("[AttendClientThread] - failed comunication with client: "+ e.getMessage());
+                String msgRmi = String.format("Houve um problema e vamos encerrar a ligação com o cliente: %s:%d",
+                        clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort());
+                synchronized (serviceRmi){
+                    serviceRmi.notifyAllObservers(msgRmi);
+                }
                 keepGoing = false;
             } catch (InterruptedException e) {
                 System.out.println("[AttendClientThread] - server finished updating: " + e.getMessage());
@@ -88,6 +107,12 @@ public class AttendClientThread extends Thread implements Observer {
             internalInfo.decrementNumClients();
         }
         System.out.println("Sai da thread do cliente");
+    }
+
+    private void setNameOfUser(String msg) {
+        if (name != null){
+            msg += " - Cliente: " + name;
+        }
     }
 
     private boolean openStreams() {
@@ -147,6 +172,7 @@ public class AttendClientThread extends Thread implements Observer {
     private void exitClient(ClientMSG msgClient) throws SQLException, IOException {
         System.out.println("Cliente saiu");
         keepGoing = false;
+        name = null;
         if (msgClient.getUser() != null){
             Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
             if(startUpdateRoutine(query, internalInfo)){
@@ -155,11 +181,19 @@ public class AttendClientThread extends Thread implements Observer {
                     internalInfo.setNumDB(internalInfo.getNumDB()+1);
                 }
                 sendCommit();
+                String msgRmi = String.format("Logout e vai terminar ligação feito pelo cliente: %s", msgClient.getUser().getUsername());
+                synchronized (serviceRmi){
+                    serviceRmi.notifyAllObservers(msgRmi);
+                }
             }else {
                 sendAbort();
             }
 
-
+        }else{
+            String msgRmi = String.format("Vai terminar ligação feito pela maquina: %s:%d", clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort());
+            synchronized (serviceRmi){
+                serviceRmi.notifyAllObservers(msgRmi);
+            }
         }
     }
 
@@ -461,6 +495,7 @@ public class AttendClientThread extends Thread implements Observer {
     private void logout(ClientMSG msgClient) throws SQLException, IOException {
         ClientMSG msg;
         Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.NOT_AUTHENTICATED);
+        name = null;
         if (startUpdateRoutine(query, internalInfo)) {
             dbVersionManager.insertQuery(query);
             synchronized (internalInfo){
@@ -468,6 +503,11 @@ public class AttendClientThread extends Thread implements Observer {
             }
             sendCommit();
             msg = new ClientMSG(ClientsPayloadType.LOGOUT);
+
+            String msgRmi = String.format("Logout feito pelo cliente: %s", msgClient.getUser().getUsername());
+            synchronized (serviceRmi){
+                serviceRmi.notifyAllObservers(msgRmi);
+            }
         } else {
             sendAbort();
             msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
@@ -670,6 +710,7 @@ public class AttendClientThread extends Thread implements Observer {
         User u = dbComm.getUser(msgClient.getUser().getUsername());
 
         if (u != null && BCrypt.checkpw(msgClient.getUser().getPassword(), u.getPassword())) {
+            name = u.getUsername();
             Query query = dbComm.setAuthenticate(msgClient.getUser().getUsername(), Authenticated.AUTHENTICATED);
             if (startUpdateRoutine(query, internalInfo)) {
                 dbVersionManager.insertQuery(query);
@@ -679,6 +720,12 @@ public class AttendClientThread extends Thread implements Observer {
                 sendCommit();
                 msg = new ClientMSG(ClientActions.LOGIN, ClientsPayloadType.LOGGED_IN);
                 msg.setUser(new User(u.getIdUser(),u.getRole(),u.getUsername(), u.getNome()));
+                String msgRmi = String.format("Login feito pelo cliente: %s", u.getUsername());
+                synchronized (serviceRmi){
+                    serviceRmi.notifyAllObservers(msgRmi);
+                }
+
+
             } else {
                 sendAbort();
                 msg = new ClientMSG(ClientsPayloadType.TRY_LATER);
