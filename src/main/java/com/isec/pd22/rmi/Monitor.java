@@ -21,6 +21,7 @@ public class Monitor {
             System.exit(-1);
         }
         Integer port = 0;
+        MonitorRmiRemote clientRemote = null;
         try {
             port = Integer.parseInt(args[1]);
         }catch (NumberFormatException e){
@@ -33,7 +34,7 @@ public class Monitor {
             System.out.println("Connected to Remote Service");
             Scanner sc = new Scanner(System.in);
             boolean registeredToCallbacks = false;
-            MonitorRmiRemote clientRemote = new MonitorRmiRemote();
+            clientRemote = new MonitorRmiRemote();
             String uuid = UUID.randomUUID().toString();
             while (keepGoing) {
                 printOptions(registeredToCallbacks);
@@ -57,18 +58,25 @@ public class Monitor {
                         }
                     }
                     case 2 -> {System.out.println(serverRemote.getListOfServers());}
-                    case 3 -> keepGoing = false;
+                    case 3 -> {
+                        serverRemote.unregisterToNotifications(uuid,clientRemote);
+                        keepGoing = false;
+                    }
                     default -> System.out.println("Invalid Option");
                 }
             }
-            UnicastRemoteObject.unexportObject(clientRemote, true);
+
         }catch (NotBoundException e){
-            System.out.println ("No light bulb service available!");
-        }catch (RemoteException e){ System.out.println ("RMI Error - " + e);
-            e.printStackTrace();
+            System.out.println ("O servico nao esta disponivel!");
+        }catch (RemoteException e){
+            System.out.println ("Erro de acesso ao servico - ");
         }catch (Exception e){
             System.out.println ("Error - " + e);
-            e.printStackTrace();
+        }finally {
+            try{
+                if(clientRemote != null)
+                    UnicastRemoteObject.unexportObject(clientRemote, true);
+            }catch (Exception ignored){}
         }
 
         System.out.println("Vamos Terminar");
