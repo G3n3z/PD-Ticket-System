@@ -51,6 +51,6 @@ public class ServerRmiService extends UnicastRemoteObject implements ServerRemot
                 idsOfClienteFailed.add(entry.getKey());
             }
         }
-        //idsOfClienteFailed.forEach(observers::remove);
+        idsOfClienteFailed.forEach(observers::remove);
     }
 }

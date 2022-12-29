@@ -15,7 +15,7 @@ public class RmiServidor implements Serializable {
     int portTcp;
     int portUdp;
     long timeAtLastHeartbeat;
-
+    int numClientes;
     public RmiServidor() {
     }
 
@@ -62,8 +62,9 @@ public class RmiServidor implements Serializable {
     public String toString() {
         return "Servidor{" +
                 "ip='" + ip + '\'' +
-                ", portTcp=" + portTcp +
-                ", portUdp=" + portUdp +
+                ", porta Tcp=" + portTcp +
+                ", porta Udp=" + portUdp +
+                ", Numero de clientes=" + numClientes +
                 ", timeAtLastHeartbeat=" + timeAtLastHeartbeat +
                 "}\n";
     }
@@ -73,6 +74,7 @@ public class RmiServidor implements Serializable {
         server.ip = heartBeat.getIp();
         server.portTcp = heartBeat.getPortTcpClients();
         server.portUdp = heartBeat.getPortUdp();
+        server.numClientes = heartBeat.getNumOfClients();
         if(server.ip.equals(ip) && server.portUdp == port){
             server.timeAtLastHeartbeat = 0;
         }else{
