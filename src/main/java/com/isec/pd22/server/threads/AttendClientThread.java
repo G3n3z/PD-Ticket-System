@@ -78,7 +78,7 @@ public class AttendClientThread extends Thread implements Observer {
                         msgRmi = String.format("O socket foi fechado e vamos fechar a ligação com o cliente: %s:%d",
                                 clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort());
                     }
-                    setNameOfUser(msgRmi);
+                    msgRmi = setNameOfUser(msgRmi);
                     synchronized (serviceRmi){
                         serviceRmi.notifyAllObservers(msgRmi);
                     }
@@ -88,6 +88,7 @@ public class AttendClientThread extends Thread implements Observer {
                 System.out.println("[AttendClientThread] - failed comunication with client: "+ e.getMessage());
                 String msgRmi = String.format("Houve um problema e vamos encerrar a ligação com o cliente: %s:%d",
                         clientSocket.getInetAddress().getHostAddress(), clientSocket.getPort());
+                msgRmi = setNameOfUser(msgRmi);
                 synchronized (serviceRmi){
                     serviceRmi.notifyAllObservers(msgRmi);
                 }
@@ -109,10 +110,11 @@ public class AttendClientThread extends Thread implements Observer {
         System.out.println("Sai da thread do cliente");
     }
 
-    private void setNameOfUser(String msg) {
+    private String setNameOfUser(String msg) {
         if (name != null){
             msg += " - Cliente: " + name;
         }
+        return msg;
     }
 
     private boolean openStreams() {
