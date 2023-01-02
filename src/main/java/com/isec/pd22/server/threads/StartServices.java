@@ -212,7 +212,8 @@ public class StartServices extends Thread {
             serviceRmi = new ServerRmiService(internalInfo);
             r1.rebind(registration, serviceRmi);
         } catch (RemoteException e) {
-            e.printStackTrace();
+            System.out.println("Não foi possivel iniciar o serviço remoto");
+            return;
         }
 
 
